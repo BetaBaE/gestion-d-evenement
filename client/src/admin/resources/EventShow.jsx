@@ -1,0 +1,181 @@
+import { useState, useEffect } from 'react';
+import { useParams } from 'react-router';
+import { useDataProvider, useNotify, Title } from 'react-admin';
+import {
+  Box,
+  Tabs,
+  Tab,
+  Paper,
+  Typography,
+  Button,
+  TextField as MuiTextField,
+  Stack,
+  Chip,
+} from '@mui/material';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import { QRCodeSVG } from 'qrcode.react';
+import { axiosClient } from '../../api/axiosClient.js';
+import { getSelectedOrganisateurId } from '../organisateurContext.js';
+import { CategoriesPanel } from './categories.jsx';
+import { OrganismesPanel } from './organismes.jsx';
+import { ParticipantsPanel } from './participants.jsx';
+
+function eventBasePath(eventId) {
+  const organisateurId = getSelectedOrganisateurId();
+  return `/admin/organisateurs/${organisateurId}/events/${eventId}`;
+}
+
+function LinksPanel({ event, onRefresh }) {
+  const notify = useNotify();
+  const publicAppUrl = import.meta.env.VITE_PUBLIC_APP_URL || window.location.origin;
+
+  const formUrl = `${publicAppUrl}/inscription/${event.formToken}`;
+  const scanUrl = event.scanToken ? `${publicAppUrl}/scan/${event.scanToken}` : null;
+
+  async function copyToClipboard(text) {
+    await navigator.clipboard.writeText(text);
+    notify('Lien copié.', { type: 'success' });
+  }
+
+  async function regenerateFormToken() {
+    try {
+      await axiosClient.post(`${eventBasePath(event.id)}/regenerer-form-token`);
+      notify('Lien du formulaire régénéré.', { type: 'success' });
+      onRefresh();
+    } catch (error) {
+      notify(error.response?.data?.message || 'Erreur.', { type: 'error' });
+    }
+  }
+
+  async function regenerateScanToken() {
+    try {
+      await axiosClient.post(`${eventBasePath(event.id)}/regenerer-scan-token`, {});
+      notify('Lien de scan régénéré.', { type: 'success' });
+      onRefresh();
+    } catch (error) {
+      notify(error.response?.data?.message || 'Erreur.', { type: 'error' });
+    }
+  }
+
+  return (
+    <Stack spacing={3} sx={{ mt: 2 }}>
+      <Paper sx={{ p: 2 }}>
+        <Typography variant="subtitle1" gutterBottom>
+          Lien du formulaire d'inscription
+        </Typography>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <MuiTextField value={formUrl} size="small" fullWidth InputProps={{ readOnly: true }} />
+          <Button startIcon={<ContentCopyIcon />} onClick={() => copyToClipboard(formUrl)}>
+            Copier
+          </Button>
+          <Button startIcon={<RefreshIcon />} onClick={regenerateFormToken} color="warning">
+            Régénérer
+          </Button>
+        </Stack>
+      </Paper>
+
+      <Paper sx={{ p: 2 }}>
+        <Typography variant="subtitle1" gutterBottom>
+          Lien de scan (jour de l'événement)
+        </Typography>
+        {scanUrl ? (
+          <Stack direction="row" spacing={2} alignItems="flex-start">
+            <Stack spacing={1} flex={1}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <MuiTextField value={scanUrl} size="small" fullWidth InputProps={{ readOnly: true }} />
+                <Button startIcon={<ContentCopyIcon />} onClick={() => copyToClipboard(scanUrl)}>
+                  Copier
+                </Button>
+                <Button startIcon={<RefreshIcon />} onClick={regenerateScanToken} color="warning">
+                  Régénérer
+                </Button>
+              </Stack>
+              <Typography variant="body2" color="text.secondary">
+                Valide du {new Date(event.scanTokenValidFrom).toLocaleString('fr-FR')} au{' '}
+                {new Date(event.scanTokenValidUntil).toLocaleString('fr-FR')}
+              </Typography>
+            </Stack>
+            <Box sx={{ background: '#fff', p: 1 }}>
+              <QRCodeSVG value={scanUrl} size={120} />
+            </Box>
+          </Stack>
+        ) : (
+          <Button onClick={regenerateScanToken}>Générer le lien de scan</Button>
+        )}
+      </Paper>
+    </Stack>
+  );
+}
+
+export function EventShow() {
+  const { id: eventId } = useParams();
+  const dataProvider = useDataProvider();
+  const notify = useNotify();
+  const [tab, setTab] = useState(0);
+  const [event, setEvent] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [organismes, setOrganismes] = useState([]);
+
+  async function loadEvent() {
+    try {
+      const { data } = await dataProvider.getOne('events', { id: eventId });
+      setEvent(data);
+    } catch (error) {
+      notify('Impossible de charger l\'événement.', { type: 'error' });
+    }
+  }
+
+  async function loadRelations() {
+    const [catRes, orgRes] = await Promise.all([
+      dataProvider.getList('categories', {
+        pagination: { page: 1, perPage: 100 },
+        sort: { field: 'nom', order: 'ASC' },
+        meta: { eventId },
+      }),
+      dataProvider.getList('organismes', {
+        pagination: { page: 1, perPage: 100 },
+        sort: { field: 'nom', order: 'ASC' },
+        meta: { eventId },
+      }),
+    ]);
+    setCategories(catRes.data);
+    setOrganismes(orgRes.data);
+  }
+
+  useEffect(() => {
+    loadEvent();
+    loadRelations();
+  }, [eventId]);
+
+  if (!event) {
+    return <Box sx={{ p: 3 }}>Chargement...</Box>;
+  }
+
+  return (
+    <Box sx={{ p: 2 }}>
+      <Title title={event.titre} />
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+        <Typography variant="h5">{event.titre}</Typography>
+        <Chip label={event.statut} size="small" />
+      </Stack>
+
+      <Paper>
+        <Tabs value={tab} onChange={(e, value) => setTab(value)}>
+          <Tab label="Catégories" />
+          <Tab label="Organismes invités" />
+          <Tab label="Participants" />
+          <Tab label="Liens" />
+        </Tabs>
+        <Box sx={{ p: 2 }}>
+          {tab === 0 && <CategoriesPanel eventId={eventId} />}
+          {tab === 1 && <OrganismesPanel eventId={eventId} />}
+          {tab === 2 && (
+            <ParticipantsPanel eventId={eventId} categories={categories} organismes={organismes} />
+          )}
+          {tab === 3 && <LinksPanel event={event} onRefresh={loadEvent} />}
+        </Box>
+      </Paper>
+    </Box>
+  );
+}

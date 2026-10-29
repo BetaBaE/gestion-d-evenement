@@ -18,7 +18,15 @@ const userSchema = new mongoose.Schema(
     actif: { type: Boolean, default: true },
     dernierLogin: { type: Date },
   },
-  { timestamps: true },
+  {
+    timestamps: true,
+    toJSON: {
+      transform: (doc, ret) => {
+        delete ret.passwordHash;
+        return ret;
+      },
+    },
+  },
 );
 
 export const User = mongoose.model('User', userSchema);

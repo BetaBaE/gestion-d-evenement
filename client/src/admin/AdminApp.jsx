@@ -1,0 +1,66 @@
+import { Admin, Resource, Layout } from 'react-admin';
+import polyglotI18nProvider from 'ra-i18n-polyglot';
+import frenchMessages from 'ra-language-french';
+import PeopleIcon from '@mui/icons-material/People';
+import BusinessIcon from '@mui/icons-material/Business';
+import EventIcon from '@mui/icons-material/Event';
+import { dataProvider } from './dataProvider.js';
+import { authProvider } from './authProvider.js';
+import { AdminAppBar } from './AdminAppBar.jsx';
+import { OrganisateurList, OrganisateurEdit, OrganisateurCreate } from './resources/organisateurs.jsx';
+import { UserList, UserEdit, UserCreate } from './resources/users.jsx';
+import { EventList, EventEdit, EventCreate } from './resources/events.jsx';
+import { EventShow } from './resources/EventShow.jsx';
+
+const i18nProvider = polyglotI18nProvider(() => frenchMessages, 'fr');
+
+function AdminLayout(props) {
+  return <Layout {...props} appBar={AdminAppBar} />;
+}
+
+export function AdminApp() {
+  return (
+    <Admin
+      basename="/admin"
+      dataProvider={dataProvider}
+      authProvider={authProvider}
+      i18nProvider={i18nProvider}
+      layout={AdminLayout}
+      requireAuth
+    >
+      {(permissions) => (
+        <>
+          {permissions === 'SUPER_ADMIN' && (
+            <Resource
+              name="organisateurs"
+              list={OrganisateurList}
+              edit={OrganisateurEdit}
+              create={OrganisateurCreate}
+              icon={BusinessIcon}
+              options={{ label: 'Organisateurs' }}
+            />
+          )}
+          {permissions === 'SUPER_ADMIN' && (
+            <Resource
+              name="users"
+              list={UserList}
+              edit={UserEdit}
+              create={UserCreate}
+              icon={PeopleIcon}
+              options={{ label: 'Gestionnaires' }}
+            />
+          )}
+          <Resource
+            name="events"
+            list={EventList}
+            edit={EventEdit}
+            create={EventCreate}
+            show={EventShow}
+            icon={EventIcon}
+            options={{ label: 'Événements' }}
+          />
+        </>
+      )}
+    </Admin>
+  );
+}

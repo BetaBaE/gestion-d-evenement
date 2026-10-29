@@ -24,6 +24,7 @@
     "axios": "1.21.0",
     "dayjs": "1.11.13",
     "html5-qrcode": "2.3.8",
+    "qrcode.react": "4.2.0",
     "ra-i18n-polyglot": "5.15.5",
     "ra-language-french": "5.15.5",
     "react": "19.3.1",
