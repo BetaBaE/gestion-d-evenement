@@ -7,6 +7,7 @@ import { env } from './config/env.js';
 import { authRoutes } from './routes/authRoutes.js';
 import { organisateurRoutes } from './routes/organisateurRoutes.js';
 import { userRoutes } from './routes/userRoutes.js';
+import { publicInscriptionRoutes } from './routes/publicInscriptionRoutes.js';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
 
 export const app = express();
@@ -24,6 +25,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/admin/organisateurs', organisateurRoutes);
 app.use('/api/admin/users', userRoutes);
+app.use('/api/public/inscription', publicInscriptionRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

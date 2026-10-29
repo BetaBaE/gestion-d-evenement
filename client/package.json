@@ -20,6 +20,7 @@
     "@mantine/notifications": "9.7.4",
     "@mui/icons-material": "9.5.0",
     "@mui/material": "9.5.0",
+    "@tabler/icons-react": "3.50.0",
     "@tanstack/react-query": "5.105.0",
     "axios": "1.21.0",
     "dayjs": "1.11.13",
