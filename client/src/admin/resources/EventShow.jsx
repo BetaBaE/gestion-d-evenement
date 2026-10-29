@@ -115,6 +115,7 @@ export function EventShow() {
   const notify = useNotify();
   const [tab, setTab] = useState(0);
   const [event, setEvent] = useState(null);
+  const [loadError, setLoadError] = useState(null);
   const [categories, setCategories] = useState([]);
   const [organismes, setOrganismes] = useState([]);
 
@@ -122,32 +123,45 @@ export function EventShow() {
     try {
       const { data } = await dataProvider.getOne('events', { id: eventId });
       setEvent(data);
+      setLoadError(null);
     } catch (error) {
-      notify('Impossible de charger l\'événement.', { type: 'error' });
+      setLoadError("Impossible de charger l'événement.");
     }
   }
 
   async function loadRelations() {
-    const [catRes, orgRes] = await Promise.all([
-      dataProvider.getList('categories', {
-        pagination: { page: 1, perPage: 100 },
-        sort: { field: 'nom', order: 'ASC' },
-        meta: { eventId },
-      }),
-      dataProvider.getList('organismes', {
-        pagination: { page: 1, perPage: 100 },
-        sort: { field: 'nom', order: 'ASC' },
-        meta: { eventId },
-      }),
-    ]);
-    setCategories(catRes.data);
-    setOrganismes(orgRes.data);
+    try {
+      const [catRes, orgRes] = await Promise.all([
+        dataProvider.getList('categories', {
+          pagination: { page: 1, perPage: 100 },
+          sort: { field: 'nom', order: 'ASC' },
+          meta: { eventId },
+        }),
+        dataProvider.getList('organismes', {
+          pagination: { page: 1, perPage: 100 },
+          sort: { field: 'nom', order: 'ASC' },
+          meta: { eventId },
+        }),
+      ]);
+      setCategories(catRes.data);
+      setOrganismes(orgRes.data);
+    } catch (error) {
+      notify('Impossible de charger les catégories ou organismes.', { type: 'error' });
+    }
   }
 
   useEffect(() => {
     loadEvent();
     loadRelations();
   }, [eventId]);
+
+  if (loadError) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography color="error">{loadError}</Typography>
+      </Box>
+    );
+  }
 
   if (!event) {
     return <Box sx={{ p: 3 }}>Chargement...</Box>;

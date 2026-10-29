@@ -84,9 +84,18 @@ export async function createEvent(req, res, next) {
 
 export async function updateEvent(req, res, next) {
   try {
+    const { badgeConfig, ...rest } = req.body;
+
+    const update = { ...rest };
+    if (badgeConfig) {
+      Object.entries(badgeConfig).forEach(([key, value]) => {
+        update[`badgeConfig.${key}`] = value;
+      });
+    }
+
     const event = await Event.findOneAndUpdate(
       { _id: req.params.eventId, organisateurId: req.organisateurId },
-      req.body,
+      { $set: update },
       { new: true, runValidators: true },
     );
     if (!event) {

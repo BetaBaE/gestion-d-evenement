@@ -90,6 +90,14 @@ export function DashboardPanel({ eventId }) {
     );
   }
 
+  if (summaryQuery.isError || !summaryQuery.data) {
+    return (
+      <Center p="xl">
+        <Text c="red">Impossible de charger les statistiques.</Text>
+      </Center>
+    );
+  }
+
   const summary = summaryQuery.data;
   const arrivalData = (arrivalQuery.data || []).map((row) => ({
     label: formatSlotLabel(row.slot),
