@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router';
 import { Title, Center } from '@mantine/core';
 import { AdminApp } from './admin/AdminApp.jsx';
 import { InscriptionPage } from './pages/public/InscriptionPage.jsx';
+import { ScanPage } from './pages/public/ScanPage.jsx';
 
 function HomePlaceholder() {
   return (
@@ -16,6 +17,7 @@ export function App() {
     <Routes>
       <Route path="/" element={<HomePlaceholder />} />
       <Route path="/inscription/:formToken" element={<InscriptionPage />} />
+      <Route path="/scan/:scanToken" element={<ScanPage />} />
       <Route path="/admin/*" element={<AdminApp />} />
     </Routes>
   );

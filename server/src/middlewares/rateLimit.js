@@ -15,3 +15,11 @@ export const publicRateLimit = rateLimit({
   legacyHeaders: false,
   message: { message: 'Trop de requêtes. Veuillez réessayer plus tard.' },
 });
+
+export const scanRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Trop de requêtes. Veuillez réessayer plus tard.' },
+});
