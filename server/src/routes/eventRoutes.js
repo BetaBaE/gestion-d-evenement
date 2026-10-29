@@ -14,6 +14,7 @@ import {
 import { categorieRoutes } from './categorieRoutes.js';
 import { organismeRoutes } from './organismeRoutes.js';
 import { participantRoutes } from './participantRoutes.js';
+import { statsRoutes } from './statsRoutes.js';
 
 export const eventRoutes = Router({ mergeParams: true });
 
@@ -28,3 +29,4 @@ eventRoutes.post('/:eventId/regenerer-scan-token', eventScope, regenerateScanTok
 eventRoutes.use('/:eventId/categories', eventScope, categorieRoutes);
 eventRoutes.use('/:eventId/organismes', eventScope, organismeRoutes);
 eventRoutes.use('/:eventId/participants', eventScope, participantRoutes);
+eventRoutes.use('/:eventId/stats', eventScope, statsRoutes);

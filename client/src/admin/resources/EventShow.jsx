@@ -20,6 +20,7 @@ import { getSelectedOrganisateurId } from '../organisateurContext.js';
 import { CategoriesPanel } from './categories.jsx';
 import { OrganismesPanel } from './organismes.jsx';
 import { ParticipantsPanel } from './participants.jsx';
+import { DashboardPanel } from './DashboardPanel.jsx';
 
 function eventBasePath(eventId) {
   const organisateurId = getSelectedOrganisateurId();
@@ -162,18 +163,20 @@ export function EventShow() {
 
       <Paper>
         <Tabs value={tab} onChange={(e, value) => setTab(value)}>
+          <Tab label="Tableau de bord" />
           <Tab label="Catégories" />
           <Tab label="Organismes invités" />
           <Tab label="Participants" />
           <Tab label="Liens" />
         </Tabs>
         <Box sx={{ p: 2 }}>
-          {tab === 0 && <CategoriesPanel eventId={eventId} />}
-          {tab === 1 && <OrganismesPanel eventId={eventId} />}
-          {tab === 2 && (
+          {tab === 0 && <DashboardPanel eventId={eventId} />}
+          {tab === 1 && <CategoriesPanel eventId={eventId} />}
+          {tab === 2 && <OrganismesPanel eventId={eventId} />}
+          {tab === 3 && (
             <ParticipantsPanel eventId={eventId} categories={categories} organismes={organismes} />
           )}
-          {tab === 3 && <LinksPanel event={event} onRefresh={loadEvent} />}
+          {tab === 4 && <LinksPanel event={event} onRefresh={loadEvent} />}
         </Box>
       </Paper>
     </Box>
