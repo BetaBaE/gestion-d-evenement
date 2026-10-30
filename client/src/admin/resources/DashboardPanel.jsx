@@ -1,15 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import {
   Box,
-  SimpleGrid,
+  Grid,
   Paper,
-  Text,
-  Title,
+  Typography,
   Table,
-  Loader,
-  Center,
-  Group,
-} from '@mantine/core';
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  CircularProgress,
+  Stack,
+} from '@mui/material';
 import {
   BarChart,
   Bar,
@@ -41,13 +44,13 @@ const SERIES_PRESENTS = '#2a78d6';
 
 function StatTile({ label, value, color }) {
   return (
-    <Paper withBorder p="md" radius="md">
-      <Text size="sm" c="dimmed">
+    <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, height: '100%' }}>
+      <Typography variant="body2" color="text.secondary">
         {label}
-      </Text>
-      <Text size="28px" fw={600} style={{ color }}>
+      </Typography>
+      <Typography variant="h5" fontWeight={600} sx={{ color }}>
         {value}
-      </Text>
+      </Typography>
     </Paper>
   );
 }
@@ -84,17 +87,17 @@ export function DashboardPanel({ eventId }) {
 
   if (summaryQuery.isLoading) {
     return (
-      <Center p="xl">
-        <Loader />
-      </Center>
+      <Box display="flex" justifyContent="center" p={4}>
+        <CircularProgress />
+      </Box>
     );
   }
 
   if (summaryQuery.isError || !summaryQuery.data) {
     return (
-      <Center p="xl">
-        <Text c="red">Impossible de charger les statistiques.</Text>
-      </Center>
+      <Box display="flex" justifyContent="center" p={4}>
+        <Typography color="error">Impossible de charger les statistiques.</Typography>
+      </Box>
     );
   }
 
@@ -106,65 +109,85 @@ export function DashboardPanel({ eventId }) {
 
   return (
     <Box>
-      <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="md" mb="xl">
-        <StatTile label="Inscrits" value={summary.inscrits} />
-        <StatTile label="Validés" value={summary.valides} color={STATUS_COLORS.valides} />
-        <StatTile label="En attente" value={summary.enAttente} color={STATUS_COLORS.enAttente} />
-        <StatTile label="Refusés" value={summary.refuses} color={STATUS_COLORS.refuses} />
-        <StatTile label="Présents" value={summary.presents} color={SERIES_PRESENTS} />
-        <StatTile label="Taux de présence" value={formatPercent(summary.tauxPresence)} />
-        <StatTile label="Entrées totales" value={summary.totalEntries} />
-        <StatTile label="Ré-entrées" value={summary.reentries} />
-      </SimpleGrid>
+      <Grid container spacing={2} sx={{ mb: 4 }}>
+        <Grid size={{ xs: 6, sm: 3 }}>
+          <StatTile label="Inscrits" value={summary.inscrits} />
+        </Grid>
+        <Grid size={{ xs: 6, sm: 3 }}>
+          <StatTile label="Validés" value={summary.valides} color={STATUS_COLORS.valides} />
+        </Grid>
+        <Grid size={{ xs: 6, sm: 3 }}>
+          <StatTile label="En attente" value={summary.enAttente} color={STATUS_COLORS.enAttente} />
+        </Grid>
+        <Grid size={{ xs: 6, sm: 3 }}>
+          <StatTile label="Refusés" value={summary.refuses} color={STATUS_COLORS.refuses} />
+        </Grid>
+        <Grid size={{ xs: 6, sm: 3 }}>
+          <StatTile label="Présents" value={summary.presents} color={SERIES_PRESENTS} />
+        </Grid>
+        <Grid size={{ xs: 6, sm: 3 }}>
+          <StatTile label="Taux de présence" value={formatPercent(summary.tauxPresence)} />
+        </Grid>
+        <Grid size={{ xs: 6, sm: 3 }}>
+          <StatTile label="Entrées totales" value={summary.totalEntries} />
+        </Grid>
+        <Grid size={{ xs: 6, sm: 3 }}>
+          <StatTile label="Ré-entrées" value={summary.reentries} />
+        </Grid>
+      </Grid>
 
-      <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md" mb="xl">
-        <Paper withBorder p="md" radius="md">
-          <Title order={5} mb="sm">
-            Présence par catégorie
-          </Title>
-          {categorieQuery.data?.length > 0 ? (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={categorieQuery.data} barGap={2}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e1e0d9" />
-                <XAxis dataKey="nom" tick={{ fontSize: 12 }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="inscrits" name="Inscrits" fill={SERIES_INSCRITS} radius={[4, 4, 0, 0]} maxBarSize={24} />
-                <Bar dataKey="presents" name="Présents" fill={SERIES_PRESENTS} radius={[4, 4, 0, 0]} maxBarSize={24} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <Text c="dimmed">Aucune donnée.</Text>
-          )}
-        </Paper>
+      <Grid container spacing={2} sx={{ mb: 4 }}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
+              Présence par catégorie
+            </Typography>
+            {categorieQuery.data?.length > 0 ? (
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={categorieQuery.data} barGap={2}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e1e0d9" />
+                  <XAxis dataKey="nom" tick={{ fontSize: 12 }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="inscrits" name="Inscrits" fill={SERIES_INSCRITS} radius={[4, 4, 0, 0]} maxBarSize={24} />
+                  <Bar dataKey="presents" name="Présents" fill={SERIES_PRESENTS} radius={[4, 4, 0, 0]} maxBarSize={24} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <Typography color="text.secondary">Aucune donnée.</Typography>
+            )}
+          </Paper>
+        </Grid>
 
-        <Paper withBorder p="md" radius="md">
-          <Title order={5} mb="sm">
-            Présence par organisme
-          </Title>
-          {organismeQuery.data?.length > 0 ? (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={organismeQuery.data} barGap={2}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e1e0d9" />
-                <XAxis dataKey="nom" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={60} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="inscrits" name="Inscrits" fill={SERIES_INSCRITS} radius={[4, 4, 0, 0]} maxBarSize={24} />
-                <Bar dataKey="presents" name="Présents" fill={SERIES_PRESENTS} radius={[4, 4, 0, 0]} maxBarSize={24} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <Text c="dimmed">Aucune donnée.</Text>
-          )}
-        </Paper>
-      </SimpleGrid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
+              Présence par organisme
+            </Typography>
+            {organismeQuery.data?.length > 0 ? (
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={organismeQuery.data} barGap={2}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e1e0d9" />
+                  <XAxis dataKey="nom" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={60} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="inscrits" name="Inscrits" fill={SERIES_INSCRITS} radius={[4, 4, 0, 0]} maxBarSize={24} />
+                  <Bar dataKey="presents" name="Présents" fill={SERIES_PRESENTS} radius={[4, 4, 0, 0]} maxBarSize={24} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <Typography color="text.secondary">Aucune donnée.</Typography>
+            )}
+          </Paper>
+        </Grid>
+      </Grid>
 
-      <Paper withBorder p="md" radius="md" mb="xl">
-        <Title order={5} mb="sm">
+      <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, mb: 4 }}>
+        <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
           Courbe d'arrivées (par tranche de 15 minutes)
-        </Title>
+        </Typography>
         {arrivalData.length > 0 ? (
           <ResponsiveContainer width="100%" height={260}>
             <AreaChart data={arrivalData}>
@@ -184,40 +207,44 @@ export function DashboardPanel({ eventId }) {
             </AreaChart>
           </ResponsiveContainer>
         ) : (
-          <Text c="dimmed">Aucune arrivée enregistrée.</Text>
+          <Typography color="text.secondary">Aucune arrivée enregistrée.</Typography>
         )}
       </Paper>
 
-      <Paper withBorder p="md" radius="md">
-        <Group justify="space-between" mb="sm">
-          <Title order={5}>Participants validés absents</Title>
-          <Text size="sm" c="dimmed">
+      <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+          <Typography variant="subtitle1" fontWeight={600}>
+            Participants validés absents
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
             {absentsQuery.data?.length || 0} participant(s)
-          </Text>
-        </Group>
+          </Typography>
+        </Stack>
         {absentsQuery.data?.length > 0 ? (
-          <Table striped highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Nom</Table.Th>
-                <Table.Th>Prénom</Table.Th>
-                <Table.Th>Fonction</Table.Th>
-                <Table.Th>Email</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {absentsQuery.data.map((p) => (
-                <Table.Tr key={p._id}>
-                  <Table.Td>{p.nom}</Table.Td>
-                  <Table.Td>{p.prenom}</Table.Td>
-                  <Table.Td>{p.fonction}</Table.Td>
-                  <Table.Td>{p.email}</Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Nom</TableCell>
+                  <TableCell>Prénom</TableCell>
+                  <TableCell>Fonction</TableCell>
+                  <TableCell>Email</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {absentsQuery.data.map((p) => (
+                  <TableRow key={p._id} hover>
+                    <TableCell>{p.nom}</TableCell>
+                    <TableCell>{p.prenom}</TableCell>
+                    <TableCell>{p.fonction}</TableCell>
+                    <TableCell>{p.email}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         ) : (
-          <Text c="dimmed">Tous les participants validés se sont présentés.</Text>
+          <Typography color="text.secondary">Tous les participants validés se sont présentés.</Typography>
         )}
       </Paper>
     </Box>

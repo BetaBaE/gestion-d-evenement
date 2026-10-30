@@ -1,23 +1,37 @@
 import { Routes, Route } from 'react-router';
-import { Title, Center } from '@mantine/core';
 import { AdminApp } from './admin/AdminApp.jsx';
 import { InscriptionPage } from './pages/public/InscriptionPage.jsx';
 import { ScanPage } from './pages/public/ScanPage.jsx';
-
-function HomePlaceholder() {
-  return (
-    <Center style={{ height: '100vh' }}>
-      <Title order={2}>Gestion des inscriptions</Title>
-    </Center>
-  );
-}
+import { PublicLayout } from './layouts/PublicLayout.jsx';
+import { HomePage } from './pages/public/HomePage.jsx';
 
 export function App() {
   return (
     <Routes>
-      <Route path="/" element={<HomePlaceholder />} />
-      <Route path="/inscription/:formToken" element={<InscriptionPage />} />
-      <Route path="/scan/:scanToken" element={<ScanPage />} />
+      <Route
+        path="/"
+        element={
+          <PublicLayout>
+            <HomePage />
+          </PublicLayout>
+        }
+      />
+      <Route
+        path="/inscription/:formToken"
+        element={
+          <PublicLayout>
+            <InscriptionPage />
+          </PublicLayout>
+        }
+      />
+      <Route
+        path="/scan/:scanToken"
+        element={
+          <PublicLayout>
+            <ScanPage />
+          </PublicLayout>
+        }
+      />
       <Route path="/admin/*" element={<AdminApp />} />
     </Routes>
   );
