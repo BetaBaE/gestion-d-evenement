@@ -8,6 +8,7 @@ const emailLogSchema = new mongoose.Schema(
     destinataire: { type: String, required: true },
     statut: { type: String, enum: ['ENVOYE', 'ECHEC'], required: true },
     erreur: { type: String },
+    expediteurUtilise: { type: String, enum: ['ORGANISATEUR', 'PLATEFORME'] },
   },
   { timestamps: true },
 );

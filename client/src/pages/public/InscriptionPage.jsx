@@ -18,20 +18,50 @@ import {
   Center,
   Loader,
   Box,
+  Checkbox,
+  FileButton,
+  Avatar,
 } from '@mantine/core';
-import { IconTrash, IconPlus } from '@tabler/icons-react';
-import { getInscriptionForm, submitInscription } from '../../api/publicApi.js';
+import { IconTrash, IconPlus, IconCamera } from '@tabler/icons-react';
+import { getInscriptionForm, submitInscription, imageUrl } from '../../api/publicApi.js';
 
 function emptyParticipant() {
-  return { civilite: 'M.', nom: '', prenom: '', fonction: '', email: '', telephone: '' };
+  return {
+    civilite: 'M.',
+    nom: '',
+    prenom: '',
+    fonction: '',
+    email: '',
+    telephone: '',
+    consentementPhoto: false,
+    photoFile: null,
+  };
 }
 
 function formatDate(date) {
   return new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-function isParticipantValid(p) {
-  return p.nom.trim() && p.prenom.trim() && p.fonction.trim() && /\S+@\S+\.\S+/.test(p.email);
+function isParticipantValid(p, photoObligatoire) {
+  const baseValid = p.nom.trim() && p.prenom.trim() && p.fonction.trim() && /\S+@\S+\.\S+/.test(p.email);
+  if (!photoObligatoire) return baseValid;
+  return baseValid && !!p.photoFile && p.consentementPhoto;
+}
+
+function PhotoPreview({ file }) {
+  const [objectUrl, setObjectUrl] = useState(null);
+
+  useEffect(() => {
+    if (!file) {
+      setObjectUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setObjectUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  return <Avatar src={objectUrl} size={56} radius="md" />;
 }
 
 const ORGANISME_EDITABLE_FIELDS = ['siegeSocial', 'adresse', 'ville', 'pays', 'telephone', 'fax', 'email', 'siteWeb'];
@@ -75,17 +105,23 @@ export function InscriptionPage() {
   const mutation = useMutation({
     mutationFn: () =>
       submitInscription(formToken, {
-        invitedOrganismId: selectedOrganismeId,
-        organismeDetails,
-        participants: participants.map(({ civilite, nom, prenom, fonction, email, telephone }) => ({
-          civilite,
-          nom,
-          prenom,
-          fonction,
-          email,
-          telephone,
-        })),
-        honeypot,
+        data: {
+          invitedOrganismId: selectedOrganismeId,
+          organismeDetails,
+          participants: participants.map(
+            ({ civilite, nom, prenom, fonction, email, telephone, consentementPhoto }) => ({
+              civilite,
+              nom,
+              prenom,
+              fonction,
+              email,
+              telephone,
+              consentementPhoto,
+            }),
+          ),
+          honeypot,
+        },
+        photos: participants.map((p) => p.photoFile),
       }),
     onError: (err) => {
       setSubmitError(err.response?.data?.message || 'Une erreur est survenue.');
@@ -120,8 +156,11 @@ export function InscriptionPage() {
     );
   }
 
+  const photoObligatoire = !!data.event.photoObligatoire;
   const canSubmit =
-    !!selectedOrganismeId && participants.length > 0 && participants.every(isParticipantValid);
+    !!selectedOrganismeId &&
+    participants.length > 0 &&
+    participants.every((p) => isParticipantValid(p, photoObligatoire));
 
   function updateParticipant(index, field, value) {
     setParticipants((prev) =>
@@ -146,9 +185,15 @@ export function InscriptionPage() {
   return (
     <Container size="sm" py="xl">
       <Paper withBorder shadow="sm" p="xl" radius="md">
-        {data.organisateur?.logoUrl && (
+        {data.organisateur?.logoImageId && (
           <Center mb="md">
-            <Image src={data.organisateur.logoUrl} alt={data.organisateur.nom} h={60} w="auto" fit="contain" />
+            <Image
+              src={imageUrl(data.organisateur.logoImageId)}
+              alt={data.organisateur.nom}
+              h={60}
+              w="auto"
+              fit="contain"
+            />
           </Center>
         )}
 
@@ -248,6 +293,30 @@ export function InscriptionPage() {
                     value={participant.telephone}
                     onChange={(e) => updateParticipant(index, 'telephone', e.currentTarget.value)}
                   />
+
+                  <Group gap="sm" align="center">
+                    <PhotoPreview file={participant.photoFile} />
+                    <FileButton
+                      onChange={(file) => updateParticipant(index, 'photoFile', file)}
+                      accept="image/jpeg,image/png,image/webp"
+                      capture="user"
+                    >
+                      {(props) => (
+                        <Button {...props} variant="light" size="xs" leftSection={<IconCamera size={14} />}>
+                          {photoObligatoire ? 'Ajouter une photo *' : 'Ajouter une photo'}
+                        </Button>
+                      )}
+                    </FileButton>
+                  </Group>
+
+                  {participant.photoFile && (
+                    <Checkbox
+                      label="J'accepte que ma photo soit utilisée pour mon badge et le contrôle d'accès à l'événement."
+                      checked={participant.consentementPhoto}
+                      onChange={(e) => updateParticipant(index, 'consentementPhoto', e.currentTarget.checked)}
+                      required={photoObligatoire}
+                    />
+                  )}
                 </Stack>
               </Paper>
             ))}

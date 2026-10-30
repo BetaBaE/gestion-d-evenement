@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams } from 'react-router';
 import { Html5Qrcode } from 'html5-qrcode';
-import { Box, Center, Loader, Alert, Text, Title, TextInput, Button, Stack } from '@mantine/core';
-import { checkScanAccess, submitScan } from '../../api/scanApi.js';
+import { Box, Center, Loader, Alert, Text, Title, TextInput, Button, Stack, Avatar } from '@mantine/core';
+import { IconUserQuestion } from '@tabler/icons-react';
+import { checkScanAccess, submitScan, scanPhotoUrl } from '../../api/scanApi.js';
 
 const FEEDBACK_COLORS = {
   ok: '#2f9e44',
@@ -177,6 +178,22 @@ export function ScanPage() {
           <Stack align="center" gap="xs">
             {feedback.type === 'ok' && (
               <>
+                {feedback.data.hasPhoto ? (
+                  <Avatar
+                    src={scanPhotoUrl(scanToken, feedback.data.participantId)}
+                    size={160}
+                    radius="md"
+                  />
+                ) : (
+                  <Stack align="center" gap={4}>
+                    <Avatar size={160} radius="md" color="gray">
+                      <IconUserQuestion size={80} />
+                    </Avatar>
+                    <Text size="sm" c="white">
+                      Pas de photo, vérifier l'identité
+                    </Text>
+                  </Stack>
+                )}
                 <Title order={1} c="white">
                   {feedback.data.prenom} {feedback.data.nom}
                 </Title>

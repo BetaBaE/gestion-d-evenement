@@ -17,6 +17,7 @@ const invitedOrganismSchema = new mongoose.Schema(
     contactTelephone: { type: String },
     contactEmail: { type: String },
     invitationEnvoyeeLe: { type: Date },
+    logoImageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Image' },
   },
   { timestamps: true },
 );

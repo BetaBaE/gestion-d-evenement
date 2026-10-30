@@ -3,6 +3,7 @@ import ExcelJS from 'exceljs';
 import { Participant } from '../models/Participant.js';
 import { CategorieEvent } from '../models/CategorieEvent.js';
 import { InvitedOrganism } from '../models/InvitedOrganism.js';
+import { Organisateur } from '../models/Organisateur.js';
 import { ApiError } from '../middlewares/errorHandler.js';
 import { generateSingleBadgePdf, generateBatchBadgesPdf } from '../services/badgeService.js';
 
@@ -10,9 +11,10 @@ async function hydrateEntries(event, participants) {
   const categorieIds = [...new Set(participants.map((p) => p.categorieId?.toString()).filter(Boolean))];
   const organismeIds = [...new Set(participants.map((p) => p.invitedOrganismId?.toString()).filter(Boolean))];
 
-  const [categories, organismes] = await Promise.all([
+  const [categories, organismes, organisateur] = await Promise.all([
     CategorieEvent.find({ _id: { $in: categorieIds } }),
     InvitedOrganism.find({ _id: { $in: organismeIds } }),
+    Organisateur.findById(event.organisateurId),
   ]);
 
   const categorieMap = new Map(categories.map((c) => [c._id.toString(), c]));
@@ -23,6 +25,7 @@ async function hydrateEntries(event, participants) {
     event,
     categorie: categorieMap.get(participant.categorieId?.toString()),
     organisme: organismeMap.get(participant.invitedOrganismId?.toString()),
+    organisateur,
   }));
 }
 
@@ -39,12 +42,13 @@ export async function printSingleBadge(req, res, next) {
       throw new ApiError(400, "Seuls les participants validés peuvent avoir un badge imprimé.");
     }
 
-    const [{ categorie, organisme }] = await hydrateEntries(req.event, [participant]);
+    const [{ categorie, organisme, organisateur }] = await hydrateEntries(req.event, [participant]);
     const pdfBuffer = await generateSingleBadgePdf({
       participant,
       event: req.event,
       categorie,
       organisme,
+      organisateur,
     });
 
     participant.nbImpressionsBadge += 1;

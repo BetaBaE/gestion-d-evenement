@@ -5,7 +5,21 @@ export async function getInscriptionForm(formToken) {
   return data;
 }
 
-export async function submitInscription(formToken, payload) {
-  const { data } = await axiosClient.post(`/public/inscription/${formToken}`, payload);
+export async function submitInscription(formToken, { data: jsonData, photos }) {
+  const formData = new FormData();
+  formData.append('data', JSON.stringify(jsonData));
+  photos.forEach((file, index) => {
+    if (file) {
+      formData.append(`photo_${index}`, file);
+    }
+  });
+
+  const { data } = await axiosClient.post(`/public/inscription/${formToken}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
   return data;
+}
+
+export function imageUrl(imageId) {
+  return `${axiosClient.defaults.baseURL}/images/${imageId}`;
 }

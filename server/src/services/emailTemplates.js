@@ -1,3 +1,10 @@
+import { env } from '../config/env.js';
+
+function logoUrlFor(organisateur) {
+  if (!organisateur?.logoImageId) return null;
+  return `${env.publicApiUrl}/images/${organisateur.logoImageId}`;
+}
+
 function formatDate(date) {
   return new Date(date).toLocaleDateString('fr-FR', {
     day: 'numeric',
@@ -30,7 +37,7 @@ export function confirmationEmailTemplate({ participant, event, organisateur }) 
     </ul>
     <p>Votre inscription est en attente de validation par l'organisateur. Vous recevrez un email avec votre badge d'accès dès qu'elle sera validée.</p>
   `;
-  return baseLayout({ logoUrl: organisateur?.logoUrl, title, bodyHtml });
+  return baseLayout({ logoUrl: logoUrlFor(organisateur), title, bodyHtml });
 }
 
 export function badgeEmailTemplate({ participant, event, organisateur }) {
@@ -47,5 +54,5 @@ export function badgeEmailTemplate({ participant, event, organisateur }) {
       <img src="cid:qrcode" alt="QR Code" style="width: 180px; height: 180px;" />
     </div>
   `;
-  return baseLayout({ logoUrl: organisateur?.logoUrl, title, bodyHtml });
+  return baseLayout({ logoUrl: logoUrlFor(organisateur), title, bodyHtml });
 }

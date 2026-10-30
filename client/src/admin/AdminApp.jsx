@@ -4,6 +4,7 @@ import frenchMessages from 'ra-language-french';
 import PeopleIcon from '@mui/icons-material/People';
 import BusinessIcon from '@mui/icons-material/Business';
 import EventIcon from '@mui/icons-material/Event';
+import MailIcon from '@mui/icons-material/Mail';
 import { dataProvider } from './dataProvider.js';
 import { authProvider } from './authProvider.js';
 import { AdminAppBar } from './AdminAppBar.jsx';
@@ -11,6 +12,7 @@ import { OrganisateurList, OrganisateurEdit, OrganisateurCreate } from './resour
 import { UserList, UserEdit, UserCreate } from './resources/users.jsx';
 import { EventList, EventEdit, EventCreate } from './resources/events.jsx';
 import { EventShow } from './resources/EventShow.jsx';
+import { EmailSettingsPage } from './pages/EmailSettingsPage.jsx';
 
 const i18nProvider = polyglotI18nProvider(() => frenchMessages, 'fr');
 
@@ -58,6 +60,12 @@ export function AdminApp() {
             show={EventShow}
             icon={EventIcon}
             options={{ label: 'Événements' }}
+          />
+          <Resource
+            name="email-settings"
+            list={EmailSettingsPage}
+            icon={MailIcon}
+            options={{ label: 'Paramètres email' }}
           />
         </>
       )}

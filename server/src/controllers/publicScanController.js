@@ -72,11 +72,13 @@ export async function recordScan(req, res, next) {
     ]);
 
     res.json({
+      participantId: participant._id,
       nom: participant.nom,
       prenom: participant.prenom,
       categorie: categorie ? { nom: categorie.nom, couleur: categorie.couleur } : null,
       organisme: organisme ? { nom: organisme.nom } : null,
       entryNumber,
+      hasPhoto: !!participant.photoImageId,
     });
   } catch (error) {
     next(error);

@@ -3,6 +3,7 @@ import { parse as parseCsv } from 'csv-parse/sync';
 import { InvitedOrganism } from '../models/InvitedOrganism.js';
 import { ApiError } from '../middlewares/errorHandler.js';
 import { parsePagination, paginatedResponse } from '../utils/pagination.js';
+import { optimizeAndStoreImage, deleteImage } from '../services/imageService.js';
 
 const organismeSchema = z.object({
   nom: z.string().min(1, 'Le nom est requis.'),
@@ -85,7 +86,62 @@ export async function deleteOrganisme(req, res, next) {
     if (!organisme) {
       throw new ApiError(404, 'Ressource introuvable');
     }
+    await deleteImage(organisme.logoImageId);
     res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function uploadOrganismeLogo(req, res, next) {
+  try {
+    if (!req.file) {
+      throw new ApiError(400, 'Une image est requise.');
+    }
+
+    const organisme = await InvitedOrganism.findOne({
+      _id: req.params.organismeId,
+      eventId: req.event._id,
+    });
+    if (!organisme) {
+      throw new ApiError(404, 'Ressource introuvable');
+    }
+
+    const previousLogoImageId = organisme.logoImageId;
+
+    const image = await optimizeAndStoreImage({
+      buffer: req.file.buffer,
+      type: 'LOGO_ORGANISME',
+      organisateurId: req.organisateurId,
+      eventId: req.event._id,
+    });
+
+    organisme.logoImageId = image._id;
+    await organisme.save();
+
+    await deleteImage(previousLogoImageId);
+
+    res.json(organisme);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteOrganismeLogo(req, res, next) {
+  try {
+    const organisme = await InvitedOrganism.findOne({
+      _id: req.params.organismeId,
+      eventId: req.event._id,
+    });
+    if (!organisme) {
+      throw new ApiError(404, 'Ressource introuvable');
+    }
+
+    await deleteImage(organisme.logoImageId);
+    organisme.logoImageId = undefined;
+    await organisme.save();
+
+    res.json(organisme);
   } catch (error) {
     next(error);
   }

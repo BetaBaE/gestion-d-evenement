@@ -9,3 +9,7 @@ export async function submitScan(scanToken, badgeCode) {
   const { data } = await axiosClient.post(`/public/scan/${scanToken}`, { badgeCode });
   return data;
 }
+
+export function scanPhotoUrl(scanToken, participantId) {
+  return `${axiosClient.defaults.baseURL}/public/scan/${scanToken}/photo/${participantId}`;
+}

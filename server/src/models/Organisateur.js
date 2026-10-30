@@ -11,7 +11,7 @@ const organisateurSchema = new mongoose.Schema(
     fax: { type: String },
     email: { type: String },
     siteWeb: { type: String },
-    logoUrl: { type: String },
+    logoImageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Image' },
     actif: { type: Boolean, default: true },
   },
   { timestamps: true },

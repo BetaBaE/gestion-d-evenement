@@ -16,7 +16,12 @@ export const authProvider = {
   },
 
   async logout() {
-    await axiosClient.post('/auth/logout');
+    try {
+      await axiosClient.post('/auth/logout');
+    } catch {
+      // Logging out should always succeed client-side, even if the
+      // server call fails (e.g. the session already expired).
+    }
     localStorage.removeItem('identity');
   },
 

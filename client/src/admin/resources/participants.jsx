@@ -26,6 +26,9 @@ import EmailIcon from '@mui/icons-material/Email';
 import PrintIcon from '@mui/icons-material/Print';
 import { axiosClient } from '../../api/axiosClient.js';
 import { getSelectedOrganisateurId } from '../organisateurContext.js';
+import { Avatar } from '@mui/material';
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
+import { adminImageUrl, uploadParticipantPhoto, deleteAllParticipantPhotos } from '../../api/imageApi.js';
 
 const statutChoices = [
   { id: 'EN_ATTENTE', name: 'En attente' },
@@ -129,6 +132,55 @@ function ParticipantRowActions({ eventId, onDone }) {
   );
 }
 
+function ParticipantPhotoCell({ eventId, onChanged }) {
+  const record = useRecordContext();
+  const notify = useNotify();
+  const organisateurId = getSelectedOrganisateurId();
+
+  if (!record) return null;
+
+  async function handleFileChange(event) {
+    event.stopPropagation();
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      await uploadParticipantPhoto(organisateurId, eventId, record.id, file);
+      notify('Photo mise à jour.', { type: 'success' });
+      onChanged();
+    } catch (error) {
+      notify(error.response?.data?.message || "Erreur lors de l'envoi de la photo.", { type: 'error' });
+    } finally {
+      event.target.value = '';
+    }
+  }
+
+  return (
+    <label onClick={(e) => e.stopPropagation()} style={{ cursor: 'pointer' }}>
+      <Avatar src={record.photoImageId ? adminImageUrl(record.photoImageId) : undefined} sx={{ width: 32, height: 32 }}>
+        <PhotoCameraIcon fontSize="small" />
+      </Avatar>
+      <input type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={handleFileChange} />
+    </label>
+  );
+}
+
+function DeleteAllPhotosButton({ eventId, onDone }) {
+  const notify = useNotify();
+
+  async function handleClick() {
+    const organisateurId = getSelectedOrganisateurId();
+    try {
+      const result = await deleteAllParticipantPhotos(organisateurId, eventId);
+      notify(`${result.deleted} photo(s) supprimée(s).`, { type: 'success' });
+      onDone();
+    } catch (error) {
+      notify(error.response?.data?.message || 'Erreur lors de la suppression.', { type: 'error' });
+    }
+  }
+
+  return <RaButton label="Supprimer toutes les photos" onClick={handleClick} />;
+}
+
 function CategorieInlineSelect({ eventId, categories, onChanged }) {
   const record = useRecordContext();
   const dataProvider = useDataProvider();
@@ -216,12 +268,14 @@ export function ParticipantsPanel({ eventId, categories, organismes }) {
   return (
     <Box>
       <RaButton label="Ajouter un participant" onClick={() => setCreateOpen(true)} sx={{ mb: 2 }} />
+      <DeleteAllPhotosButton eventId={eventId} onDone={refresh} />
 
       <ListBase resource="participants" queryOptions={{ meta: { eventId } }}>
         <BulkActionsToolbar>
           <BulkValidateButton eventId={eventId} onDone={refresh} />
         </BulkActionsToolbar>
         <Datagrid rowClick={false}>
+          <ParticipantPhotoCell eventId={eventId} onChanged={refresh} />
           <TextField source="nom" label="Nom" />
           <TextField source="prenom" label="Prénom" />
           <TextField source="email" label="Email" />

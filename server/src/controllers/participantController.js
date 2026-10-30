@@ -8,6 +8,7 @@ import { ApiError } from '../middlewares/errorHandler.js';
 import { parsePagination, paginatedResponse } from '../utils/pagination.js';
 import { generateBadgeCode } from '../utils/tokens.js';
 import { sendConfirmationEmail, sendBadgeEmail } from '../services/emailService.js';
+import { optimizeAndStoreImage, deleteImage } from '../services/imageService.js';
 
 const manualParticipantSchema = z.object({
   invitedOrganismId: z.string().min(1, "L'organisme est requis."),
@@ -262,6 +263,82 @@ export async function listParticipantEmailLogs(req, res, next) {
   try {
     const logs = await EmailLog.find({ participantId: req.params.participantId }).sort({ createdAt: -1 });
     res.json(logs);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function uploadParticipantPhoto(req, res, next) {
+  try {
+    if (!req.file) {
+      throw new ApiError(400, 'Une image est requise.');
+    }
+
+    const participant = await Participant.findOne({
+      _id: req.params.participantId,
+      eventId: req.event._id,
+    });
+    if (!participant) {
+      throw new ApiError(404, 'Ressource introuvable');
+    }
+
+    const previousPhotoImageId = participant.photoImageId;
+
+    const image = await optimizeAndStoreImage({
+      buffer: req.file.buffer,
+      type: 'PHOTO_PARTICIPANT',
+      organisateurId: req.organisateurId,
+      eventId: req.event._id,
+    });
+
+    participant.photoImageId = image._id;
+    participant.consentementPhoto = true;
+    participant.consentementPhotoLe = new Date();
+    await participant.save();
+
+    await deleteImage(previousPhotoImageId);
+
+    res.json(participant);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteParticipantPhoto(req, res, next) {
+  try {
+    const participant = await Participant.findOne({
+      _id: req.params.participantId,
+      eventId: req.event._id,
+    });
+    if (!participant) {
+      throw new ApiError(404, 'Ressource introuvable');
+    }
+
+    await deleteImage(participant.photoImageId);
+    participant.photoImageId = undefined;
+    await participant.save();
+
+    res.json(participant);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteAllParticipantPhotos(req, res, next) {
+  try {
+    const participants = await Participant.find({
+      eventId: req.event._id,
+      photoImageId: { $exists: true, $ne: null },
+    });
+
+    await Promise.all(participants.map((p) => deleteImage(p.photoImageId)));
+
+    await Participant.updateMany(
+      { eventId: req.event._id },
+      { $unset: { photoImageId: '' } },
+    );
+
+    res.json({ deleted: participants.length });
   } catch (error) {
     next(error);
   }

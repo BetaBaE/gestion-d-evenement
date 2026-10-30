@@ -6,5 +6,5 @@ import { loginRateLimit } from '../middlewares/rateLimit.js';
 export const authRoutes = Router();
 
 authRoutes.post('/login', loginRateLimit, login);
-authRoutes.post('/logout', requireAuth, logout);
+authRoutes.post('/logout', logout);
 authRoutes.get('/me', requireAuth, me);

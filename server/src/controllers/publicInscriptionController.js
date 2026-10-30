@@ -7,6 +7,7 @@ import { Organisateur } from '../models/Organisateur.js';
 import { ApiError } from '../middlewares/errorHandler.js';
 import { generateBadgeCode, generateToken } from '../utils/tokens.js';
 import { sendConfirmationEmail } from '../services/emailService.js';
+import { optimizeAndStoreImage } from '../services/imageService.js';
 
 const participantRowSchema = z.object({
   civilite: z.enum(['M.', 'Mme']).optional(),
@@ -15,6 +16,7 @@ const participantRowSchema = z.object({
   fonction: z.string().min(1, 'La fonction est requise.'),
   email: z.string().email('Email invalide.'),
   telephone: z.string().optional(),
+  consentementPhoto: z.boolean().optional(),
 });
 
 const submissionSchema = z.object({
@@ -68,10 +70,11 @@ export async function getInscriptionForm(req, res, next) {
         ville: event.ville,
         dateDebut: event.dateDebut,
         dateFin: event.dateFin,
+        photoObligatoire: event.photoObligatoire,
       },
       organisateur: {
         nom: organisateur?.nom,
-        logoUrl: organisateur?.logoUrl,
+        logoImageId: organisateur?.logoImageId,
       },
       organismes: organismes.map((o) => ({
         id: o._id,
@@ -93,7 +96,8 @@ export async function getInscriptionForm(req, res, next) {
 
 export async function submitInscription(req, res, next) {
   try {
-    const data = submissionSchema.parse(req.body);
+    const rawData = JSON.parse(req.body.data || '{}');
+    const data = submissionSchema.parse(rawData);
 
     if (data.honeypot) {
       throw new ApiError(400, 'Requête invalide.');
@@ -126,6 +130,26 @@ export async function submitInscription(req, res, next) {
       );
     }
 
+    const photoFiles = req.files || [];
+    const photoByIndex = new Map();
+    photoFiles.forEach((file) => {
+      const match = file.fieldname.match(/^photo_(\d+)$/);
+      if (match) {
+        photoByIndex.set(Number(match[1]), file);
+      }
+    });
+
+    if (event.photoObligatoire) {
+      const missingPhotoIndex = data.participants.findIndex((_, index) => !photoByIndex.has(index));
+      if (missingPhotoIndex !== -1) {
+        throw new ApiError(400, 'Une photo est requise pour chaque participant.');
+      }
+      const missingConsentIndex = data.participants.findIndex((p) => !p.consentementPhoto);
+      if (missingConsentIndex !== -1) {
+        throw new ApiError(400, 'Le consentement pour la photo est requis.');
+      }
+    }
+
     if (data.organismeDetails) {
       const updates = {};
       for (const [key, value] of Object.entries(data.organismeDetails)) {
@@ -144,7 +168,21 @@ export async function submitInscription(req, res, next) {
     const inscriptionGroupeId = generateToken(8);
     const createdParticipants = [];
 
-    for (const row of data.participants) {
+    for (let index = 0; index < data.participants.length; index += 1) {
+      const row = data.participants[index];
+      const photoFile = photoByIndex.get(index);
+
+      let photoImageId;
+      if (photoFile && row.consentementPhoto) {
+        const image = await optimizeAndStoreImage({
+          buffer: photoFile.buffer,
+          type: 'PHOTO_PARTICIPANT',
+          organisateurId: event.organisateurId,
+          eventId: event._id,
+        });
+        photoImageId = image._id;
+      }
+
       const participant = await Participant.create({
         eventId: event._id,
         invitedOrganismId: organisme._id,
@@ -160,6 +198,9 @@ export async function submitInscription(req, res, next) {
         inscriptionGroupeId,
         badgeCode: generateBadgeCode(),
         createdBy: null,
+        photoImageId,
+        consentementPhoto: !!(photoFile && row.consentementPhoto),
+        consentementPhotoLe: photoFile && row.consentementPhoto ? new Date() : undefined,
       });
       createdParticipants.push(participant);
 

@@ -30,6 +30,9 @@ const participantSchema = new mongoose.Schema(
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     validatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     validatedAt: { type: Date },
+    photoImageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Image' },
+    consentementPhoto: { type: Boolean, default: false },
+    consentementPhotoLe: { type: Date },
   },
   { timestamps: true },
 );

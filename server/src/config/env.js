@@ -15,6 +15,7 @@ export const env = {
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
   clientUrl: required('CLIENT_URL'),
   publicAppUrl: process.env.PUBLIC_APP_URL || process.env.CLIENT_URL,
+  publicApiUrl: process.env.PUBLIC_API_URL || `http://localhost:${process.env.PORT || '4000'}/api`,
   smtp: {
     host: process.env.SMTP_HOST || 'localhost',
     port: Number(process.env.SMTP_PORT) || 1025,
@@ -26,4 +27,6 @@ export const env = {
     email: process.env.SUPERADMIN_EMAIL,
     password: process.env.SUPERADMIN_PASSWORD,
   },
+  emailSettingsEncryptionKey: process.env.EMAIL_SETTINGS_ENCRYPTION_KEY,
+  uploadMaxMb: Number(process.env.UPLOAD_MAX_MB) || 5,
 };

@@ -21,10 +21,29 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { axiosClient } from '../../api/axiosClient.js';
 import { getSelectedOrganisateurId } from '../organisateurContext.js';
+import { ImageUploader } from '../components/ImageUploader.jsx';
+import { adminImageUrl, uploadOrganismeLogo, deleteOrganismeLogo } from '../../api/imageApi.js';
 
-function OrganismeForm() {
+function OrganismeLogoField({ eventId }) {
+  const record = useRecordContext();
+  if (!record) return null;
+
+  const organisateurId = getSelectedOrganisateurId();
+
+  return (
+    <ImageUploader
+      label="Logo de l'organisme"
+      imageUrl={record.logoImageId ? adminImageUrl(record.logoImageId) : null}
+      onUpload={(file) => uploadOrganismeLogo(organisateurId, eventId, record.id, file)}
+      onDelete={() => deleteOrganismeLogo(organisateurId, eventId, record.id)}
+    />
+  );
+}
+
+function OrganismeForm({ eventId, isEdit }) {
   return (
     <SimpleForm toolbar={<Toolbar><SaveButton /></Toolbar>}>
+      {isEdit && <OrganismeLogoField eventId={eventId} />}
       <TextInput source="nom" label="Nom" required fullWidth />
       <TextInput source="siegeSocial" label="Siège social" fullWidth />
       <TextInput source="adresse" label="Adresse" fullWidth />
@@ -146,7 +165,7 @@ export function OrganismesPanel({ eventId }) {
                 },
               }}
             >
-              <OrganismeForm />
+              <OrganismeForm eventId={eventId} isEdit={false} />
             </CreateBase>
           )}
           {dialog?.mode === 'edit' && (
@@ -163,7 +182,7 @@ export function OrganismesPanel({ eventId }) {
                 },
               }}
             >
-              <OrganismeForm />
+              <OrganismeForm eventId={eventId} isEdit />
             </EditBase>
           )}
         </DialogContent>

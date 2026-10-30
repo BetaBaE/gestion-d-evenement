@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { validateBody } from '../middlewares/validate.js';
-import { csvUpload } from '../middlewares/upload.js';
+import { csvUpload, imageUpload } from '../middlewares/upload.js';
 import {
   listOrganismes,
   getOrganisme,
@@ -8,6 +8,8 @@ import {
   updateOrganisme,
   deleteOrganisme,
   importOrganismes,
+  uploadOrganismeLogo,
+  deleteOrganismeLogo,
   validateOrganisme,
 } from '../controllers/organismeController.js';
 
@@ -19,3 +21,5 @@ organismeRoutes.post('/', validateBody(validateOrganisme), createOrganisme);
 organismeRoutes.put('/:organismeId', validateBody(validateOrganisme.partial()), updateOrganisme);
 organismeRoutes.delete('/:organismeId', deleteOrganisme);
 organismeRoutes.post('/import', csvUpload.single('file'), importOrganismes);
+organismeRoutes.post('/:organismeId/logo', imageUpload.single('file'), uploadOrganismeLogo);
+organismeRoutes.delete('/:organismeId/logo', deleteOrganismeLogo);

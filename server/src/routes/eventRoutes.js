@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { validateBody } from '../middlewares/validate.js';
 import { eventScope } from '../middlewares/eventScope.js';
+import { imageUpload } from '../middlewares/upload.js';
 import {
   listEvents,
   getEvent,
@@ -9,6 +10,9 @@ import {
   deleteEvent,
   regenerateFormToken,
   regenerateScanToken,
+  uploadBadgeBackground,
+  deleteBadgeBackground,
+  previewBadge,
   validateEvent,
 } from '../controllers/eventController.js';
 import { categorieRoutes } from './categorieRoutes.js';
@@ -25,6 +29,9 @@ eventRoutes.put('/:eventId', eventScope, validateBody(validateEvent.partial()), 
 eventRoutes.delete('/:eventId', eventScope, deleteEvent);
 eventRoutes.post('/:eventId/regenerer-form-token', eventScope, regenerateFormToken);
 eventRoutes.post('/:eventId/regenerer-scan-token', eventScope, regenerateScanToken);
+eventRoutes.post('/:eventId/badge-fond', eventScope, imageUpload.single('file'), uploadBadgeBackground);
+eventRoutes.delete('/:eventId/badge-fond', eventScope, deleteBadgeBackground);
+eventRoutes.get('/:eventId/badge-apercu', eventScope, previewBadge);
 
 eventRoutes.use('/:eventId/categories', eventScope, categorieRoutes);
 eventRoutes.use('/:eventId/organismes', eventScope, organismeRoutes);

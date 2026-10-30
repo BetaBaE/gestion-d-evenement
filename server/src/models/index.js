@@ -6,3 +6,5 @@ export { InvitedOrganism } from './InvitedOrganism.js';
 export { Participant } from './Participant.js';
 export { Scan } from './Scan.js';
 export { EmailLog } from './EmailLog.js';
+export { Image } from './Image.js';
+export { EmailSettings } from './EmailSettings.js';

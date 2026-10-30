@@ -9,7 +9,10 @@ import {
   TextInput,
   BooleanInput,
   EditButton,
+  useRecordContext,
 } from 'react-admin';
+import { ImageUploader } from '../components/ImageUploader.jsx';
+import { adminImageUrl, uploadOrganisateurLogo, deleteOrganisateurLogo } from '../../api/imageApi.js';
 
 export function OrganisateurList() {
   return (
@@ -26,9 +29,23 @@ export function OrganisateurList() {
   );
 }
 
-function OrganisateurForm() {
+function OrganisateurLogoField() {
+  const record = useRecordContext();
+  if (!record) return null;
+
   return (
-    <SimpleForm>
+    <ImageUploader
+      label="Logo de l'organisateur"
+      imageUrl={record.logoImageId ? adminImageUrl(record.logoImageId) : null}
+      onUpload={(file) => uploadOrganisateurLogo(record.id, file)}
+      onDelete={() => deleteOrganisateurLogo(record.id)}
+    />
+  );
+}
+
+function OrganisateurFields() {
+  return (
+    <>
       <TextInput source="nom" label="Nom" required fullWidth />
       <TextInput source="sigle" label="Sigle" />
       <TextInput source="adresse" label="Adresse" fullWidth />
@@ -38,16 +55,18 @@ function OrganisateurForm() {
       <TextInput source="fax" label="Fax" />
       <TextInput source="email" label="Email" />
       <TextInput source="siteWeb" label="Site web" />
-      <TextInput source="logoUrl" label="URL du logo" fullWidth />
       <BooleanInput source="actif" label="Actif" />
-    </SimpleForm>
+    </>
   );
 }
 
 export function OrganisateurEdit() {
   return (
     <Edit>
-      <OrganisateurForm />
+      <SimpleForm>
+        <OrganisateurLogoField />
+        <OrganisateurFields />
+      </SimpleForm>
     </Edit>
   );
 }
@@ -55,7 +74,9 @@ export function OrganisateurEdit() {
 export function OrganisateurCreate() {
   return (
     <Create>
-      <OrganisateurForm />
+      <SimpleForm>
+        <OrganisateurFields />
+      </SimpleForm>
     </Create>
   );
 }

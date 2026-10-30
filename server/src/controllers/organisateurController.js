@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { Organisateur } from '../models/Organisateur.js';
 import { ApiError } from '../middlewares/errorHandler.js';
 import { parsePagination, paginatedResponse } from '../utils/pagination.js';
+import { optimizeAndStoreImage, deleteImage } from '../services/imageService.js';
 
 const organisateurSchema = z.object({
   nom: z.string().min(1, 'Le nom est requis.'),
@@ -13,7 +14,6 @@ const organisateurSchema = z.object({
   fax: z.string().optional(),
   email: z.string().email('Email invalide.').optional().or(z.literal('')),
   siteWeb: z.string().optional(),
-  logoUrl: z.string().optional(),
   actif: z.boolean().optional(),
 });
 
@@ -78,6 +78,53 @@ export async function deleteOrganisateur(req, res, next) {
     if (!organisateur) {
       throw new ApiError(404, 'Ressource introuvable');
     }
+    res.json(organisateur);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function uploadOrganisateurLogo(req, res, next) {
+  try {
+    if (!req.file) {
+      throw new ApiError(400, 'Une image est requise.');
+    }
+
+    const organisateur = await Organisateur.findById(req.params.id);
+    if (!organisateur) {
+      throw new ApiError(404, 'Ressource introuvable');
+    }
+
+    const previousLogoImageId = organisateur.logoImageId;
+
+    const image = await optimizeAndStoreImage({
+      buffer: req.file.buffer,
+      type: 'LOGO_ORGANISATEUR',
+      organisateurId: organisateur._id,
+    });
+
+    organisateur.logoImageId = image._id;
+    await organisateur.save();
+
+    await deleteImage(previousLogoImageId);
+
+    res.json(organisateur);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteOrganisateurLogo(req, res, next) {
+  try {
+    const organisateur = await Organisateur.findById(req.params.id);
+    if (!organisateur) {
+      throw new ApiError(404, 'Ressource introuvable');
+    }
+
+    await deleteImage(organisateur.logoImageId);
+    organisateur.logoImageId = undefined;
+    await organisateur.save();
+
     res.json(organisateur);
   } catch (error) {
     next(error);
