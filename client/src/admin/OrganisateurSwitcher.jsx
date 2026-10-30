@@ -37,10 +37,18 @@ export function OrganisateurSwitcher() {
   }
 
   return (
-    <FormControl size="small" sx={{ minWidth: 220, marginLeft: 2 }}>
+    <FormControl
+      size="small"
+      sx={{
+        minWidth: 160,
+        maxWidth: 240,
+        marginLeft: 1,
+        '& .MuiInputBase-root': { height: 32, fontSize: '0.8125rem' },
+      }}
+    >
       <Select value={selected} onChange={handleChange} displayEmpty>
         {organisateurs.map((org) => (
-          <MenuItem key={org.id} value={org.id}>
+          <MenuItem key={org.id} value={org.id} sx={{ fontSize: '0.8125rem' }}>
             {org.nom}
           </MenuItem>
         ))}
