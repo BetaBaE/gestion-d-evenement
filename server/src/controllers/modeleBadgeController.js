@@ -2,41 +2,7 @@ import { z } from 'zod';
 import { ModeleBadge } from '../models/ModeleBadge.js';
 import { ApiError } from '../middlewares/errorHandler.js';
 import { parsePagination, paginatedResponse } from '../utils/pagination.js';
-import { hasElementType, getElementDefinition } from '../../../shared/badge-renderer/index.js';
-
-const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Couleur hexadécimale invalide.');
-
-const elementSchema = z.object({
-  id: z.string().min(1),
-  type: z.string().min(1),
-  panneau: z.enum(['P1', 'P2', 'P3', 'P4']),
-  x: z.number(),
-  y: z.number(),
-  largeur: z.number().positive(),
-  hauteur: z.number().positive(),
-  rotation: z.number().optional().default(0),
-  z: z.number().optional().default(0),
-  verrouille: z.boolean().optional().default(false),
-  masque: z.boolean().optional().default(false),
-  groupeId: z.string().nullable().optional().default(null),
-  visibleSi: z
-    .object({ categories: z.array(z.string()) })
-    .nullable()
-    .optional()
-    .default(null),
-  props: z.record(z.string(), z.unknown()).optional().default({}),
-  style: z.record(z.string(), z.unknown()).optional().default({}),
-});
-
-const themeSchema = z.object({
-  couleurPrincipale: hexColor.optional(),
-  couleurSecondaire: hexColor.optional(),
-  couleurAccent: hexColor.optional(),
-  couleurTexte: hexColor.optional(),
-  policeTitres: z.string().max(60).optional(),
-  policeTexte: z.string().max(60).optional(),
-  policeNom: z.string().max(60).optional(),
-});
+import { elementSchema, themeSchema, validateElementTypes } from '../validation/badgeElements.js';
 
 const modeleBadgeSchema = z.object({
   nom: z.string().min(1, 'Le nom est requis.'),
@@ -52,21 +18,6 @@ const modeleBadgeSchema = z.object({
 });
 
 export const validateModeleBadge = modeleBadgeSchema;
-
-function validateElementTypes(elements) {
-  const errors = [];
-  (elements || []).forEach((el, index) => {
-    if (!hasElementType(el.type)) {
-      errors.push(`elements[${index}]: type d'élément inconnu "${el.type}"`);
-      return;
-    }
-    const result = getElementDefinition(el.type).validateProps(el.props || {});
-    if (!result.valid) {
-      errors.push(`elements[${index}] (${el.type}): ${result.errors.join(', ')}`);
-    }
-  });
-  return errors;
-}
 
 export async function listModelesBadge(req, res, next) {
   try {

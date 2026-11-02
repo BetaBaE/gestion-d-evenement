@@ -1,5 +1,5 @@
 import { registerElement } from '../registry.js';
-import { esc } from '../escape.js';
+import { dynamicTextMarkup } from './texte.js';
 import { ok, fail } from '../validate.js';
 
 registerElement('qrCode', {
@@ -97,7 +97,7 @@ registerElement('dates', {
   render({ props, ctx }) {
     const text = formatDateRange(ctx.event?.dateDebut, ctx.event?.dateFin, props.format);
     if (!text) return '';
-    return esc(text);
+    return dynamicTextMarkup(text);
   },
 });
 

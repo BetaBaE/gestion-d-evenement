@@ -107,7 +107,7 @@ export function EmailSettingsPage() {
 
   if (isLoading) {
     return (
-      <Box p={4} display="flex" justifyContent="center">
+      <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}>
         <CircularProgress />
       </Box>
     );

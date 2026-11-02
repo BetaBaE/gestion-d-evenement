@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link as RouterLink } from 'react-router';
 import {
   List,
   Datagrid,
@@ -32,6 +33,7 @@ import {
 } from '@mui/material';
 import PreviewIcon from '@mui/icons-material/Preview';
 import ArticleIcon from '@mui/icons-material/Article';
+import DesignServicesIcon from '@mui/icons-material/DesignServices';
 import { badgePreviewUrl, badgePreviewHtmlUrl } from '../../api/imageApi.js';
 import { getSelectedOrganisateurId } from '../organisateurContext.js';
 import { axiosClient } from '../../api/axiosClient.js';
@@ -150,9 +152,20 @@ function BadgeSection() {
       </Box>
 
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-        Appliquer un modèle remplace le badge actuel de cet événement. L'éditeur visuel arrive dans une prochaine
-        étape.
+        Appliquer un modèle remplace le badge actuel de cet événement.
       </Typography>
+
+      <Button
+        variant="contained"
+        color="secondary"
+        size="small"
+        startIcon={<DesignServicesIcon />}
+        component={RouterLink}
+        to={`/admin/badge-editor/${record.id}`}
+        sx={{ mr: 1 }}
+      >
+        Ouvrir l'éditeur
+      </Button>
 
       <Button
         variant="outlined"

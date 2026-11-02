@@ -1,6 +1,7 @@
 import { registerElement } from '../registry.js';
 import { esc } from '../escape.js';
 import { ok, fail } from '../validate.js';
+import { dynamicTextMarkup } from './texte.js';
 
 registerElement('forme', {
   defaultProps: { forme: 'rectangle' },
@@ -29,7 +30,8 @@ registerElement('bandeCategorie', {
   },
   render({ props, ctx }) {
     const label = props.texte === 'auto' || !props.texte ? ctx.categorie?.nom || '' : props.texte;
-    return `<span>${esc(label)}</span>`;
+    if (!label) return '';
+    return dynamicTextMarkup(label);
   },
 });
 
@@ -63,8 +65,10 @@ registerElement('icone', {
     }
     return ok({ icone });
   },
-  render({ props }) {
-    return ICON_GLYPHS[props.icone];
+  render({ props, box }) {
+    // Glyph sized to the box (the smaller side), not the inherited font size.
+    const sizeMm = Math.max(1, Math.min(box.widthMm, box.heightMm) * 0.8);
+    return `<span class="el-icone" style="font-size:${sizeMm}mm;line-height:1">${ICON_GLYPHS[props.icone]}</span>`;
   },
 });
 

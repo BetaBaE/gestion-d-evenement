@@ -65,8 +65,8 @@ function LinksPanel({ event, onRefresh }) {
         <Typography variant="subtitle1" gutterBottom>
           Lien du formulaire d'inscription
         </Typography>
-        <Stack direction="row" spacing={1} alignItems="center">
-          <MuiTextField value={formUrl} size="small" fullWidth InputProps={{ readOnly: true }} />
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+          <MuiTextField value={formUrl} size="small" fullWidth slotProps={{ input: { readOnly: true } }} />
           <Button startIcon={<ContentCopyIcon />} onClick={() => copyToClipboard(formUrl)}>
             Copier
           </Button>
@@ -81,10 +81,10 @@ function LinksPanel({ event, onRefresh }) {
           Lien de scan (jour de l'événement)
         </Typography>
         {scanUrl ? (
-          <Stack direction="row" spacing={2} alignItems="flex-start">
+          <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start' }}>
             <Stack spacing={1} sx={{ flex: 1, minWidth: 0 }}>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <MuiTextField value={scanUrl} size="small" fullWidth InputProps={{ readOnly: true }} />
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                <MuiTextField value={scanUrl} size="small" fullWidth slotProps={{ input: { readOnly: true } }} />
                 <Button startIcon={<ContentCopyIcon />} onClick={() => copyToClipboard(scanUrl)} sx={{ flexShrink: 0 }}>
                   Copier
                 </Button>
@@ -165,7 +165,7 @@ export function EventShow() {
   return (
     <Box sx={{ p: 2 }}>
       <Title title={event.titre} />
-      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 2 }}>
         <Typography variant="h5">{event.titre}</Typography>
         <Chip label={event.statut} size="small" />
       </Stack>

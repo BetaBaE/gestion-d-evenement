@@ -87,7 +87,7 @@ export function DashboardPanel({ eventId }) {
 
   if (summaryQuery.isLoading) {
     return (
-      <Box display="flex" justifyContent="center" p={4}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
         <CircularProgress />
       </Box>
     );
@@ -95,7 +95,7 @@ export function DashboardPanel({ eventId }) {
 
   if (summaryQuery.isError || !summaryQuery.data) {
     return (
-      <Box display="flex" justifyContent="center" p={4}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
         <Typography color="error">Impossible de charger les statistiques.</Typography>
       </Box>
     );
@@ -212,7 +212,7 @@ export function DashboardPanel({ eventId }) {
       </Paper>
 
       <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
           <Typography variant="subtitle1" fontWeight={600}>
             Participants validés absents
           </Typography>

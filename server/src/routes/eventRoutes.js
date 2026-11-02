@@ -12,6 +12,8 @@ import {
   regenerateScanToken,
   listBadgeTemplates,
   applyBadgeTemplate,
+  updateEventBadge,
+  getBadgeEditorContext,
   previewBadge,
   previewBadgeHtml,
   validateEvent,
@@ -33,6 +35,8 @@ eventRoutes.post('/:eventId/regenerer-form-token', eventScope, regenerateFormTok
 eventRoutes.post('/:eventId/regenerer-scan-token', eventScope, regenerateScanToken);
 eventRoutes.get('/:eventId/badge-templates', eventScope, listBadgeTemplates);
 eventRoutes.post('/:eventId/badge-template', eventScope, applyBadgeTemplate);
+eventRoutes.put('/:eventId/badge', eventScope, updateEventBadge);
+eventRoutes.get('/:eventId/badge-contexte', eventScope, getBadgeEditorContext);
 eventRoutes.post('/:eventId/badge-image', eventScope, imageUpload.single('file'), uploadBlocImage);
 eventRoutes.get('/:eventId/badge-apercu', eventScope, previewBadge);
 eventRoutes.get('/:eventId/badge-apercu-html', eventScope, previewBadgeHtml);

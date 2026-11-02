@@ -89,7 +89,7 @@ export function PartenairesPage() {
         configuration du badge (panneaux "Partenaires").
       </Typography>
 
-      <Stack direction="row" spacing={2} alignItems="flex-start" flexWrap="wrap">
+      <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <Paper sx={{ p: 3, width: 360 }}>
           <Typography variant="subtitle1" mb={2}>
             Ajouter un partenaire
@@ -128,7 +128,7 @@ export function PartenairesPage() {
             Partenaires existants
           </Typography>
           {isLoading ? (
-            <Box display="flex" justifyContent="center" p={2}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
               <CircularProgress size={24} />
             </Box>
           ) : (

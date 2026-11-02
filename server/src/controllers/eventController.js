@@ -8,27 +8,18 @@ import { generateToken } from '../utils/tokens.js';
 import { generateSingleBadgePdf, generateBadgeHtmlPreview } from '../services/badgeService.js';
 import { Organisateur } from '../models/Organisateur.js';
 import { ModeleBadge } from '../models/ModeleBadge.js';
+import { InvitedOrganism } from '../models/InvitedOrganism.js';
+import { Partenaire } from '../models/Partenaire.js';
 import { STARTER_TEMPLATES } from '../../../shared/badge-renderer/index.js';
+import { elementSchema, themeSchema, validateElementTypes } from '../validation/badgeElements.js';
 
-const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Couleur hexadécimale invalide.');
-
-// Badge elements are only set by applying a template (applyBadgeTemplate)
-// until the editor lands (Addendum 3 v2 phase 6b). Only folding options
-// and theme colors stay editable through the regular updateEvent endpoint.
+// Badge elements are set by applying a template (applyBadgeTemplate) or by
+// the editor (updateEventBadge). Only folding options and theme colors are
+// editable through the regular updateEvent endpoint.
 const badgeSchema = z.object({
   rotationLigneBas180: z.boolean().optional(),
   traitsDePliage: z.boolean().optional(),
-  theme: z
-    .object({
-      couleurPrincipale: hexColor.optional(),
-      couleurSecondaire: hexColor.optional(),
-      couleurAccent: hexColor.optional(),
-      couleurTexte: hexColor.optional(),
-      policeTitres: z.string().max(60).optional(),
-      policeTexte: z.string().max(60).optional(),
-      policeNom: z.string().max(60).optional(),
-    })
-    .optional(),
+  theme: themeSchema.optional(),
 });
 
 const BADGE_TEMPLATE_FIELDS = [
@@ -259,6 +250,65 @@ const applyTemplateSchema = z.union([
  * a reference: later edits to the template never change this event's badge
  * automatically.
  */
+/**
+ * Everything the badge editor needs besides the event itself, in one call:
+ * organisateur branding (the organisateur endpoint is Super Admin only, so
+ * a Gestionnaire couldn't load it), the event's categories (for
+ * "visible si" and previews), invited organismes and the partner library.
+ */
+export async function getBadgeEditorContext(req, res, next) {
+  try {
+    const [organisateur, categories, organismes, partenaires] = await Promise.all([
+      Organisateur.findById(req.organisateurId).select('nom siteWeb logoImageId brandKit'),
+      CategorieEvent.find({ eventId: req.event._id }).select('nom couleur isDefault').sort({ nom: 1 }),
+      InvitedOrganism.find({ eventId: req.event._id }).select('nom logoImageId').sort({ nom: 1 }),
+      Partenaire.find({ organisateurId: req.organisateurId, actif: { $ne: false } }).select('nom logoImageId').sort({ nom: 1 }),
+    ]);
+    res.json({ organisateur, categories, organismes, partenaires });
+  } catch (error) {
+    next(error);
+  }
+}
+
+const editorBadgeSchema = z.object({
+  elements: z.array(elementSchema).max(300),
+  theme: themeSchema.optional(),
+});
+
+/**
+ * Editor autosave target (Addendum 3 v2 phase 6b). Replaces the event's
+ * badge elements wholesale. Phase 6c moves this onto a separate draft
+ * (badgeBrouillon) with an explicit publish step.
+ */
+export async function updateEventBadge(req, res, next) {
+  try {
+    const { elements, theme } = editorBadgeSchema.parse(req.body);
+    const errors = validateElementTypes(elements);
+    if (errors.length > 0) {
+      throw new ApiError(400, 'Badge invalide.', errors);
+    }
+
+    const update = { 'badge.elements': elements, 'badge.publieLe': new Date() };
+    if (theme) {
+      Object.entries(theme).forEach(([key, value]) => {
+        update[`badge.theme.${key}`] = value;
+      });
+    }
+
+    const event = await Event.findOneAndUpdate(
+      { _id: req.params.eventId, organisateurId: req.organisateurId },
+      { $set: update, $inc: { 'badge.version': 1 } },
+      { new: true, runValidators: true },
+    );
+    if (!event) {
+      throw new ApiError(404, 'Ressource introuvable');
+    }
+    res.json({ badge: event.badge });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function applyBadgeTemplate(req, res, next) {
   try {
     const body = applyTemplateSchema.parse(req.body);

@@ -3,6 +3,7 @@ import './elements/participant.js';
 import './elements/contenu.js';
 import { getElementDefinition, hasElementType } from './registry.js';
 import { styleToCss } from './style.js';
+import { esc } from './escape.js';
 
 export {
   registerElement,
@@ -28,6 +29,12 @@ const FONT_STACKS = {
 };
 
 export const SAFE_ZONE_DEFAULT_MM = 5;
+
+// Fonts selectable in the editor (Addendum 3 v2 §5.5: only bundled fonts,
+// no uploads). Not bundled as files yet — each falls back to a system stack.
+export const ALLOWED_FONTS = ['Montserrat', 'Open Sans', 'Merriweather', 'Noto Naskh Arabic'];
+
+export const COLOR_TOKENS = ['principale', 'secondaire', 'accent', 'texte', 'categorie', 'blanc', 'noir'];
 
 export function panelSizeMm(badge) {
   if (badge.format === 'A6') return { width: 105, height: 148.5 };
@@ -63,6 +70,8 @@ function baseCss(theme) {
     .el-logos-row { display: flex; justify-content: center; align-items: center; }
     .el-logo-cell { flex: 1 1 0; display: flex; align-items: center; justify-content: center; min-width: 0; }
     .el-logo-cell img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .el-forme--pilule { border-radius: 999mm !important; }
+    .el-forme--cercle { border-radius: 50% !important; }
     .safe-zone { position: absolute; border: 0.2mm dashed rgba(255,0,0,0.4); pointer-events: none; }
   `;
 }
@@ -94,18 +103,12 @@ function layoutCss(badge) {
     body { width: 210mm; height: 297mm; }
     .sheet { position: relative; width: 210mm; height: 297mm; display: grid; grid-template-columns: 105mm 105mm; grid-template-rows: 148.5mm 148.5mm; }
     .panel { width: 105mm; height: 148.5mm; }
+    .panel-P1 { grid-row: 1; grid-column: 1; }
+    .panel-P3 { grid-row: 1; grid-column: 2; }
+    .panel-P2 { grid-row: 2; grid-column: 1; }
+    .panel-P4 { grid-row: 2; grid-column: 2; }
     ${foldLines}
     ${rotation}
-  `;
-}
-
-function singlePanelLayoutCss(badge) {
-  const { width, height } = panelSizeMm(badge);
-  return `
-    @page { size: ${width}mm ${height}mm; margin: 0; }
-    body { width: ${width}mm; height: ${height}mm; }
-    .sheet { width: ${width}mm; height: ${height}mm; }
-    .panel { width: ${width}mm; height: ${height}mm; }
   `;
 }
 
@@ -122,9 +125,24 @@ function elementClassName(element) {
   return '';
 }
 
+const EDITOR_PLACEHOLDER_LABELS = {
+  champ: 'Champ vide',
+  texte: 'Texte vide',
+  qrCode: 'QR code',
+  photo: 'Photo',
+  image: 'Image',
+  logoOrganisateur: 'Logo organisateur',
+  logoOrganisme: 'Logo organisme',
+  grillePartenaires: 'Partenaires',
+  dates: 'Dates',
+  bandeCategorie: 'Catégorie',
+  icone: 'Icône',
+};
+
 function renderElement(element, ctx) {
   if (element.masque) return '';
-  if (!elementMatchesCategorie(element, ctx.categorie)) return '';
+  const categorieMatches = elementMatchesCategorie(element, ctx.categorie);
+  if (!categorieMatches && !ctx.editorMode) return '';
   if (!hasElementType(element.type)) return '';
 
   const def = getElementDefinition(element.type);
@@ -132,11 +150,19 @@ function renderElement(element, ctx) {
   if (!validated.valid) return '';
 
   const box = { widthMm: element.largeur, heightMm: element.hauteur };
-  const inner = def.render({ props: validated.value, style: element.style || {}, box, ctx, measureTextWidthMm: ctx.measureTextWidthMm });
+  let inner = def.render({ props: validated.value, style: element.style || {}, box, ctx, measureTextWidthMm: ctx.measureTextWidthMm });
+  const extraClasses = [];
   // A `forme` element renders no inner HTML by design (its background/
   // border comes entirely from styleToCss) — every other type returning ''
-  // means "nothing to show" (e.g. no photo uploaded) and should be skipped.
-  if (!inner && element.type !== 'forme') return '';
+  // means "nothing to show" (e.g. no photo uploaded) and is skipped in the
+  // printed output. In the editor it still needs a visible, selectable box.
+  if (!inner && element.type !== 'forme') {
+    if (!ctx.editorMode) return '';
+    inner = `<span class="el-placeholder">${EDITOR_PLACEHOLDER_LABELS[element.type] || element.type}</span>`;
+    extraClasses.push('el-empty');
+  }
+  if (!categorieMatches) extraClasses.push('el-ghost');
+  if (element.type === 'forme') extraClasses.push(`el-forme--${validated.value.forme}`);
 
   const categorieColor = ctx.categorie?.couleur;
   const styleCss = styleToCss(element.style, ctx.theme, categorieColor);
@@ -144,15 +170,16 @@ function renderElement(element, ctx) {
   const positionCss = `left:${element.x}mm;top:${element.y}mm;width:${element.largeur}mm;height:${element.hauteur}mm;z-index:${element.z ?? 0};${transform}`;
 
   const dataAttrs = [
-    `data-element-id="${element.id || ''}"`,
-    `data-element-type="${element.type}"`,
+    `data-element-id="${esc(element.id || '')}"`,
+    `data-element-type="${esc(element.type)}"`,
     `data-taille-max="${element.style?.tailleMax ?? 14}"`,
     `data-taille-min="${element.style?.tailleMin ?? 6}"`,
     `data-interligne="${element.style?.interligne ?? 1.2}"`,
     `data-lignes-max="${element.style?.lignesMax ?? 1}"`,
   ].join(' ');
 
-  return `<div class="el-wrapper ${elementClassName(element)}" ${dataAttrs} style="${positionCss}${styleCss}">${inner}</div>`;
+  const classes = ['el-wrapper', elementClassName(element), ...extraClasses].filter(Boolean).join(' ');
+  return `<div class="${classes}" ${dataAttrs} style="${esc(positionCss + styleCss)}">${inner}</div>`;
 }
 
 function renderPanel(panelKey, elements, ctx, showSafeZone, safeZoneMm) {
@@ -164,29 +191,58 @@ function renderPanel(panelKey, elements, ctx, showSafeZone, safeZoneMm) {
   return `<section class="panel panel-${panelKey}">${elementsHtml}${safeZoneHtml}</section>`;
 }
 
-function buildCtx({ theme, participant, event, organisme, organisateur, categorie, assets, measureTextWidthMm }) {
-  return { participant, event, organisme, organisateur, categorie, theme, assets: assets || {}, measureTextWidthMm };
+function buildCtx({ theme, participant, event, organisme, organisateur, categorie, assets, measureTextWidthMm, editorMode }) {
+  return { participant, event, organisme, organisateur, categorie, theme, assets: assets || {}, measureTextWidthMm, editorMode: !!editorMode };
 }
 
 /**
- * Renders exactly one panel's HTML, sized to that single panel regardless
- * of the overall multi-panel format. Used by the editor's per-panel canvas
- * (one panel per editable box) rather than a whole A4 sheet.
+ * Prefixes every top-level selector in `css` with `scope` so the renderer's
+ * stylesheet (which includes a `*` reset and `body` rules meant for a
+ * standalone page) can be injected into the admin app without leaking.
+ * Only handles the flat rule lists this module itself generates — no
+ * nested at-rules (callers strip @page first).
  */
-export function renderSinglePanelHtml({ panelKey, badge, theme, participant, event, organisme, organisateur, categorie, assets, measureTextWidthMm, showSafeZone }) {
-  const ctx = buildCtx({ theme, participant, event, organisme, organisateur, categorie, assets, measureTextWidthMm });
-  const panelHtml = renderPanel(panelKey, badge.elements, ctx, showSafeZone, badge.safeZoneMm ?? SAFE_ZONE_DEFAULT_MM);
+function scopeCss(css, scope) {
+  return css.replace(/(^|})\s*([^{}@]+)\{/g, (_match, close, selectors) => {
+    const scoped = selectors
+      .split(',')
+      .map((sel) => sel.trim())
+      .filter(Boolean)
+      .map((sel) => {
+        if (sel === 'body') return scope;
+        if (sel === '*') return `${scope} *`;
+        return `${scope} ${sel}`;
+      })
+      .join(', ');
+    return `${close} ${scoped} {`;
+  });
+}
 
-  return `<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="utf-8" />
-<style>${baseCss(theme)}${singlePanelLayoutCss(badge)}</style>
-</head>
-<body>
-  <div class="sheet">${panelHtml}</div>
-</body>
-</html>`;
+const EDITOR_CSS = `
+  .el-empty { outline: 0.3mm dashed #9aa5b1; outline-offset: -0.3mm; background: rgba(154,165,177,0.08); }
+  .el-placeholder { font: 500 2.6mm/1.2 'Segoe UI', Arial, sans-serif; color: #6b7785; margin: auto; text-align: center; }
+  .el-ghost { opacity: 0.35; }
+`;
+
+/**
+ * Editor variant of renderBadgeHtml (Addendum 3 v2 §4.1): same markup and
+ * the same element renderers, so the canvas is the print output, but
+ * returned as { css, html } for injection into the admin page — CSS scoped
+ * under `scope`, no @page rules, empty elements shown as placeholders so
+ * they stay selectable, elements hidden for this category shown faded, and
+ * the bottom-row 180° print rotation not applied (editing upside down would
+ * invert every drag).
+ */
+export function renderEditorSheet({ badge, theme, participant, event, organisme, organisateur, categorie, assets, scope }) {
+  const ctx = buildCtx({ theme, participant, event, organisme, organisateur, categorie, assets, editorMode: true });
+  const safeZoneMm = badge.safeZoneMm ?? SAFE_ZONE_DEFAULT_MM;
+  const panels = ['P1', 'P2', 'P3', 'P4'].map((key) => renderPanel(key, badge.elements, ctx, true, safeZoneMm));
+  const sheetHtml = badge.format === 'A4_PLIE_4' ? panels.join('') : panels[0];
+
+  const layout = layoutCss({ ...badge, rotationLigneBas180: false }).replace(/@page[^}]*}/g, '');
+  const css = scopeCss(`${baseCss(theme)}${layout}${EDITOR_CSS}`, scope);
+
+  return { css, html: `<div class="sheet">${sheetHtml}</div>` };
 }
 
 /**

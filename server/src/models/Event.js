@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 const elementSchema = new mongoose.Schema(
   {
     id: { type: String, required: true },
+    nom: { type: String },
     type: { type: String, required: true },
     panneau: { type: String, enum: ['P1', 'P2', 'P3', 'P4'], required: true },
     x: { type: Number, required: true },

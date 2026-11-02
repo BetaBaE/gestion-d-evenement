@@ -57,7 +57,7 @@ export function styleToCss(style, theme, categorieColor) {
   if (s.majuscules) rules.push('text-transform:uppercase');
   if (s.graisse) rules.push(`font-weight:${s.graisse}`);
   if (s.italique) rules.push('font-style:italic');
-  if (s.police) rules.push(`font-family:'${s.police}'`);
+  if (s.police) rules.push(`font-family:'${s.police}', 'Segoe UI', Arial, sans-serif`);
   if (s.dir && s.dir !== 'auto') rules.push(`direction:${s.dir}`);
 
   return rules.join(';');

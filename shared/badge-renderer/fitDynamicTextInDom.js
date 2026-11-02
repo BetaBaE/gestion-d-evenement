@@ -7,12 +7,14 @@ const MM_PER_PX_96DPI = 25.4 / 96;
  * ES-module twin of window.__badgeRendererFit in browserFit.js (which is
  * what Puppeteer injects): measures every .el-dynamictext against its real
  * rendered font and rewrites it into fitted, non-wrapping lines. Used by
- * the editor iframe. Returns the ids of elements whose text got truncated.
+ * the editor canvas. `root` may be a Document or any container Element.
+ * Returns the ids of elements whose text got truncated.
  */
-export function fitDynamicTextInDom(doc = document) {
+export function fitDynamicTextInDom(root = document) {
   const truncatedElementIds = [];
+  const doc = root.ownerDocument || root;
 
-  doc.querySelectorAll('.el-dynamictext').forEach((span) => {
+  root.querySelectorAll('.el-dynamictext').forEach((span) => {
     const rawText = span.getAttribute('data-raw-text') || '';
     const wrapper = span.closest('.el-wrapper');
     if (!wrapper) return;

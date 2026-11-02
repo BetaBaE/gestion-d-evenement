@@ -10,7 +10,7 @@ import { ok, fail } from '../validate.js';
  * so the editor iframe and Puppeteer both run the exact same fitting logic
  * against the exact same rendered DOM (Addendum 3 v2 §7).
  */
-function dynamicTextMarkup(rawText) {
+export function dynamicTextMarkup(rawText) {
   return `<span class="el-dynamictext" data-raw-text="${esc(rawText)}">${esc(rawText)}</span>`;
 }
 

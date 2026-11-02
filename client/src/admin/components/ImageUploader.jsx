@@ -41,7 +41,7 @@ export function ImageUploader({ label, imageUrl, onUpload, onDelete }) {
       <Typography variant="body2" sx={{ mb: 1 }}>
         {label}
       </Typography>
-      <Stack direction="row" spacing={2} alignItems="center">
+      <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
         {imageUrl && (
           <Box
             component="img"

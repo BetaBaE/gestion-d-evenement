@@ -14,7 +14,10 @@ import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
 
 export const app = express();
 
-app.use(helmet());
+// The admin UI (:5173) and the API (:4000) are different origins. Image
+// routes override this to `cross-origin` (see routes/imageRoutes.js), since
+// the UI embeds API-served images and Helmet's default blocked them all.
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'same-site' } }));
 app.use(cors({ origin: env.clientUrls, credentials: true }));
 app.use(morgan('dev'));
 app.use(express.json());
