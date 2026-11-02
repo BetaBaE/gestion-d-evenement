@@ -1,220 +1,105 @@
-import PDFDocument from 'pdfkit';
-import sharp from 'sharp';
-import { generateQrCodeBuffer } from './qrService.js';
+import puppeteer from 'puppeteer';
 import { getImageWithData } from './imageService.js';
+import { Partenaire } from '../models/Partenaire.js';
+import { buildBadgeHtml, buildBatchBadgeHtml, imageDataUri } from '../badges/templates/badgeHtml.js';
 
-const MM_TO_PT = 2.834645669;
+let browserPromise = null;
 
-function mmToPt(mm) {
-  return mm * MM_TO_PT;
+async function getBrowser() {
+  if (!browserPromise) {
+    browserPromise = puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+    browserPromise.then((browser) => {
+      browser.on('disconnected', () => {
+        browserPromise = null;
+      });
+    });
+  }
+  return browserPromise;
 }
 
-async function loadImageBuffer(imageId) {
+async function loadImageDataUri(imageId) {
   if (!imageId) return null;
   const image = await getImageWithData(imageId);
   if (!image?.data) return null;
-  // pdfkit can only embed JPEG or PNG; stored images are WebP, so convert
-  // on the fly here rather than storing a second copy of every image.
-  return sharp(image.data).png().toBuffer();
+  return imageDataUri(image.data, image.mimeType);
 }
 
-async function drawBadge(doc, { x, y, widthPt, heightPt, participant, event, categorie, organisme, qrBuffer, images }) {
-  const padding = mmToPt(3);
+async function loadImages(event, organisateur, participant, organisme) {
   const badgeConfig = event.badgeConfig || {};
-
-  doc.save();
-
-  if (images.fond) {
-    doc.image(images.fond, x, y, { width: widthPt, height: heightPt });
-  }
-
-  doc.rect(x, y, widthPt, heightPt).stroke('#cccccc');
-
-  let cursorY = y + mmToPt(2);
-
-  if (badgeConfig.afficherLogoOrganisateur && images.logoOrganisateur) {
-    const logoHeight = mmToPt(8);
-    doc.image(images.logoOrganisateur, x + padding, cursorY, { fit: [widthPt - padding * 2, logoHeight], align: 'center' });
-    cursorY += logoHeight + mmToPt(2);
-  }
-
-  if (badgeConfig.afficherPhoto && images.photo) {
-    const photoSize = mmToPt(18);
-    doc.image(images.photo, x + (widthPt - photoSize) / 2, cursorY, { width: photoSize, height: photoSize });
-    cursorY += photoSize + mmToPt(2);
-  }
-
-  doc.fillColor('#111111').fontSize(13).font('Helvetica-Bold');
-  doc.text(`${participant.prenom} ${participant.nom}`, x + padding, cursorY, {
-    width: widthPt - padding * 2,
-    align: 'center',
-  });
-  cursorY += mmToPt(6);
-
-  if (badgeConfig.afficherFonction && participant.fonction) {
-    doc.fillColor('#444444').fontSize(9).font('Helvetica');
-    doc.text(participant.fonction, x + padding, cursorY, {
-      width: widthPt - padding * 2,
-      align: 'center',
-    });
-    cursorY += mmToPt(5);
-  }
-
-  if (badgeConfig.afficherOrganisme && organisme?.nom) {
-    if (badgeConfig.afficherLogoOrganisme && images.logoOrganisme) {
-      const organismeLogoHeight = mmToPt(6);
-      doc.image(images.logoOrganisme, x + (widthPt - organismeLogoHeight) / 2, cursorY, {
-        fit: [widthPt - padding * 2, organismeLogoHeight],
-        align: 'center',
-      });
-      cursorY += organismeLogoHeight + mmToPt(1);
-    } else {
-      doc.fillColor('#444444').fontSize(8).font('Helvetica-Oblique');
-      doc.text(organisme.nom, x + padding, cursorY, {
-        width: widthPt - padding * 2,
-        align: 'center',
-      });
-      cursorY += mmToPt(4);
-    }
-  }
-
-  const bandHeight = mmToPt(6);
-  const bandY = y + heightPt - bandHeight;
-  doc.rect(x, bandY, widthPt, bandHeight).fill(categorie?.couleur || badgeConfig.couleurPrincipale || '#1971c2');
-  doc.fillColor('#ffffff').fontSize(8).font('Helvetica-Bold');
-  doc.text(categorie?.nom || '', x + padding, bandY + (bandHeight - 10) / 2, {
-    width: widthPt - padding * 2 - mmToPt(10),
-    align: 'left',
-  });
-
-  const qrSize = Math.min(mmToPt(10), bandHeight - mmToPt(1));
-  doc.image(qrBuffer, x + widthPt - qrSize - mmToPt(2), bandY + (bandHeight - qrSize) / 2, {
-    width: qrSize,
-    height: qrSize,
-  });
-
-  doc.restore();
+  const [fond, banniere, logoEvenement, logoOrganisateur, photo, logoOrganisme] = await Promise.all([
+    loadImageDataUri(badgeConfig.fondImageId),
+    loadImageDataUri(badgeConfig.entete?.banniereImageId),
+    loadImageDataUri(badgeConfig.entete?.logoEvenementImageId),
+    loadImageDataUri(organisateur?.logoImageId),
+    loadImageDataUri(participant.photoImageId),
+    loadImageDataUri(organisme?.logoImageId),
+  ]);
+  return { fond, banniere, logoEvenement, logoOrganisateur, photo, logoOrganisme };
 }
 
-async function loadSharedImages(event, organisateur) {
-  const badgeConfig = event.badgeConfig || {};
-  const [fond, logoOrganisateur] = await Promise.all([
-    loadImageBuffer(badgeConfig.fondImageId),
-    loadImageBuffer(organisateur?.logoImageId),
-  ]);
-  return { fond, logoOrganisateur };
+async function loadPartenaires(organisateurId, badgeConfig) {
+  const ids = new Set();
+  (badgeConfig.groupesPartenaires || []).forEach((g) => {
+    (g.partenaires || []).forEach((p) => p.partenaireId && ids.add(String(p.partenaireId)));
+  });
+  if (badgeConfig.encartPromo?.partenaireId) {
+    ids.add(String(badgeConfig.encartPromo.partenaireId));
+  }
+  if (ids.size === 0) return [];
+
+  const partenaires = await Partenaire.find({ _id: { $in: [...ids] }, organisateurId });
+  return Promise.all(
+    partenaires.map(async (p) => ({
+      _id: p._id,
+      logoDataUri: await loadImageDataUri(p.logoImageId),
+    })),
+  );
 }
 
-async function loadPerParticipantImages({ participant, organisme }) {
-  const [photo, logoOrganisme] = await Promise.all([
-    loadImageBuffer(participant.photoImageId),
-    loadImageBuffer(organisme?.logoImageId),
+async function renderHtmlToPdf(html) {
+  const browser = await getBrowser();
+  const page = await browser.newPage();
+  try {
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    return await page.pdf({ printBackground: true, preferCSSPageSize: true });
+  } finally {
+    await page.close();
+  }
+}
+
+async function hydrateEntry({ participant, event, categorie, organisme, organisateur }) {
+  const [images, partenaires] = await Promise.all([
+    loadImages(event, organisateur, participant, organisme),
+    loadPartenaires(event.organisateurId, event.badgeConfig || {}),
   ]);
-  return { photo, logoOrganisme };
+  return { participant, event, categorie, organisme, organisateur, images, partenaires };
 }
 
 export async function generateSingleBadgePdf({ participant, event, categorie, organisme, organisateur }) {
-  const { largeurMm, hauteurMm, orientation } = event.badgeConfig || {};
-  const isLandscape = orientation === 'paysage';
-  const widthMm = isLandscape ? Math.max(largeurMm, hauteurMm) : Math.min(largeurMm, hauteurMm);
-  const heightMm = isLandscape ? Math.min(largeurMm, hauteurMm) : Math.max(largeurMm, hauteurMm);
+  const hydrated = await hydrateEntry({ participant, event, categorie, organisme, organisateur });
+  const html = await buildBadgeHtml(hydrated);
+  return renderHtmlToPdf(html);
+}
 
-  const widthPt = mmToPt(widthMm);
-  const heightPt = mmToPt(heightMm);
-
-  const doc = new PDFDocument({ size: [widthPt, heightPt], margin: 0 });
-  const chunks = [];
-  doc.on('data', (chunk) => chunks.push(chunk));
-
-  const [qrBuffer, sharedImages, participantImages] = await Promise.all([
-    generateQrCodeBuffer(participant.badgeCode),
-    loadSharedImages(event, organisateur),
-    loadPerParticipantImages({ participant, organisme }),
-  ]);
-
-  await drawBadge(doc, {
-    x: 0,
-    y: 0,
-    widthPt,
-    heightPt,
-    participant,
-    event,
-    categorie,
-    organisme,
-    qrBuffer,
-    images: { ...sharedImages, ...participantImages },
-  });
-
-  doc.end();
-
-  return new Promise((resolve, reject) => {
-    doc.on('end', () => resolve(Buffer.concat(chunks)));
-    doc.on('error', reject);
-  });
+/**
+ * Renders the raw HTML for a badge, used by the live-preview endpoint so
+ * the back-office iframe shows exactly what the PDF will produce.
+ */
+export async function generateBadgeHtmlPreview(args) {
+  const hydrated = await hydrateEntry(args);
+  return buildBadgeHtml(hydrated);
 }
 
 export async function generateBatchBadgesPdf(entries) {
-  const doc = new PDFDocument({ size: 'A4', margin: mmToPt(10) });
-  const chunks = [];
-  doc.on('data', (chunk) => chunks.push(chunk));
+  const hydrated = await Promise.all(entries.map((entry) => hydrateEntry(entry)));
+  const html = await buildBatchBadgeHtml(hydrated);
+  return renderHtmlToPdf(html);
+}
 
-  const { largeurMm, hauteurMm, orientation } = entries[0]?.event.badgeConfig || {};
-  const isLandscape = orientation === 'paysage';
-  const widthMm = isLandscape ? Math.max(largeurMm, hauteurMm) : Math.min(largeurMm, hauteurMm);
-  const heightMm = isLandscape ? Math.min(largeurMm, hauteurMm) : Math.max(largeurMm, hauteurMm);
-  const widthPt = mmToPt(widthMm);
-  const heightPt = mmToPt(heightMm);
-
-  const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-  const pageHeight = doc.page.height - doc.page.margins.top - doc.page.margins.bottom;
-  const gap = mmToPt(4);
-  const cols = Math.max(1, Math.floor((pageWidth + gap) / (widthPt + gap)));
-  const rows = Math.max(1, Math.floor((pageHeight + gap) / (heightPt + gap)));
-  const perPage = cols * rows;
-
-  const sharedImagesCache = new Map();
-
-  for (let i = 0; i < entries.length; i += 1) {
-    const { participant, event, categorie, organisme, organisateur } = entries[i];
-    const positionOnPage = i % perPage;
-
-    if (i > 0 && positionOnPage === 0) {
-      doc.addPage();
-    }
-
-    const col = positionOnPage % cols;
-    const row = Math.floor(positionOnPage / cols);
-    const x = doc.page.margins.left + col * (widthPt + gap);
-    const y = doc.page.margins.top + row * (heightPt + gap);
-
-    const eventKey = event._id.toString();
-    if (!sharedImagesCache.has(eventKey)) {
-      sharedImagesCache.set(eventKey, await loadSharedImages(event, organisateur));
-    }
-
-    const [qrBuffer, participantImages] = await Promise.all([
-      generateQrCodeBuffer(participant.badgeCode),
-      loadPerParticipantImages({ participant, organisme }),
-    ]);
-
-    await drawBadge(doc, {
-      x,
-      y,
-      widthPt,
-      heightPt,
-      participant,
-      event,
-      categorie,
-      organisme,
-      qrBuffer,
-      images: { ...sharedImagesCache.get(eventKey), ...participantImages },
-    });
+export async function closeBadgeBrowser() {
+  if (browserPromise) {
+    const browser = await browserPromise;
+    await browser.close();
+    browserPromise = null;
   }
-
-  doc.end();
-
-  return new Promise((resolve, reject) => {
-    doc.on('end', () => resolve(Buffer.concat(chunks)));
-    doc.on('error', reject);
-  });
 }

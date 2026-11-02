@@ -42,6 +42,10 @@ export function confirmationEmailTemplate({ participant, event, organisateur }) 
 
 export function badgeEmailTemplate({ participant, event, organisateur }) {
   const title = `Votre badge — ${event.titre}`;
+  const foldInstruction =
+    event.badgeConfig?.format === 'A4_PLIE_4'
+      ? '<p><strong>Imprimez ce badge en A4, taille réelle (100 %), puis pliez-le en 4.</strong></p>'
+      : '';
   const bodyHtml = `
     <p>Bonjour ${participant.civilite || ''} ${participant.prenom} ${participant.nom},</p>
     <p>Votre inscription à l'événement <strong>${event.titre}</strong> a été validée.</p>
@@ -50,6 +54,7 @@ export function badgeEmailTemplate({ participant, event, organisateur }) {
       <li><strong>Date :</strong> du ${formatDate(event.dateDebut)} au ${formatDate(event.dateFin)}</li>
     </ul>
     <p>Vous trouverez votre badge d'accès en pièce jointe. Veuillez le présenter (imprimé ou sur votre téléphone) à l'entrée de l'événement.</p>
+    ${foldInstruction}
     <div style="text-align:center; margin: 24px 0;">
       <img src="cid:qrcode" alt="QR Code" style="width: 180px; height: 180px;" />
     </div>

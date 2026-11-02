@@ -83,6 +83,7 @@ export async function testEmailSettings(req, res, next) {
       port: settings.smtpPort,
       secure: settings.smtpSecure,
       auth: { user: settings.smtpUser, pass: password },
+      tls: { rejectUnauthorized: false },
     });
 
     try {

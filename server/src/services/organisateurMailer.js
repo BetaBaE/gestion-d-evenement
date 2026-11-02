@@ -34,6 +34,7 @@ export async function getOrganisateurTransporter(organisateurId) {
     port: settings.smtpPort,
     secure: settings.smtpSecure,
     auth: { user: settings.smtpUser, pass: password },
+    tls: { rejectUnauthorized: false },
   });
 
   transporterCache.set(key, transporter);

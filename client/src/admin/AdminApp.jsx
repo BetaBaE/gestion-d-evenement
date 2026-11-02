@@ -5,6 +5,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import BusinessIcon from '@mui/icons-material/Business';
 import EventIcon from '@mui/icons-material/Event';
 import MailIcon from '@mui/icons-material/Mail';
+import HandshakeIcon from '@mui/icons-material/Handshake';
 import { dataProvider } from './dataProvider.js';
 import { authProvider } from './authProvider.js';
 import { AdminAppBar } from './AdminAppBar.jsx';
@@ -13,6 +14,7 @@ import { UserList, UserEdit, UserCreate } from './resources/users.jsx';
 import { EventList, EventEdit, EventCreate } from './resources/events.jsx';
 import { EventShow } from './resources/EventShow.jsx';
 import { EmailSettingsPage } from './pages/EmailSettingsPage.jsx';
+import { PartenairesPage } from './pages/PartenairesPage.jsx';
 
 const i18nProvider = polyglotI18nProvider(() => frenchMessages, 'fr');
 
@@ -66,6 +68,12 @@ export function AdminApp() {
             list={EmailSettingsPage}
             icon={MailIcon}
             options={{ label: 'Paramètres email' }}
+          />
+          <Resource
+            name="partenaires"
+            list={PartenairesPage}
+            icon={HandshakeIcon}
+            options={{ label: 'Partenaires' }}
           />
         </>
       )}

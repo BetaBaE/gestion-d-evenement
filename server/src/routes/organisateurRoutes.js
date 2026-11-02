@@ -15,6 +15,7 @@ import {
 import { imageUpload } from '../middlewares/upload.js';
 import { eventRoutes } from './eventRoutes.js';
 import { emailSettingsRoutes } from './emailSettingsRoutes.js';
+import { partenaireRoutes } from './partenaireRoutes.js';
 
 export const organisateurRoutes = Router();
 
@@ -50,4 +51,11 @@ organisateurRoutes.use(
   requireRole('SUPER_ADMIN', 'GESTIONNAIRE'),
   tenantScope,
   emailSettingsRoutes,
+);
+
+organisateurRoutes.use(
+  '/:organisateurId/partenaires',
+  requireRole('SUPER_ADMIN', 'GESTIONNAIRE'),
+  tenantScope,
+  partenaireRoutes,
 );

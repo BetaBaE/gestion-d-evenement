@@ -9,7 +9,15 @@ const imageSchema = new mongoose.Schema(
     hauteur: { type: Number, required: true },
     type: {
       type: String,
-      enum: ['PHOTO_PARTICIPANT', 'LOGO_ORGANISATEUR', 'LOGO_ORGANISME', 'FOND_BADGE'],
+      enum: [
+        'PHOTO_PARTICIPANT',
+        'LOGO_ORGANISATEUR',
+        'LOGO_ORGANISME',
+        'FOND_BADGE',
+        'LOGO_EVENEMENT',
+        'BANNIERE_BADGE',
+        'LOGO_PARTENAIRE',
+      ],
       required: true,
     },
     organisateurId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organisateur', required: true },

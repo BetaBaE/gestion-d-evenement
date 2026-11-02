@@ -11,6 +11,7 @@ import {
   Alert,
   Typography,
   CircularProgress,
+  MenuItem,
 } from '@mui/material';
 import { getEmailSettings, saveEmailSettings, testEmailSettings } from '../../api/emailSettingsApi.js';
 
@@ -26,6 +27,14 @@ const EMPTY_FORM = {
   actif: true,
 };
 
+const PROVIDER_PRESETS = [
+  { value: 'outlook', label: 'Outlook / Office 365', smtpHost: 'smtp.office365.com', smtpPort: 587, smtpSecure: false },
+  { value: 'gmail', label: 'Gmail / Google Workspace', smtpHost: 'smtp.gmail.com', smtpPort: 465, smtpSecure: true },
+  { value: 'yahoo', label: 'Yahoo Mail', smtpHost: 'smtp.mail.yahoo.com', smtpPort: 465, smtpSecure: true },
+  { value: 'zoho', label: 'Zoho Mail', smtpHost: 'smtp.zoho.com', smtpPort: 465, smtpSecure: true },
+  { value: 'custom', label: 'Autre / personnalisé', smtpHost: '', smtpPort: 587, smtpSecure: false },
+];
+
 export function EmailSettingsPage() {
   const notify = useNotify();
   const [form, setForm] = useState(EMPTY_FORM);
@@ -34,6 +43,7 @@ export function EmailSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
+  const [provider, setProvider] = useState('custom');
 
   useEffect(() => {
     getEmailSettings()
@@ -49,6 +59,18 @@ export function EmailSettingsPage() {
 
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function handleProviderChange(value) {
+    setProvider(value);
+    const preset = PROVIDER_PRESETS.find((p) => p.value === value);
+    if (!preset || preset.value === 'custom') return;
+    setForm((prev) => ({
+      ...prev,
+      smtpHost: preset.smtpHost,
+      smtpPort: preset.smtpPort,
+      smtpSecure: preset.smtpSecure,
+    }));
   }
 
   async function handleSave(event) {
@@ -107,6 +129,20 @@ export function EmailSettingsPage() {
       <Paper sx={{ p: 3, maxWidth: 600 }}>
         <form onSubmit={handleSave}>
           <Stack spacing={2}>
+            <TextField
+              select
+              label="Fournisseur email"
+              value={provider}
+              onChange={(e) => handleProviderChange(e.target.value)}
+              helperText="Préremplit l'hôte, le port et la sécurité. Vous pouvez ensuite les ajuster."
+              fullWidth
+            >
+              {PROVIDER_PRESETS.map((p) => (
+                <MenuItem key={p.value} value={p.value}>
+                  {p.label}
+                </MenuItem>
+              ))}
+            </TextField>
             <TextField
               label="Hôte SMTP"
               value={form.smtpHost}

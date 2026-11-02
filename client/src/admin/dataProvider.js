@@ -27,6 +27,10 @@ function resourcePath(resource, meta) {
       const organisateurId = resolveOrganisateurId(meta);
       return `/admin/organisateurs/${organisateurId}/events/${meta.eventId}/participants`;
     }
+    case 'partenaires': {
+      const organisateurId = resolveOrganisateurId(meta);
+      return `/admin/organisateurs/${organisateurId}/partenaires`;
+    }
     default:
       throw new Error(`Unknown resource: ${resource}`);
   }
