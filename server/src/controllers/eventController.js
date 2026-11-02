@@ -5,22 +5,17 @@ import { Participant } from '../models/Participant.js';
 import { ApiError } from '../middlewares/errorHandler.js';
 import { parsePagination, paginatedResponse } from '../utils/pagination.js';
 import { generateToken } from '../utils/tokens.js';
-import { optimizeAndStoreImage, deleteImage } from '../services/imageService.js';
 import { generateSingleBadgePdf, generateBadgeHtmlPreview } from '../services/badgeService.js';
 import { Organisateur } from '../models/Organisateur.js';
-import { BUILTIN_TEMPLATES, hasBlockType, getBlockDefinition } from '../../../shared/badge-renderer/index.js';
+import { ModeleBadge } from '../models/ModeleBadge.js';
+import { STARTER_TEMPLATES } from '../../../shared/badge-renderer/index.js';
 
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Couleur hexadécimale invalide.');
 
-// Badge content (panneaux.P1-P4.blocs) is edited via the dedicated
-// getBadgeContenu/updateBadgeContenu endpoints (the drag-and-drop builder,
-// Addendum 3 phase 6b) or set wholesale by applying a built-in template
-// (applyBadgeTemplate). Only format/dimensions/folding/theme stay editable
-// through the regular updateEvent endpoint.
-const badgeConfigSchema = z.object({
-  format: z.enum(['A4_PLIE_4', 'A6', 'CARTE']).optional(),
-  carteLargeurMm: z.number().positive().optional(),
-  carteHauteurMm: z.number().positive().optional(),
+// Badge elements are only set by applying a template (applyBadgeTemplate)
+// until the editor lands (Addendum 3 v2 phase 6b). Only folding options
+// and theme colors stay editable through the regular updateEvent endpoint.
+const badgeSchema = z.object({
   rotationLigneBas180: z.boolean().optional(),
   traitsDePliage: z.boolean().optional(),
   theme: z
@@ -29,13 +24,39 @@ const badgeConfigSchema = z.object({
       couleurSecondaire: hexColor.optional(),
       couleurAccent: hexColor.optional(),
       couleurTexte: hexColor.optional(),
-      degradeEntete: z.boolean().optional(),
       policeTitres: z.string().max(60).optional(),
       policeTexte: z.string().max(60).optional(),
       policeNom: z.string().max(60).optional(),
     })
     .optional(),
 });
+
+const BADGE_TEMPLATE_FIELDS = [
+  'format',
+  'carteLargeurMm',
+  'carteHauteurMm',
+  'rotationLigneBas180',
+  'traitsDePliage',
+  'safeZoneMm',
+  'theme',
+  'elements',
+];
+
+function badgeFromTemplate(template, { modeleSourceId = null, modeleSourceVersion = null } = {}) {
+  const badge = { modeleSourceId, modeleSourceVersion, version: 1, publieLe: new Date() };
+  BADGE_TEMPLATE_FIELDS.forEach((field) => {
+    if (template[field] !== undefined) badge[field] = structuredClone(template[field]);
+  });
+  return badge;
+}
+
+async function defaultBadgeForOrganisateur(organisateurId) {
+  const modele = await ModeleBadge.findOne({ organisateurId, parDefaut: true, archive: { $ne: true } }).lean();
+  if (modele) {
+    return badgeFromTemplate(modele, { modeleSourceId: modele._id, modeleSourceVersion: modele.version });
+  }
+  return badgeFromTemplate(STARTER_TEMPLATES.SALON_A4_PLIE_4.build());
+}
 
 const eventSchema = z.object({
   titre: z.string().min(1, 'Le titre est requis.'),
@@ -52,7 +73,7 @@ const eventSchema = z.object({
   banniereUrl: z.string().optional(),
   antiDoublonMinutes: z.number().int().positive().optional(),
   photoObligatoire: z.boolean().optional(),
-  badgeConfig: badgeConfigSchema.optional(),
+  badge: badgeSchema.optional(),
 });
 
 export const validateEvent = eventSchema;
@@ -85,11 +106,13 @@ export async function getEvent(req, res, next) {
 
 export async function createEvent(req, res, next) {
   try {
+    const { badge: _ignoredBadge, ...fields } = req.body;
     const event = await Event.create({
-      ...req.body,
+      ...fields,
       organisateurId: req.organisateurId,
       formToken: generateToken(32),
       createdBy: req.user.sub,
+      badge: await defaultBadgeForOrganisateur(req.organisateurId),
     });
 
     await CategorieEvent.create({
@@ -107,12 +130,20 @@ export async function createEvent(req, res, next) {
 
 export async function updateEvent(req, res, next) {
   try {
-    const { badgeConfig, ...rest } = req.body;
+    const { badge, ...rest } = req.body;
 
+    // Dot-path keys so a partial badge update merges into the existing
+    // sub-document instead of replacing it (and wiping its elements).
     const update = { ...rest };
-    if (badgeConfig) {
-      Object.entries(badgeConfig).forEach(([key, value]) => {
-        update[`badgeConfig.${key}`] = value;
+    if (badge) {
+      Object.entries(badge).forEach(([key, value]) => {
+        if (key === 'theme' && value) {
+          Object.entries(value).forEach(([themeKey, themeValue]) => {
+            update[`badge.theme.${themeKey}`] = themeValue;
+          });
+        } else {
+          update[`badge.${key}`] = value;
+        }
       });
     }
 
@@ -198,232 +229,63 @@ export async function regenerateScanToken(req, res, next) {
   }
 }
 
-// Images now attach to a specific block's props (e.g. enteteEvenement's
-// banniereImageId/logoImageId) rather than a fixed badgeConfig field, since
-// content is a list of blocks per panel (Addendum 3). Finds the first block
-// of the given type across all panels and returns { bloc } so callers can
-// mutate bloc.props directly before event.save().
-function findFirstBlockByType(event, blockType) {
-  for (const panelKey of ['P1', 'P2', 'P3', 'P4']) {
-    const panneau = event.badgeConfig?.panneaux?.[panelKey];
-    const bloc = (panneau?.blocs || []).find((b) => b.type === blockType);
-    if (bloc) return bloc;
-  }
-  return null;
-}
-
-export async function uploadBadgeBanniere(req, res, next) {
+/**
+ * Lists everything that can be applied to an event's badge: the read-only
+ * starter templates defined in code, plus this organisateur's own
+ * (non-archived) ModeleBadge templates.
+ */
+export async function listBadgeTemplates(req, res, next) {
   try {
-    if (!req.file) {
-      throw new ApiError(400, 'Une image est requise.');
-    }
+    const modeles = await ModeleBadge.find({ organisateurId: req.organisateurId, archive: { $ne: true } })
+      .sort({ nom: 1 })
+      .select('nom description format parDefaut version');
 
-    const event = await Event.findOne({ _id: req.params.eventId, organisateurId: req.organisateurId });
-    if (!event) {
-      throw new ApiError(404, 'Ressource introuvable');
-    }
-
-    const bloc = findFirstBlockByType(event, 'enteteEvenement');
-    if (!bloc) {
-      throw new ApiError(400, "Ce badge n'a pas de bloc d'en-tête. Appliquez un modèle d'abord.");
-    }
-
-    const previousId = bloc.props?.banniereImageId;
-
-    const image = await optimizeAndStoreImage({
-      buffer: req.file.buffer,
-      type: 'BANNIERE_BADGE',
-      organisateurId: req.organisateurId,
-      eventId: event._id,
+    res.json({
+      starters: Object.entries(STARTER_TEMPLATES).map(([key, t]) => ({ key, nom: t.label })),
+      modeles,
     });
-
-    bloc.props.banniereImageId = image._id;
-    event.markModified('badgeConfig.panneaux');
-    await event.save();
-
-    await deleteImage(previousId);
-
-    res.json(event);
   } catch (error) {
     next(error);
   }
 }
 
-export async function deleteBadgeBanniere(req, res, next) {
-  try {
-    const event = await Event.findOne({ _id: req.params.eventId, organisateurId: req.organisateurId });
-    if (!event) {
-      throw new ApiError(404, 'Ressource introuvable');
-    }
+const applyTemplateSchema = z.union([
+  z.object({ starterKey: z.enum(Object.keys(STARTER_TEMPLATES)) }),
+  z.object({ modeleId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Identifiant de modèle invalide.') }),
+]);
 
-    const bloc = findFirstBlockByType(event, 'enteteEvenement');
-    if (bloc) {
-      await deleteImage(bloc.props?.banniereImageId);
-      bloc.props.banniereImageId = undefined;
-      event.markModified('badgeConfig.panneaux');
-      await event.save();
-    }
-
-    res.json(event);
-  } catch (error) {
-    next(error);
-  }
-}
-
-export async function uploadBadgeLogoEvenement(req, res, next) {
-  try {
-    if (!req.file) {
-      throw new ApiError(400, 'Une image est requise.');
-    }
-
-    const event = await Event.findOne({ _id: req.params.eventId, organisateurId: req.organisateurId });
-    if (!event) {
-      throw new ApiError(404, 'Ressource introuvable');
-    }
-
-    const bloc = findFirstBlockByType(event, 'enteteEvenement');
-    if (!bloc) {
-      throw new ApiError(400, "Ce badge n'a pas de bloc d'en-tête. Appliquez un modèle d'abord.");
-    }
-
-    const previousId = bloc.props?.logoImageId;
-
-    const image = await optimizeAndStoreImage({
-      buffer: req.file.buffer,
-      type: 'LOGO_EVENEMENT',
-      organisateurId: req.organisateurId,
-      eventId: event._id,
-    });
-
-    bloc.props.logoImageId = image._id;
-    event.markModified('badgeConfig.panneaux');
-    await event.save();
-
-    await deleteImage(previousId);
-
-    res.json(event);
-  } catch (error) {
-    next(error);
-  }
-}
-
-export async function deleteBadgeLogoEvenement(req, res, next) {
-  try {
-    const event = await Event.findOne({ _id: req.params.eventId, organisateurId: req.organisateurId });
-    if (!event) {
-      throw new ApiError(404, 'Ressource introuvable');
-    }
-
-    const bloc = findFirstBlockByType(event, 'enteteEvenement');
-    if (bloc) {
-      await deleteImage(bloc.props?.logoImageId);
-      bloc.props.logoImageId = undefined;
-      event.markModified('badgeConfig.panneaux');
-      await event.save();
-    }
-
-    res.json(event);
-  } catch (error) {
-    next(error);
-  }
-}
-
+/**
+ * Copies a template into Event.badge (Addendum 3 v2 §2.1). It's a copy, not
+ * a reference: later edits to the template never change this event's badge
+ * automatically.
+ */
 export async function applyBadgeTemplate(req, res, next) {
   try {
-    const { templateKey } = z.object({ templateKey: z.enum(Object.keys(BUILTIN_TEMPLATES)) }).parse(req.body);
+    const body = applyTemplateSchema.parse(req.body);
 
     const event = await Event.findOne({ _id: req.params.eventId, organisateurId: req.organisateurId });
     if (!event) {
       throw new ApiError(404, 'Ressource introuvable');
     }
 
-    const built = BUILTIN_TEMPLATES[templateKey].build();
-    event.badgeConfig.format = built.format;
-    event.badgeConfig.carteLargeurMm = built.carteLargeurMm ?? event.badgeConfig.carteLargeurMm;
-    event.badgeConfig.carteHauteurMm = built.carteHauteurMm ?? event.badgeConfig.carteHauteurMm;
-    event.badgeConfig.rotationLigneBas180 = built.rotationLigneBas180 ?? false;
-    event.badgeConfig.traitsDePliage = built.traitsDePliage ?? true;
-    event.badgeConfig.panneaux = built.panneaux;
-    event.markModified('badgeConfig');
-    await event.save();
-
-    res.json(event);
-  } catch (error) {
-    next(error);
-  }
-}
-
-const PANEL_KEYS = ['P1', 'P2', 'P3', 'P4'];
-
-const blocSchema = z.object({
-  id: z.string().min(1),
-  type: z.string().min(1),
-  props: z.record(z.string(), z.unknown()).optional().default({}),
-  style: z
-    .object({
-      alignement: z.enum(['gauche', 'centre', 'droite']).optional(),
-      margeHaut: z.enum(['aucune', 'S', 'M', 'L']).optional(),
-      margeBas: z.enum(['aucune', 'S', 'M', 'L']).optional(),
-      couleurFond: z.enum(['aucune', 'principale', 'secondaire', 'accent']).optional(),
-      couleurTexte: z.enum(['auto', 'principale', 'accent', 'texte', 'blanc']).optional(),
-      taille: z.enum(['S', 'M', 'L', 'XL']).optional(),
-    })
-    .optional()
-    .default({}),
-});
-
-const panneauContenuSchema = z.object({
-  actif: z.boolean().optional(),
-  blocs: z.array(blocSchema),
-});
-
-const panneauxContenuSchema = z.object({
-  P1: panneauContenuSchema,
-  P2: panneauContenuSchema,
-  P3: panneauContenuSchema,
-  P4: panneauContenuSchema,
-});
-
-export async function getBadgeContenu(req, res, next) {
-  try {
-    const event = await Event.findOne({ _id: req.params.eventId, organisateurId: req.organisateurId });
-    if (!event) {
-      throw new ApiError(404, 'Ressource introuvable');
-    }
-    res.json({ panneaux: event.badgeConfig.panneaux, theme: event.badgeConfig.theme, format: event.badgeConfig.format });
-  } catch (error) {
-    next(error);
-  }
-}
-
-export async function updateBadgeContenu(req, res, next) {
-  try {
-    const { panneaux } = z.object({ panneaux: panneauxContenuSchema }).parse(req.body);
-
-    const errors = [];
-    PANEL_KEYS.forEach((key) => {
-      panneaux[key].blocs.forEach((bloc, index) => {
-        if (!hasBlockType(bloc.type)) {
-          errors.push(`${key}[${index}]: type de bloc inconnu "${bloc.type}"`);
-          return;
-        }
-        const result = getBlockDefinition(bloc.type).validateProps(bloc.props);
-        if (!result.valid) {
-          errors.push(`${key}[${index}] (${bloc.type}): ${result.errors.join(', ')}`);
-        }
-      });
-    });
-    if (errors.length > 0) {
-      throw new ApiError(400, 'Contenu de badge invalide.', errors);
+    let badge;
+    if (body.starterKey) {
+      badge = badgeFromTemplate(STARTER_TEMPLATES[body.starterKey].build());
+    } else {
+      const modele = await ModeleBadge.findOne({
+        _id: body.modeleId,
+        organisateurId: req.organisateurId,
+        archive: { $ne: true },
+      }).lean();
+      if (!modele) {
+        throw new ApiError(404, 'Modèle de badge introuvable.');
+      }
+      badge = badgeFromTemplate(modele, { modeleSourceId: modele._id, modeleSourceVersion: modele.version });
     }
 
-    const event = await Event.findOne({ _id: req.params.eventId, organisateurId: req.organisateurId });
-    if (!event) {
-      throw new ApiError(404, 'Ressource introuvable');
-    }
-
-    event.badgeConfig.panneaux = panneaux;
-    event.markModified('badgeConfig.panneaux');
+    badge.version = (event.badge?.version || 0) + 1;
+    event.badge = badge;
+    event.markModified('badge');
     await event.save();
 
     res.json(event);
@@ -492,6 +354,14 @@ export async function previewBadgeHtml(req, res, next) {
     const html = await generateBadgeHtmlPreview(sample);
 
     res.set('Content-Type', 'text/html');
+    // Helmet's default CSP blocks inline scripts, which would stop the
+    // text-fitting pass injected into this page. Override for this response
+    // only: no network access at all, inline scripts/styles and data: images
+    // allowed (all user text in the page is HTML-escaped by the renderer).
+    res.set(
+      'Content-Security-Policy',
+      "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:",
+    );
     res.send(html);
   } catch (error) {
     next(error);

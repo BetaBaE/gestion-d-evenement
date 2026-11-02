@@ -10,13 +10,8 @@ import {
   deleteEvent,
   regenerateFormToken,
   regenerateScanToken,
-  uploadBadgeBanniere,
-  deleteBadgeBanniere,
-  uploadBadgeLogoEvenement,
-  deleteBadgeLogoEvenement,
+  listBadgeTemplates,
   applyBadgeTemplate,
-  getBadgeContenu,
-  updateBadgeContenu,
   previewBadge,
   previewBadgeHtml,
   validateEvent,
@@ -36,13 +31,8 @@ eventRoutes.put('/:eventId', eventScope, validateBody(validateEvent.partial()), 
 eventRoutes.delete('/:eventId', eventScope, deleteEvent);
 eventRoutes.post('/:eventId/regenerer-form-token', eventScope, regenerateFormToken);
 eventRoutes.post('/:eventId/regenerer-scan-token', eventScope, regenerateScanToken);
-eventRoutes.post('/:eventId/badge-banniere', eventScope, imageUpload.single('file'), uploadBadgeBanniere);
-eventRoutes.delete('/:eventId/badge-banniere', eventScope, deleteBadgeBanniere);
-eventRoutes.post('/:eventId/badge-logo-evenement', eventScope, imageUpload.single('file'), uploadBadgeLogoEvenement);
-eventRoutes.delete('/:eventId/badge-logo-evenement', eventScope, deleteBadgeLogoEvenement);
+eventRoutes.get('/:eventId/badge-templates', eventScope, listBadgeTemplates);
 eventRoutes.post('/:eventId/badge-template', eventScope, applyBadgeTemplate);
-eventRoutes.get('/:eventId/badge-contenu', eventScope, getBadgeContenu);
-eventRoutes.put('/:eventId/badge-contenu', eventScope, updateBadgeContenu);
 eventRoutes.post('/:eventId/badge-image', eventScope, imageUpload.single('file'), uploadBlocImage);
 eventRoutes.get('/:eventId/badge-apercu', eventScope, previewBadge);
 eventRoutes.get('/:eventId/badge-apercu-html', eventScope, previewBadgeHtml);

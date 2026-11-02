@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   List,
   Datagrid,
@@ -18,22 +18,21 @@ import {
   useRecordContext,
   useNotify,
   useRefresh,
-  Link,
 } from 'react-admin';
-import { Button, Box, Typography, Divider, MenuItem, FormControl, InputLabel, Select } from '@mui/material';
+import {
+  Button,
+  Box,
+  Typography,
+  Divider,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Select,
+  ListSubheader,
+} from '@mui/material';
 import PreviewIcon from '@mui/icons-material/Preview';
 import ArticleIcon from '@mui/icons-material/Article';
-import DashboardCustomizeIcon from '@mui/icons-material/DashboardCustomize';
-import { ImageUploader } from '../components/ImageUploader.jsx';
-import {
-  adminImageUrl,
-  uploadBadgeBanniere,
-  deleteBadgeBanniere,
-  uploadBadgeLogoEvenement,
-  deleteBadgeLogoEvenement,
-  badgePreviewUrl,
-  badgePreviewHtmlUrl,
-} from '../../api/imageApi.js';
+import { badgePreviewUrl, badgePreviewHtmlUrl } from '../../api/imageApi.js';
 import { getSelectedOrganisateurId } from '../organisateurContext.js';
 import { axiosClient } from '../../api/axiosClient.js';
 
@@ -44,17 +43,11 @@ const statutChoices = [
   { id: 'ARCHIVE', name: 'Archivé' },
 ];
 
-const formatChoices = [
-  { id: 'A4_PLIE_4', name: 'A4 plié en 4 (badge + infos + partenaires)' },
-  { id: 'A6', name: 'A6 (badge seul)' },
-  { id: 'CARTE', name: 'Carte (taille personnalisée)' },
-];
-
-const BADGE_TEMPLATES = [
-  { id: 'SALON_A4_PLIE_4', name: 'Salon A4 plié en 4' },
-  { id: 'BADGE_SIMPLE_A6', name: 'Badge simple A6' },
-  { id: 'CARTE_COMPACTE', name: 'Carte compacte' },
-];
+const FORMAT_LABELS = {
+  A4_PLIE_4: 'A4 plié en 4',
+  A6: 'A6',
+  CARTE: 'Carte',
+};
 
 export function EventList() {
   return (
@@ -72,22 +65,44 @@ export function EventList() {
   );
 }
 
-function BadgeTemplatePicker() {
+function eventBasePath(eventId) {
+  return `/admin/organisateurs/${getSelectedOrganisateurId()}/events/${eventId}`;
+}
+
+/**
+ * Applies a template to this event's badge: either a built-in starter or
+ * one of the organisateur's own ModeleBadge templates. Applying copies the
+ * template into the event (it is not a live link to the template).
+ */
+function BadgeSection() {
   const record = useRecordContext();
   const notify = useNotify();
   const refresh = useRefresh();
-  const [templateKey, setTemplateKey] = useState('SALON_A4_PLIE_4');
+  const [templates, setTemplates] = useState({ starters: [], modeles: [] });
+  const [choice, setChoice] = useState('');
   const [isApplying, setIsApplying] = useState(false);
+
+  useEffect(() => {
+    if (!record) return;
+    axiosClient
+      .get(`${eventBasePath(record.id)}/badge-templates`)
+      .then(({ data }) => {
+        setTemplates(data);
+        if (data.starters.length > 0) setChoice(`starter:${data.starters[0].key}`);
+      })
+      .catch(() => notify('Impossible de charger les modèles de badge.', { type: 'error' }));
+  }, [record?.id]);
 
   if (!record) return null;
   const organisateurId = getSelectedOrganisateurId();
 
   async function handleApply() {
+    const [kind, value] = choice.split(':');
     setIsApplying(true);
     try {
       await axiosClient.post(
-        `/admin/organisateurs/${organisateurId}/events/${record.id}/badge-template`,
-        { templateKey },
+        `${eventBasePath(record.id)}/badge-template`,
+        kind === 'starter' ? { starterKey: value } : { modeleId: value },
       );
       notify('Modèle de badge appliqué.', { type: 'success' });
       refresh();
@@ -98,68 +113,47 @@ function BadgeTemplatePicker() {
     }
   }
 
-  return (
-    <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
-      <FormControl size="small" sx={{ minWidth: 240 }}>
-        <InputLabel>Modèle de badge</InputLabel>
-        <Select value={templateKey} label="Modèle de badge" onChange={(e) => setTemplateKey(e.target.value)}>
-          {BADGE_TEMPLATES.map((t) => (
-            <MenuItem key={t.id} value={t.id}>
-              {t.name}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-      <Button variant="contained" onClick={handleApply} disabled={isApplying}>
-        Appliquer le modèle
-      </Button>
-      <Button
-        component={Link}
-        to={`/admin/events/${record.id}/badge-builder`}
-        variant="outlined"
-        startIcon={<DashboardCustomizeIcon />}
-      >
-        Modifier le badge
-      </Button>
-    </Box>
-  );
-}
-
-function BadgeImagesField() {
-  const record = useRecordContext();
-  if (!record) return null;
-
-  const organisateurId = getSelectedOrganisateurId();
-  const enteteBlock = ['P1', 'P2', 'P3', 'P4']
-    .flatMap((key) => record.badgeConfig?.panneaux?.[key]?.blocs || [])
-    .find((b) => b.type === 'enteteEvenement');
+  const badge = record.badge || {};
 
   return (
-    <Box sx={{ mb: 2 }}>
+    <Box sx={{ mb: 2, width: '100%' }}>
       <Typography variant="subtitle1" sx={{ mb: 1 }}>
-        Badge — images de l'en-tête
+        Badge
       </Typography>
-      {!enteteBlock && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          Appliquez d'abord un modèle de badge ci-dessus pour pouvoir y ajouter des images.
-        </Typography>
-      )}
-      {enteteBlock && (
-        <>
-          <ImageUploader
-            label="Logo de l'événement (en-tête du badge)"
-            imageUrl={enteteBlock.props?.logoImageId ? adminImageUrl(enteteBlock.props.logoImageId) : null}
-            onUpload={(file) => uploadBadgeLogoEvenement(organisateurId, record.id, file)}
-            onDelete={() => deleteBadgeLogoEvenement(organisateurId, record.id)}
-          />
-          <ImageUploader
-            label="Bannière d'en-tête (mode image, remplace l'en-tête généré)"
-            imageUrl={enteteBlock.props?.banniereImageId ? adminImageUrl(enteteBlock.props.banniereImageId) : null}
-            onUpload={(file) => uploadBadgeBanniere(organisateurId, record.id, file)}
-            onDelete={() => deleteBadgeBanniere(organisateurId, record.id)}
-          />
-        </>
-      )}
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        Format actuel : {FORMAT_LABELS[badge.format] || '—'} · {badge.elements?.length || 0} élément(s) · version{' '}
+        {badge.version || 1}
+      </Typography>
+
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
+        <FormControl size="small" sx={{ minWidth: 280 }}>
+          <InputLabel>Modèle de badge</InputLabel>
+          <Select value={choice} label="Modèle de badge" onChange={(e) => setChoice(e.target.value)}>
+            <ListSubheader>Modèles de départ</ListSubheader>
+            {templates.starters.map((t) => (
+              <MenuItem key={t.key} value={`starter:${t.key}`}>
+                {t.nom}
+              </MenuItem>
+            ))}
+            {templates.modeles.length > 0 && <ListSubheader>Modèles de l'organisateur</ListSubheader>}
+            {templates.modeles.map((m) => (
+              <MenuItem key={m._id} value={`modele:${m._id}`}>
+                {m.nom}
+                {m.parDefaut ? ' (par défaut)' : ''}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <Button variant="contained" onClick={handleApply} disabled={isApplying || !choice}>
+          Appliquer le modèle
+        </Button>
+      </Box>
+
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+        Appliquer un modèle remplace le badge actuel de cet événement. L'éditeur visuel arrive dans une prochaine
+        étape.
+      </Typography>
+
       <Button
         variant="outlined"
         size="small"
@@ -185,12 +179,7 @@ function BadgeImagesField() {
 function EventForm({ isEdit }) {
   return (
     <SimpleForm>
-      {isEdit && (
-        <>
-          <BadgeTemplatePicker />
-          <BadgeImagesField />
-        </>
-      )}
+      {isEdit && <BadgeSection />}
       <TextInput source="titre" label="Titre" validate={required()} fullWidth />
       <TextInput source="description" label="Description" multiline fullWidth />
       <TextInput source="lieu" label="Lieu" />
@@ -206,23 +195,23 @@ function EventForm({ isEdit }) {
       <NumberInput source="antiDoublonMinutes" label="Anti-doublon (minutes)" />
       <BooleanInput source="photoObligatoire" label="Photo obligatoire à l'inscription" />
 
-      <Typography variant="subtitle1" sx={{ mt: 2 }}>
-        Badge — format
-      </Typography>
-      <SelectInput source="badgeConfig.format" label="Format du badge" choices={formatChoices} />
-      <NumberInput source="badgeConfig.carteLargeurMm" label="Largeur (mm, format Carte)" />
-      <NumberInput source="badgeConfig.carteHauteurMm" label="Hauteur (mm, format Carte)" />
-      <BooleanInput source="badgeConfig.rotationLigneBas180" label="Pivoter la ligne du bas à 180°" />
-      <BooleanInput source="badgeConfig.traitsDePliage" label="Afficher les traits de pliage" />
+      {isEdit && (
+        <>
+          <Typography variant="subtitle1" sx={{ mt: 2 }}>
+            Badge — pliage
+          </Typography>
+          <BooleanInput source="badge.rotationLigneBas180" label="Pivoter la ligne du bas à 180°" />
+          <BooleanInput source="badge.traitsDePliage" label="Afficher les traits de pliage" />
 
-      <Typography variant="subtitle1" sx={{ mt: 2 }}>
-        Badge — thème
-      </Typography>
-      <TextInput source="badgeConfig.theme.couleurPrincipale" label="Couleur principale (hex)" placeholder="#1971c2" />
-      <TextInput source="badgeConfig.theme.couleurSecondaire" label="Couleur secondaire (hex)" placeholder="#dceefe" />
-      <TextInput source="badgeConfig.theme.couleurAccent" label="Couleur accent (hex)" placeholder="#e3a72f" />
-      <TextInput source="badgeConfig.theme.couleurTexte" label="Couleur texte (hex)" placeholder="#1f2a1f" />
-      <BooleanInput source="badgeConfig.theme.degradeEntete" label="Dégradé dans l'en-tête" />
+          <Typography variant="subtitle1" sx={{ mt: 2 }}>
+            Badge — couleurs
+          </Typography>
+          <TextInput source="badge.theme.couleurPrincipale" label="Couleur principale (hex)" placeholder="#1971c2" />
+          <TextInput source="badge.theme.couleurSecondaire" label="Couleur secondaire (hex)" placeholder="#dceefe" />
+          <TextInput source="badge.theme.couleurAccent" label="Couleur accent (hex)" placeholder="#e3a72f" />
+          <TextInput source="badge.theme.couleurTexte" label="Couleur texte (hex)" placeholder="#1f2a1f" />
+        </>
+      )}
     </SimpleForm>
   );
 }

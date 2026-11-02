@@ -1,39 +1,45 @@
 const registry = new Map();
 
 /**
- * Registers a block type. No zod here: this package has zero dependencies
- * so it can be imported by both client and server (Node resolves bare
- * specifiers from the importing file's own node_modules, which the client
- * and server don't share, so any dependency would have to be duplicated in
- * both — simplest to just not have one).
+ * Registers an element type (Addendum 3 v2 §3 — free-positioned elements,
+ * replacing the old vertical-stack "block" model). No zod here: this
+ * package has zero dependencies so it can be imported by both client and
+ * server — Node resolves bare specifiers from the importing file's own
+ * node_modules, which client/ and server/ don't share, so any dependency
+ * would have to be duplicated in both. Simplest to just not have one.
  *
  * `validateProps(props)` returns `{ valid: true, value }` or
  * `{ valid: false, errors: [string, ...] }` — hand-written, not a zod
- * schema. `defaultProps` seeds a freshly-dropped block. `render` returns an
- * HTML string for the block's content (the caller wraps it with the
- * block's style/alignment via blockStyleToCss).
+ * schema. `defaultProps` seeds a freshly-dropped element (along with a
+ * default largeur/hauteur in mm — see defaultSizeMm). `render` returns an
+ * HTML string for the element's inner content; the caller positions it
+ * absolutely and applies its Style via styleToCss.
  */
-export function registerBlock(type, { validateProps, defaultProps, render }) {
+export function registerElement(type, { validateProps, defaultProps, defaultSizeMm, render }) {
   if (registry.has(type)) {
-    throw new Error(`Block type already registered: ${type}`);
+    throw new Error(`Element type already registered: ${type}`);
   }
-  registry.set(type, { type, validateProps, defaultProps, render });
+  registry.set(type, { type, validateProps, defaultProps, defaultSizeMm, render });
 }
 
-export function getBlockDefinition(type) {
+export function getElementDefinition(type) {
   const def = registry.get(type);
-  if (!def) throw new Error(`Unknown block type: ${type}`);
+  if (!def) throw new Error(`Unknown element type: ${type}`);
   return def;
 }
 
-export function hasBlockType(type) {
+export function hasElementType(type) {
   return registry.has(type);
 }
 
 export function getDefaultProps(type) {
-  return structuredClone(getBlockDefinition(type).defaultProps);
+  return structuredClone(getElementDefinition(type).defaultProps);
 }
 
-export function listBlockTypes() {
+export function getDefaultSizeMm(type) {
+  return structuredClone(getElementDefinition(type).defaultSizeMm || { largeur: 30, hauteur: 10 });
+}
+
+export function listElementTypes() {
   return [...registry.keys()];
 }

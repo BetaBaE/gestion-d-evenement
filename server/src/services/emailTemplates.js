@@ -43,7 +43,7 @@ export function confirmationEmailTemplate({ participant, event, organisateur }) 
 export function badgeEmailTemplate({ participant, event, organisateur }) {
   const title = `Votre badge — ${event.titre}`;
   const foldInstruction =
-    event.badgeConfig?.format === 'A4_PLIE_4'
+    event.badge?.format === 'A4_PLIE_4'
       ? '<p><strong>Imprimez ce badge en A4, taille réelle (100 %), puis pliez-le en 4.</strong></p>'
       : '';
   const bodyHtml = `

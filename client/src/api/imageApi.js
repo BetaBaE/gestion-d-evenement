@@ -67,28 +67,6 @@ export async function deleteAllParticipantPhotos(organisateurId, eventId) {
   return data;
 }
 
-export function uploadBadgeBanniere(organisateurId, eventId, file) {
-  return uploadImage(`/admin/organisateurs/${organisateurId}/events/${eventId}/badge-banniere`, file);
-}
-
-export async function deleteBadgeBanniere(organisateurId, eventId) {
-  const { data } = await axiosClient.delete(
-    `/admin/organisateurs/${organisateurId}/events/${eventId}/badge-banniere`,
-  );
-  return data;
-}
-
-export function uploadBadgeLogoEvenement(organisateurId, eventId, file) {
-  return uploadImage(`/admin/organisateurs/${organisateurId}/events/${eventId}/badge-logo-evenement`, file);
-}
-
-export async function deleteBadgeLogoEvenement(organisateurId, eventId) {
-  const { data } = await axiosClient.delete(
-    `/admin/organisateurs/${organisateurId}/events/${eventId}/badge-logo-evenement`,
-  );
-  return data;
-}
-
 export function badgePreviewHtmlUrl(organisateurId, eventId) {
   return `${axiosClient.defaults.baseURL}/admin/organisateurs/${organisateurId}/events/${eventId}/badge-apercu-html`;
 }
