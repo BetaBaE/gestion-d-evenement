@@ -1,3 +1,4 @@
+import { getImageUrl } from './imageApi.js';
 import { axiosClient } from './axiosClient.js';
 
 export async function getInscriptionForm(formToken) {
@@ -21,5 +22,5 @@ export async function submitInscription(formToken, { data: jsonData, photos }) {
 }
 
 export function imageUrl(imageId) {
-  return `${axiosClient.defaults.baseURL}/images/${imageId}`;
+  return getImageUrl(imageId);
 }

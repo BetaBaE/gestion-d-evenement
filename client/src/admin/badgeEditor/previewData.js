@@ -1,4 +1,4 @@
-import { adminImageUrl } from '../../api/imageApi.js';
+import { getImageUrl } from '../../api/imageApi.js';
 
 const SAMPLE_PARTICIPANT = {
   civilite: 'M.',
@@ -95,20 +95,21 @@ export function buildEditorAssets({ elements, context, subject, qrCodeSvg }) {
   elements
     .filter((el) => el.type === 'image' && el.props?.imageId)
     .forEach((el) => {
-      freeImages[String(el.props.imageId)] = adminImageUrl(el.props.imageId);
+      freeImages[String(el.props.imageId)] = getImageUrl(el.props.imageId);
     });
 
   const partenaireLogos = {};
   (context?.partenaires || []).forEach((p) => {
-    if (p.logoImageId) partenaireLogos[String(p._id)] = adminImageUrl(p.logoImageId);
+    if (p.logoImageId) partenaireLogos[String(p._id)] = getImageUrl(p.logoImageId);
   });
 
-  const logo = (id) => (id ? adminImageUrl(id) : null);
+  // Logos are public branding; only participant photos need the private route.
+  const logo = (id) => (id ? getImageUrl(id) : null);
 
   return {
     organisateurLogo: logo(context?.organisateur?.logoImageId),
     organismeLogo: logo(subject?.organisme?.logoImageId),
-    participantPhoto: logo(subject?.participant?.photoImageId),
+    participantPhoto: subject?.participant?.photoImageId ? getImageUrl(subject.participant.photoImageId, { prive: true }) : null,
     freeImages,
     partenaireLogos,
     qrCodeSvg,

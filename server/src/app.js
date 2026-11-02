@@ -14,9 +14,9 @@ import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
 
 export const app = express();
 
-// The admin UI (:5173) and the API (:4000) are different origins. Image
-// routes override this to `cross-origin` (see routes/imageRoutes.js), since
-// the UI embeds API-served images and Helmet's default blocked them all.
+// The app reaches the API through a same-origin proxy (Vite in dev, Nginx
+// in production), so images are same-origin; `same-site` (instead of
+// Helmet's default `same-origin`) leaves headroom for a split subdomain.
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'same-site' } }));
 app.use(cors({ origin: env.clientUrls, credentials: true }));
 app.use(morgan('dev'));

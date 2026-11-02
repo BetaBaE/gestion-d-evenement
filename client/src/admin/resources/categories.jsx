@@ -2,7 +2,6 @@ import {
   Datagrid,
   TextField,
   BooleanField,
-  SimpleForm,
   TextInput,
   ListBase,
   EditBase,
@@ -12,12 +11,11 @@ import {
   useRefresh,
   Button as RaButton,
   useDataProvider,
-  SaveButton,
-  Toolbar,
+  required,
 } from 'react-admin';
 import { useState } from 'react';
-import { Box, Dialog, DialogContent, DialogTitle, IconButton } from '@mui/material';
-import ColorLensIcon from '@mui/icons-material/ColorLens';
+import { Box, IconButton } from '@mui/material';
+import { FormDialog, DialogForm, FormSection, Field, ColorInput } from '../../components/form/index.js';
 import DeleteIcon from '@mui/icons-material/Delete';
 
 function ColorSwatch() {
@@ -36,13 +34,21 @@ function ColorSwatch() {
   );
 }
 
-function CategorieForm() {
+function CategorieForm({ isEdit }) {
   return (
-    <SimpleForm toolbar={<Toolbar><SaveButton /></Toolbar>}>
-      <TextInput source="nom" label="Nom" required fullWidth />
-      <TextInput source="couleur" label="Couleur (hex)" placeholder="#1971c2" />
-      <TextInput source="description" label="Description" fullWidth multiline />
-    </SimpleForm>
+    <DialogForm saveLabel={isEdit ? 'Enregistrer' : 'Créer la catégorie'} defaultValues={isEdit ? undefined : { couleur: '#1971C2' }}>
+      <FormSection title="Catégorie" description="La couleur sert de bandeau sur le badge des participants de cette catégorie.">
+        <Field w="half">
+          <TextInput source="nom" label="Nom" validate={required()} fullWidth />
+        </Field>
+        <Field w="half">
+          <ColorInput source="couleur" label="Couleur" />
+        </Field>
+        <Field w="full">
+          <TextInput source="description" label="Description" fullWidth multiline minRows={2} />
+        </Field>
+      </FormSection>
+    </DialogForm>
   );
 }
 
@@ -96,12 +102,12 @@ export function CategoriesPanel({ eventId }) {
         </Datagrid>
       </ListBase>
 
-      <Dialog open={!!dialog} onClose={() => setDialog(null)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          <ColorLensIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
-          {dialog?.mode === 'create' ? 'Nouvelle catégorie' : 'Modifier la catégorie'}
-        </DialogTitle>
-        <DialogContent>
+      <FormDialog
+        open={!!dialog}
+        onClose={() => setDialog(null)}
+        title={dialog?.mode === 'create' ? 'Créer une catégorie' : 'Modifier la catégorie'}
+        maxWidth="sm"
+      >
           {dialog?.mode === 'create' && (
             <CreateBase
               resource="categories"
@@ -114,7 +120,7 @@ export function CategoriesPanel({ eventId }) {
                 },
               }}
             >
-              <CategorieForm />
+              <CategorieForm isEdit={false} />
             </CreateBase>
           )}
           {dialog?.mode === 'edit' && (
@@ -122,6 +128,7 @@ export function CategoriesPanel({ eventId }) {
               resource="categories"
               id={dialog.id}
               queryOptions={{ meta: { eventId } }}
+              mutationMode="pessimistic"
               mutationOptions={{
                 meta: { eventId },
                 onSuccess: () => {
@@ -131,11 +138,10 @@ export function CategoriesPanel({ eventId }) {
                 },
               }}
             >
-              <CategorieForm />
+              <CategorieForm isEdit />
             </EditBase>
           )}
-        </DialogContent>
-      </Dialog>
+      </FormDialog>
     </Box>
   );
 }

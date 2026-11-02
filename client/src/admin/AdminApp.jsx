@@ -13,7 +13,7 @@ import { AdminAppBar } from './AdminAppBar.jsx';
 import { OrganisateurList, OrganisateurEdit, OrganisateurCreate } from './resources/organisateurs.jsx';
 import { UserList, UserEdit, UserCreate } from './resources/users.jsx';
 import { EventList, EventEdit, EventCreate } from './resources/events.jsx';
-import { EventShow } from './resources/EventShow.jsx';
+import { EventShowRedirect } from './resources/EventShow.jsx';
 import { EmailSettingsPage } from './pages/EmailSettingsPage.jsx';
 import { PartenairesPage } from './pages/PartenairesPage.jsx';
 import { BadgeEditorPage } from './badgeEditor/BadgeEditorPage.jsx';
@@ -61,7 +61,7 @@ export function AdminApp() {
             list={EventList}
             edit={EventEdit}
             create={EventCreate}
-            show={EventShow}
+            show={EventShowRedirect}
             icon={EventIcon}
             options={{ label: 'Événements' }}
           />

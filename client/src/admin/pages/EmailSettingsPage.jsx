@@ -1,19 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Title, useNotify } from 'react-admin';
-import {
-  Box,
-  Paper,
-  TextField,
-  Switch,
-  FormControlLabel,
-  Button,
-  Stack,
-  Alert,
-  Typography,
-  CircularProgress,
-  MenuItem,
-} from '@mui/material';
+import { Title, useNotify, Form, TextInput, NumberInput, SelectInput, BooleanInput, required, email, minValue, maxValue } from 'react-admin';
+import { useFormContext, useFormState } from 'react-hook-form';
+import { Alert, Box, Button, CircularProgress, MenuItem, TextField, Typography } from '@mui/material';
+import SendIcon from '@mui/icons-material/Send';
 import { getEmailSettings, saveEmailSettings, testEmailSettings } from '../../api/emailSettingsApi.js';
+import { FormPage, FormSection, Field, FormActions, PasswordInput } from '../../components/form/index.js';
 
 const EMPTY_FORM = {
   smtpHost: '',
@@ -32,76 +23,132 @@ const PROVIDER_PRESETS = [
   { value: 'gmail', label: 'Gmail / Google Workspace', smtpHost: 'smtp.gmail.com', smtpPort: 465, smtpSecure: true },
   { value: 'yahoo', label: 'Yahoo Mail', smtpHost: 'smtp.mail.yahoo.com', smtpPort: 465, smtpSecure: true },
   { value: 'zoho', label: 'Zoho Mail', smtpHost: 'smtp.zoho.com', smtpPort: 465, smtpSecure: true },
-  { value: 'custom', label: 'Autre / personnalisé', smtpHost: '', smtpPort: 587, smtpSecure: false },
+  { value: 'custom', label: 'Autre / personnalisé' },
 ];
 
-export function EmailSettingsPage() {
-  const notify = useNotify();
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [hasPassword, setHasPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isTesting, setIsTesting] = useState(false);
-  const [testResult, setTestResult] = useState(null);
+const SECURITY_CHOICES = [
+  { id: 'starttls', name: 'STARTTLS ou aucune' },
+  { id: 'ssl', name: 'SSL / TLS' },
+];
+
+/** Prefills host / port / security; they stay editable afterwards. */
+function ProviderSelect() {
+  const { setValue } = useFormContext();
   const [provider, setProvider] = useState('custom');
+  return (
+    <TextField
+      select
+      label="Fournisseur"
+      value={provider}
+      size="small"
+      fullWidth
+      helperText="Préremplit l'hôte, le port et la sécurité."
+      onChange={(e) => {
+        setProvider(e.target.value);
+        const preset = PROVIDER_PRESETS.find((p) => p.value === e.target.value);
+        if (!preset?.smtpHost) return;
+        setValue('smtpHost', preset.smtpHost, { shouldDirty: true, shouldValidate: true });
+        setValue('smtpPort', preset.smtpPort, { shouldDirty: true, shouldValidate: true });
+        setValue('smtpSecure', preset.smtpSecure, { shouldDirty: true });
+      }}
+    >
+      {PROVIDER_PRESETS.map((p) => (
+        <MenuItem key={p.value} value={p.value}>
+          {p.label}
+        </MenuItem>
+      ))}
+    </TextField>
+  );
+}
 
-  useEffect(() => {
-    getEmailSettings()
-      .then((data) => {
-        if (data) {
-          setForm({ ...EMPTY_FORM, ...data, smtpPass: '' });
-          setHasPassword(!!data.smtpPassConfigure);
-        }
-      })
-      .catch(() => notify('Impossible de charger les paramètres email.', { type: 'error' }))
-      .finally(() => setIsLoading(false));
-  }, []);
+function formatDate(value) {
+  return value ? new Date(value).toLocaleString('fr-FR') : '';
+}
 
-  function updateField(field, value) {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  }
-
-  function handleProviderChange(value) {
-    setProvider(value);
-    const preset = PROVIDER_PRESETS.find((p) => p.value === value);
-    if (!preset || preset.value === 'custom') return;
-    setForm((prev) => ({
-      ...prev,
-      smtpHost: preset.smtpHost,
-      smtpPort: preset.smtpPort,
-      smtpSecure: preset.smtpSecure,
-    }));
-  }
-
-  async function handleSave(event) {
-    event.preventDefault();
-    setIsSaving(true);
-    try {
-      const payload = { ...form, smtpPort: Number(form.smtpPort) };
-      const saved = await saveEmailSettings(payload);
-      setForm({ ...EMPTY_FORM, ...saved, smtpPass: '' });
-      setHasPassword(true);
-      notify('Paramètres email enregistrés.', { type: 'success' });
-    } catch (error) {
-      notify(error.response?.data?.message || "Erreur lors de l'enregistrement.", { type: 'error' });
-    } finally {
-      setIsSaving(false);
-    }
-  }
+/** Test button + last test status. Tests the saved settings, so it waits for unsaved edits. */
+function TestSection({ settings, onTested }) {
+  const notify = useNotify();
+  const { isDirty } = useFormState();
+  const [isTesting, setIsTesting] = useState(false);
+  const canTest = !!settings?.smtpPassConfigure && !isDirty;
 
   async function handleTest() {
     setIsTesting(true);
-    setTestResult(null);
     try {
       const result = await testEmailSettings();
-      setTestResult(result);
-      if (result.statut === 'OK') {
-        notify('Email de test envoyé avec succès.', { type: 'success' });
-      }
+      if (result.statut === 'OK') notify('Email de test envoyé avec succès.', { type: 'success' });
+      onTested(result);
     } catch (error) {
       notify(error.response?.data?.message || 'Erreur lors du test.', { type: 'error' });
     } finally {
       setIsTesting(false);
+    }
+  }
+
+  return (
+    <FormSection
+      title="Test de connexion"
+      description="Envoie un email de test à l'adresse de l'expéditeur avec la configuration enregistrée."
+    >
+      <Field w="full">
+        {settings?.dernierTestStatut ? (
+          <Alert severity={settings.dernierTestStatut === 'OK' ? 'success' : 'error'} sx={{ mb: 1.5 }}>
+            {settings.dernierTestStatut === 'OK'
+              ? `Dernier test réussi le ${formatDate(settings.dernierTestLe)}.`
+              : `Dernier test échoué le ${formatDate(settings.dernierTestLe)} : ${settings.dernierTestErreur || 'erreur inconnue'}`}
+          </Alert>
+        ) : (
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            Aucun test effectué pour le moment.
+          </Typography>
+        )}
+        <Button
+          variant="outlined"
+          startIcon={isTesting ? <CircularProgress size={16} /> : <SendIcon />}
+          onClick={handleTest}
+          disabled={isTesting || !canTest}
+        >
+          Tester la connexion
+        </Button>
+        {!canTest && (
+          <Typography variant="caption" color="text.secondary" sx={{ ml: 1.5 }}>
+            {settings?.smtpPassConfigure ? 'Enregistrez vos modifications avant de tester.' : 'Enregistrez la configuration avant de tester.'}
+          </Typography>
+        )}
+      </Field>
+    </FormSection>
+  );
+}
+
+export function EmailSettingsPage() {
+  const notify = useNotify();
+  const [settings, setSettings] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    getEmailSettings()
+      .then((data) => setSettings(data))
+      .catch(() => notify('Impossible de charger les paramètres email.', { type: 'error' }))
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  async function handleSave(values) {
+    const payload = {
+      smtpHost: values.smtpHost,
+      smtpPort: Number(values.smtpPort),
+      smtpSecure: !!values.smtpSecure,
+      smtpUser: values.smtpUser,
+      fromName: values.fromName || '',
+      fromEmail: values.fromEmail,
+      replyTo: values.replyTo || '',
+      actif: !!values.actif,
+      ...(values.smtpPass ? { smtpPass: values.smtpPass } : {}),
+    };
+    try {
+      setSettings(await saveEmailSettings(payload));
+      notify('Paramètres email enregistrés.', { type: 'success' });
+    } catch (error) {
+      notify(error.response?.data?.message || "Erreur lors de l'enregistrement.", { type: 'error' });
     }
   }
 
@@ -113,126 +160,84 @@ export function EmailSettingsPage() {
     );
   }
 
+  const hasPassword = !!settings?.smtpPassConfigure;
+  const record = { ...EMPTY_FORM, ...(settings || {}), smtpPass: '' };
+
   return (
-    <Box p={2}>
+    <>
       <Title title="Paramètres email" />
-      <Typography variant="h5" mb={2}>
-        Paramètres email de l'organisateur
-      </Typography>
-      <Typography variant="body2" color="text.secondary" mb={2}>
-        Configurez la boîte email depuis laquelle les emails de confirmation et de badge sont
-        envoyés pour cet organisateur. Si aucune configuration active n'est définie, ou si le
-        dernier test a échoué, les emails sont envoyés depuis l'adresse par défaut de la
-        plateforme.
-      </Typography>
+      {/* key: re-initialise the form with what the server saved. */}
+      <Form key={settings?.updatedAt || 'new'} record={record} onSubmit={handleSave} mode="onBlur" reValidateMode="onChange">
+        <FormPage
+          title="Paramètres email"
+          subtitle="Boîte d'envoi des emails de confirmation et de badge. Sans configuration active (ou si le dernier test a échoué), l'adresse par défaut de la plateforme est utilisée."
+          breadcrumbs={[{ label: 'Paramètres email' }]}
+          actions={<FormActions />}
+        >
+          <FormSection title="Serveur SMTP">
+            <Field w="half">
+              <ProviderSelect />
+            </Field>
+            <Field w="half">
+              <BooleanInput source="actif" label="Utiliser cette configuration" sx={{ mt: 1 }} />
+            </Field>
+            <Field w="half">
+              <TextInput source="smtpHost" label="Hôte SMTP" validate={required()} fullWidth />
+            </Field>
+            <Field w="quarter">
+              <NumberInput
+                source="smtpPort"
+                label="Port"
+                validate={[required(), minValue(1, 'Port invalide.'), maxValue(65535, 'Port invalide.')]}
+                min={1}
+                max={65535}
+                fullWidth
+              />
+            </Field>
+            <Field w="quarter">
+              <SelectInput
+                source="smtpSecure"
+                label="Sécurité"
+                choices={SECURITY_CHOICES}
+                format={(v) => (v ? 'ssl' : 'starttls')}
+                parse={(v) => v === 'ssl'}
+                emptyText={null}
+                fullWidth
+              />
+            </Field>
+          </FormSection>
 
-      <Paper sx={{ p: 3, maxWidth: 600 }}>
-        <form onSubmit={handleSave}>
-          <Stack spacing={2}>
-            <TextField
-              select
-              label="Fournisseur email"
-              value={provider}
-              onChange={(e) => handleProviderChange(e.target.value)}
-              helperText="Préremplit l'hôte, le port et la sécurité. Vous pouvez ensuite les ajuster."
-              fullWidth
-            >
-              {PROVIDER_PRESETS.map((p) => (
-                <MenuItem key={p.value} value={p.value}>
-                  {p.label}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              label="Hôte SMTP"
-              value={form.smtpHost}
-              onChange={(e) => updateField('smtpHost', e.target.value)}
-              required
-              fullWidth
-            />
-            <TextField
-              label="Port SMTP"
-              type="number"
-              value={form.smtpPort}
-              onChange={(e) => updateField('smtpPort', e.target.value)}
-              required
-              fullWidth
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={!!form.smtpSecure}
-                  onChange={(e) => updateField('smtpSecure', e.target.checked)}
-                />
-              }
-              label="Connexion sécurisée (SSL, port 465)"
-            />
-            <TextField
-              label="Utilisateur SMTP"
-              value={form.smtpUser}
-              onChange={(e) => updateField('smtpUser', e.target.value)}
-              required
-              fullWidth
-            />
-            <TextField
-              label="Mot de passe SMTP"
-              type="password"
-              value={form.smtpPass}
-              onChange={(e) => updateField('smtpPass', e.target.value)}
-              placeholder={hasPassword ? '••••••••' : ''}
-              helperText={hasPassword ? 'Laisser vide pour conserver le mot de passe actuel.' : undefined}
-              fullWidth
-            />
-            <TextField
-              label="Nom de l'expéditeur"
-              value={form.fromName || ''}
-              onChange={(e) => updateField('fromName', e.target.value)}
-              fullWidth
-            />
-            <TextField
-              label="Email de l'expéditeur"
-              type="email"
-              value={form.fromEmail}
-              onChange={(e) => updateField('fromEmail', e.target.value)}
-              required
-              fullWidth
-            />
-            <TextField
-              label="Répondre à (optionnel)"
-              type="email"
-              value={form.replyTo || ''}
-              onChange={(e) => updateField('replyTo', e.target.value)}
-              fullWidth
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={!!form.actif}
-                  onChange={(e) => updateField('actif', e.target.checked)}
-                />
-              }
-              label="Actif"
-            />
+          <FormSection title="Authentification">
+            <Field w="half">
+              <TextInput source="smtpUser" label="Utilisateur" validate={required()} autoComplete="off" fullWidth />
+            </Field>
+            <Field w="half">
+              <PasswordInput
+                source="smtpPass"
+                label="Mot de passe"
+                generate={false}
+                placeholder={hasPassword ? '••••••••' : undefined}
+                validate={hasPassword ? undefined : required('Le mot de passe SMTP est requis.')}
+                helperText={hasPassword ? 'Laisser vide pour conserver le mot de passe actuel.' : undefined}
+              />
+            </Field>
+          </FormSection>
 
-            {testResult && (
-              <Alert severity={testResult.statut === 'OK' ? 'success' : 'error'}>
-                {testResult.statut === 'OK'
-                  ? 'Connexion réussie. Un email de test a été envoyé.'
-                  : `Échec du test : ${testResult.erreur}`}
-              </Alert>
-            )}
+          <FormSection title="Expéditeur" description="Ce que les participants voient dans leur boîte de réception.">
+            <Field w="half">
+              <TextInput source="fromName" label="Nom de l'expéditeur" fullWidth />
+            </Field>
+            <Field w="half">
+              <TextInput source="fromEmail" label="Email de l'expéditeur" type="email" validate={[required(), email('Email invalide.')]} fullWidth />
+            </Field>
+            <Field w="half">
+              <TextInput source="replyTo" label="Répondre à" type="email" validate={email('Email invalide.')} fullWidth />
+            </Field>
+          </FormSection>
 
-            <Stack direction="row" spacing={2}>
-              <Button type="submit" variant="contained" disabled={isSaving}>
-                Enregistrer
-              </Button>
-              <Button variant="outlined" onClick={handleTest} disabled={isTesting || !hasPassword}>
-                Tester la connexion
-              </Button>
-            </Stack>
-          </Stack>
-        </form>
-      </Paper>
-    </Box>
+          <TestSection settings={settings} onTested={() => getEmailSettings().then(setSettings)} />
+        </FormPage>
+      </Form>
+    </>
   );
 }

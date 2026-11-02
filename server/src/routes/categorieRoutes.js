@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { validateBody } from '../middlewares/validate.js';
 import {
   listCategories,
+  getCategorie,
   createCategorie,
   updateCategorie,
   deleteCategorie,
@@ -11,6 +12,7 @@ import {
 export const categorieRoutes = Router({ mergeParams: true });
 
 categorieRoutes.get('/', listCategories);
+categorieRoutes.get('/:categorieId', getCategorie);
 categorieRoutes.post('/', validateBody(validateCategorie), createCategorie);
 categorieRoutes.put('/:categorieId', validateBody(validateCategorie.partial()), updateCategorie);
 categorieRoutes.delete('/:categorieId', deleteCategorie);

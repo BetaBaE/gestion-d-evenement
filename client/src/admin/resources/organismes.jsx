@@ -1,7 +1,6 @@
 import {
   Datagrid,
   TextField,
-  SimpleForm,
   TextInput,
   ListBase,
   EditBase,
@@ -11,53 +10,103 @@ import {
   useRefresh,
   Button as RaButton,
   useDataProvider,
-  SaveButton,
-  Toolbar,
   Pagination,
+  required,
+  email,
 } from 'react-admin';
 import { useRef, useState } from 'react';
-import { Box, Dialog, DialogContent, DialogTitle, IconButton } from '@mui/material';
+import { Box, IconButton, Typography } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { axiosClient } from '../../api/axiosClient.js';
 import { getSelectedOrganisateurId } from '../organisateurContext.js';
-import { ImageUploader } from '../components/ImageUploader.jsx';
-import { adminImageUrl, uploadOrganismeLogo, deleteOrganismeLogo } from '../../api/imageApi.js';
+import { FormDialog, DialogForm, FormSection, Field, ImageField, UrlInput } from '../../components/form/index.js';
+import { getImageUrl, uploadOrganismeLogo, deleteOrganismeLogo } from '../../api/imageApi.js';
 
 function OrganismeLogoField({ eventId }) {
   const record = useRecordContext();
-  if (!record) return null;
-
+  const refresh = useRefresh();
+  if (!record) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        Le logo pourra être ajouté une fois l'organisme créé.
+      </Typography>
+    );
+  }
   const organisateurId = getSelectedOrganisateurId();
-
   return (
-    <ImageUploader
-      label="Logo de l'organisme"
-      imageUrl={record.logoImageId ? adminImageUrl(record.logoImageId) : null}
-      onUpload={(file) => uploadOrganismeLogo(organisateurId, eventId, record.id, file)}
-      onDelete={() => deleteOrganismeLogo(organisateurId, eventId, record.id)}
+    <ImageField
+      label="Logo"
+      variant="logo"
+      imageUrl={getImageUrl(record.logoImageId, { v: record.updatedAt })}
+      onUpload={async (file, options) => {
+        await uploadOrganismeLogo(organisateurId, eventId, record.id, file, options);
+        refresh();
+      }}
+      onDelete={async () => {
+        await deleteOrganismeLogo(organisateurId, eventId, record.id);
+        refresh();
+      }}
     />
   );
 }
 
+const emailValide = email('Email invalide.');
+
 function OrganismeForm({ eventId, isEdit }) {
   return (
-    <SimpleForm toolbar={<Toolbar><SaveButton /></Toolbar>}>
-      {isEdit && <OrganismeLogoField eventId={eventId} />}
-      <TextInput source="nom" label="Nom" required fullWidth />
-      <TextInput source="siegeSocial" label="Siège social" fullWidth />
-      <TextInput source="adresse" label="Adresse" fullWidth />
-      <TextInput source="ville" label="Ville" />
-      <TextInput source="pays" label="Pays" />
-      <TextInput source="telephone" label="Téléphone" />
-      <TextInput source="fax" label="Fax" />
-      <TextInput source="email" label="Email" />
-      <TextInput source="siteWeb" label="Site web" />
-      <TextInput source="contactNom" label="Nom du contact" />
-      <TextInput source="contactFonction" label="Fonction du contact" />
-      <TextInput source="contactTelephone" label="Téléphone du contact" />
-      <TextInput source="contactEmail" label="Email du contact" />
-    </SimpleForm>
+    <DialogForm saveLabel={isEdit ? 'Enregistrer' : "Créer l'organisme"}>
+      <FormSection title="Identité">
+        <Field w="full">
+          <OrganismeLogoField eventId={eventId} />
+        </Field>
+        <Field w="full">
+          <TextInput source="nom" label="Nom" validate={required()} fullWidth />
+        </Field>
+        <Field w="full">
+          <TextInput source="siegeSocial" label="Siège social" fullWidth />
+        </Field>
+      </FormSection>
+
+      <FormSection title="Coordonnées">
+        <Field w="full">
+          <TextInput source="adresse" label="Adresse" fullWidth />
+        </Field>
+        <Field w="half">
+          <TextInput source="ville" label="Ville" fullWidth />
+        </Field>
+        <Field w="half">
+          <TextInput source="pays" label="Pays" fullWidth />
+        </Field>
+        <Field w="half">
+          <TextInput source="telephone" label="Téléphone" type="tel" fullWidth />
+        </Field>
+        <Field w="half">
+          <TextInput source="fax" label="Fax" type="tel" fullWidth />
+        </Field>
+        <Field w="half">
+          <TextInput source="email" label="Email" type="email" validate={emailValide} fullWidth />
+        </Field>
+        <Field w="half">
+          <UrlInput source="siteWeb" label="Site web" />
+        </Field>
+      </FormSection>
+
+      <FormSection title="Personne de contact" description="Reçoit le lien d'inscription et les communications de l'organisateur.">
+        <Field w="half">
+          <TextInput source="contactNom" label="Nom du contact" fullWidth />
+        </Field>
+        <Field w="half">
+          <TextInput source="contactFonction" label="Fonction" fullWidth />
+        </Field>
+        <Field w="half">
+          <TextInput source="contactTelephone" label="Téléphone" type="tel" fullWidth />
+        </Field>
+        <Field w="half">
+          <TextInput source="contactEmail" label="Email" type="email" validate={emailValide} fullWidth />
+        </Field>
+      </FormSection>
+    </DialogForm>
   );
 }
 
@@ -150,9 +199,11 @@ export function OrganismesPanel({ eventId }) {
         <Pagination />
       </ListBase>
 
-      <Dialog open={!!dialog} onClose={() => setDialog(null)} maxWidth="sm" fullWidth>
-        <DialogTitle>{dialog?.mode === 'create' ? 'Nouvel organisme' : "Modifier l'organisme"}</DialogTitle>
-        <DialogContent>
+      <FormDialog
+        open={!!dialog}
+        onClose={() => setDialog(null)}
+        title={dialog?.mode === 'create' ? 'Créer un organisme invité' : "Modifier l'organisme"}
+      >
           {dialog?.mode === 'create' && (
             <CreateBase
               resource="organismes"
@@ -173,6 +224,7 @@ export function OrganismesPanel({ eventId }) {
               resource="organismes"
               id={dialog.id}
               queryOptions={{ meta: { eventId } }}
+              mutationMode="pessimistic"
               mutationOptions={{
                 meta: { eventId },
                 onSuccess: () => {
@@ -185,8 +237,7 @@ export function OrganismesPanel({ eventId }) {
               <OrganismeForm eventId={eventId} isEdit />
             </EditBase>
           )}
-        </DialogContent>
-      </Dialog>
+      </FormDialog>
     </Box>
   );
 }

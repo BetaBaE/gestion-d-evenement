@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { hexColor } from '../validation/badgeElements.js';
+import { ALLOWED_FONTS } from '../../../shared/badge-renderer/index.js';
 import { Organisateur } from '../models/Organisateur.js';
 import { ApiError } from '../middlewares/errorHandler.js';
 import { parsePagination, paginatedResponse } from '../utils/pagination.js';
@@ -15,6 +17,25 @@ const organisateurSchema = z.object({
   email: z.string().email('Email invalide.').optional().or(z.literal('')),
   siteWeb: z.string().optional(),
   actif: z.boolean().optional(),
+  brandKit: z
+    .object({
+      couleurs: z
+        .object({
+          principale: hexColor.optional(),
+          secondaire: hexColor.optional(),
+          accent: hexColor.optional(),
+          texte: hexColor.optional(),
+        })
+        .optional(),
+      polices: z
+        .object({
+          titres: z.enum(ALLOWED_FONTS).optional(),
+          texte: z.enum(ALLOWED_FONTS).optional(),
+          nom: z.enum(ALLOWED_FONTS).optional(),
+        })
+        .optional(),
+    })
+    .optional(),
 });
 
 export const validateOrganisateur = organisateurSchema;
@@ -126,6 +147,23 @@ export async function deleteOrganisateurLogo(req, res, next) {
     await organisateur.save();
 
     res.json(organisateur);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Brand kit of the caller's organisateur (tenant-scoped, so a Gestionnaire
+ * can read their own without access to the Super Admin organisateur API).
+ * Used for color-picker presets across the back-office.
+ */
+export async function getBrandKit(req, res, next) {
+  try {
+    const organisateur = await Organisateur.findById(req.organisateurId).select('brandKit');
+    if (!organisateur) {
+      throw new ApiError(404, 'Ressource introuvable');
+    }
+    res.json(organisateur.brandKit || {});
   } catch (error) {
     next(error);
   }

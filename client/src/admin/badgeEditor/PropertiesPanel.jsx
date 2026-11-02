@@ -26,6 +26,7 @@ import { ALLOWED_FONTS, listTextVariables, resolveToken } from '../../../../shar
 import { CHAMP_OPTIONS, ELEMENT_CATALOG, ICON_OPTIONS, elementLabel } from './elementCatalog.js';
 import { activePanels } from './geometry.js';
 import { ImagePickerField } from './ImagePickerField.jsx';
+import { ColorField as SharedColorField, useBrandKitColors } from '../../components/form/index.js';
 
 const TOKENS = [
   { value: 'principale', label: 'Principale' },
@@ -72,46 +73,13 @@ function NumberField({ label, value, onChange, step = 0.5, min, max, suffix }) {
   );
 }
 
-/** Theme token or free hex, with the theme's colors offered first. */
+const CATEGORY_SWATCH = 'linear-gradient(135deg,#e03131,#2f9e44,#1971c2)';
+
+/** Shared ColorField with the badge theme tokens and the organisateur's brand kit. */
 function ColorField({ label, value, onChange, theme, allowNone }) {
-  const isHex = typeof value === 'string' && value.startsWith('#');
-  return (
-    <Box>
-      <Typography variant="caption" color="text.secondary">
-        {label}
-      </Typography>
-      <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-        {allowNone && (
-          <Chip size="small" label="Aucun" variant={!value || value === 'aucun' ? 'filled' : 'outlined'} onClick={() => onChange('aucun')} />
-        )}
-        {TOKENS.map((t) => {
-          const swatch = t.value === 'categorie' ? 'linear-gradient(135deg,#e03131,#2f9e44,#1971c2)' : resolveToken(t.value, theme);
-          return (
-            <Tooltip key={t.value} title={t.label}>
-              <Box
-                onClick={() => onChange(t.value)}
-                sx={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: '50%',
-                  background: swatch,
-                  border: value === t.value ? '2px solid #1971c2' : '1px solid #bbb',
-                  cursor: 'pointer',
-                }}
-              />
-            </Tooltip>
-          );
-        })}
-        <input
-          type="color"
-          value={isHex ? value : '#000000'}
-          onChange={(e) => onChange(e.target.value)}
-          style={{ width: 26, height: 22, padding: 0, border: isHex ? '2px solid #1971c2' : '1px solid #bbb' }}
-          title="Couleur libre"
-        />
-      </Stack>
-    </Box>
-  );
+  const brandColors = useBrandKitColors();
+  const tokens = TOKENS.map((t) => ({ ...t, color: t.value === 'categorie' ? CATEGORY_SWATCH : resolveToken(t.value, theme) }));
+  return <SharedColorField label={label} value={value} onChange={onChange} tokens={tokens} presets={brandColors} allowNone={allowNone} />;
 }
 
 function VariableMenu({ onInsert }) {
@@ -406,6 +374,11 @@ function StyleSection({ el, onStyle, theme }) {
   );
 }
 
+function ThemeColorField({ label, value, onChange }) {
+  const brandColors = useBrandKitColors();
+  return <SharedColorField label={label} value={value} onChange={onChange} presets={brandColors} />;
+}
+
 function ThemeSection({ theme, onTheme }) {
   const colors = [
     ['couleurPrincipale', 'Principale'],
@@ -420,13 +393,7 @@ function ThemeSection({ theme, onTheme }) {
         Sélectionnez un élément pour le modifier. Les couleurs du thème recolorent tous les éléments qui les utilisent.
       </Typography>
       {colors.map(([key, label]) => (
-        <Stack key={key} direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-          <input type="color" value={theme[key] || '#000000'} onChange={(e) => onTheme({ [key]: e.target.value })} style={{ width: 32, height: 26, padding: 0 }} />
-          <Typography variant="body2">{label}</Typography>
-          <Typography variant="caption" color="text.secondary">
-            {theme[key]}
-          </Typography>
-        </Stack>
+        <ThemeColorField key={key} label={label} value={theme[key]} onChange={(v) => onTheme({ [key]: v })} />
       ))}
       {[
         ['policeTitres', 'Police des titres'],

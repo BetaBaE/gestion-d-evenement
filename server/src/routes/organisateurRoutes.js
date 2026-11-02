@@ -10,6 +10,7 @@ import {
   deleteOrganisateur,
   uploadOrganisateurLogo,
   deleteOrganisateurLogo,
+  getBrandKit,
   validateOrganisateur,
 } from '../controllers/organisateurController.js';
 import { imageUpload } from '../middlewares/upload.js';
@@ -39,6 +40,8 @@ organisateurRoutes.post(
   uploadOrganisateurLogo,
 );
 organisateurRoutes.delete('/:id/logo', requireRole('SUPER_ADMIN'), deleteOrganisateurLogo);
+
+organisateurRoutes.get('/:organisateurId/brand-kit', requireRole('SUPER_ADMIN', 'GESTIONNAIRE'), tenantScope, getBrandKit);
 
 organisateurRoutes.use(
   '/:organisateurId/events',

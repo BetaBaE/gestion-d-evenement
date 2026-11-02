@@ -1,25 +1,24 @@
 import {
   Datagrid,
   TextField,
-  SimpleForm,
   SelectInput,
   ListBase,
   CreateBase,
+  EditBase,
   useRecordContext,
   useNotify,
   useRefresh,
   useListContext,
   Button as RaButton,
   useDataProvider,
-  SaveButton,
-  Toolbar,
   Pagination,
   TextInput,
   required,
+  email,
   BulkActionsToolbar,
 } from 'react-admin';
 import { useState } from 'react';
-import { Box, Chip, Dialog, DialogContent, DialogTitle, IconButton, Stack } from '@mui/material';
+import { Box, Chip, IconButton, Stack, Typography } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import EmailIcon from '@mui/icons-material/Email';
@@ -28,7 +27,8 @@ import { axiosClient } from '../../api/axiosClient.js';
 import { getSelectedOrganisateurId } from '../organisateurContext.js';
 import { Avatar } from '@mui/material';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
-import { adminImageUrl, uploadParticipantPhoto, deleteAllParticipantPhotos } from '../../api/imageApi.js';
+import { getImageUrl, uploadParticipantPhoto, deleteParticipantPhoto, deleteAllParticipantPhotos } from '../../api/imageApi.js';
+import { FormDialog, DialogForm, FormSection, Field, ImageField } from '../../components/form/index.js';
 
 const statutChoices = [
   { id: 'EN_ATTENTE', name: 'En attente' },
@@ -156,7 +156,7 @@ function ParticipantPhotoCell({ eventId, onChanged }) {
 
   return (
     <label onClick={(e) => e.stopPropagation()} style={{ cursor: 'pointer' }}>
-      <Avatar src={record.photoImageId ? adminImageUrl(record.photoImageId) : undefined} sx={{ width: 32, height: 32 }}>
+      <Avatar src={record.photoImageId ? getImageUrl(record.photoImageId, { prive: true }) : undefined} sx={{ width: 32, height: 32 }}>
         <PhotoCameraIcon fontSize="small" />
       </Avatar>
       <input type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={handleFileChange} />
@@ -230,51 +230,119 @@ function BulkValidateButton({ eventId, onDone }) {
   return <RaButton label="Valider et envoyer les badges" onClick={handleClick} />;
 }
 
-function ParticipantForm({ categories, organismes }) {
+function ParticipantPhotoField({ eventId }) {
+  const record = useRecordContext();
+  const refresh = useRefresh();
+  if (!record) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        La photo pourra être ajoutée une fois le participant créé.
+      </Typography>
+    );
+  }
+  const organisateurId = getSelectedOrganisateurId();
   return (
-    <SimpleForm toolbar={<Toolbar><SaveButton /></Toolbar>}>
-      <SelectInput
-        source="invitedOrganismId"
-        label="Organisme"
-        choices={organismes.map((o) => ({ id: o.id, name: o.nom }))}
-        validate={required()}
-        fullWidth
-      />
-      <SelectInput
-        source="categorieId"
-        label="Catégorie"
-        choices={categories.map((c) => ({ id: c.id, name: c.nom }))}
-      />
-      <SelectInput
-        source="civilite"
-        label="Civilité"
-        choices={[{ id: 'M.', name: 'M.' }, { id: 'Mme', name: 'Mme' }]}
-      />
-      <TextInput source="nom" label="Nom" validate={required()} />
-      <TextInput source="prenom" label="Prénom" validate={required()} />
-      <TextInput source="fonction" label="Fonction" validate={required()} />
-      <TextInput source="email" label="Email" validate={required()} fullWidth />
-      <TextInput source="telephone" label="Téléphone" />
-      <TextInput source="commentaire" label="Commentaire" fullWidth multiline />
-    </SimpleForm>
+    <ImageField
+      label="Photo"
+      variant="photo"
+      imageUrl={getImageUrl(record.photoImageId, { prive: true, v: record.updatedAt })}
+      onUpload={async (file, options) => {
+        await uploadParticipantPhoto(organisateurId, eventId, record.id, file, options);
+        refresh();
+      }}
+      onDelete={async () => {
+        await deleteParticipantPhoto(organisateurId, eventId, record.id);
+        refresh();
+      }}
+    />
+  );
+}
+
+const civiliteChoices = [
+  { id: 'M.', name: 'M.' },
+  { id: 'Mme', name: 'Mme' },
+];
+
+// Fields the update API accepts (email and organisme are fixed after registration).
+const EDITABLE_FIELDS = ['categorieId', 'civilite', 'nom', 'prenom', 'fonction', 'telephone', 'commentaire'];
+const pickEditable = (data) =>
+  Object.fromEntries(EDITABLE_FIELDS.filter((k) => data[k] !== null && data[k] !== undefined).map((k) => [k, data[k]]));
+
+function ParticipantForm({ eventId, categories, organismes, isEdit }) {
+  return (
+    <DialogForm saveLabel={isEdit ? 'Enregistrer' : 'Ajouter le participant'}>
+      <FormSection title="Identité">
+        <Field w="full">
+          <ParticipantPhotoField eventId={eventId} />
+        </Field>
+        <Field w="half">
+          <TextInput source="nom" label="Nom" validate={required()} fullWidth />
+        </Field>
+        <Field w="half">
+          <TextInput source="prenom" label="Prénom" validate={required()} fullWidth />
+        </Field>
+        <Field w="quarter">
+          <SelectInput source="civilite" label="Civilité" choices={civiliteChoices} fullWidth />
+        </Field>
+        <Field w="quarter">
+          <SelectInput source="categorieId" label="Catégorie" choices={categories.map((c) => ({ id: c.id, name: c.nom }))} fullWidth />
+        </Field>
+        <Field w="half">
+          <TextInput source="fonction" label="Fonction" validate={required()} fullWidth />
+        </Field>
+      </FormSection>
+
+      <FormSection
+        title="Contact"
+        description={isEdit ? "L'email et l'organisme ne sont pas modifiables après l'inscription." : undefined}
+      >
+        <Field w="half">
+          <SelectInput
+            source="invitedOrganismId"
+            label="Organisme"
+            choices={organismes.map((o) => ({ id: o.id, name: o.nom }))}
+            validate={isEdit ? undefined : required()}
+            disabled={isEdit}
+            fullWidth
+          />
+        </Field>
+        <Field w="half">
+          <TextInput source="email" label="Email" type="email" validate={isEdit ? undefined : [required(), email('Email invalide.')]} disabled={isEdit} fullWidth />
+        </Field>
+        <Field w="half">
+          <TextInput source="telephone" label="Téléphone" type="tel" fullWidth />
+        </Field>
+      </FormSection>
+
+      <FormSection title="Remarques">
+        <Field w="full">
+          <TextInput source="commentaire" label="Commentaire" fullWidth multiline minRows={2} />
+        </Field>
+      </FormSection>
+    </DialogForm>
   );
 }
 
 export function ParticipantsPanel({ eventId, categories, organismes }) {
   const notify = useNotify();
   const refresh = useRefresh();
-  const [createOpen, setCreateOpen] = useState(false);
+  const [dialog, setDialog] = useState(null);
 
   return (
     <Box>
-      <RaButton label="Ajouter un participant" onClick={() => setCreateOpen(true)} sx={{ mb: 2 }} />
+      <RaButton label="Ajouter un participant" onClick={() => setDialog({ mode: 'create' })} sx={{ mb: 2 }} />
       <DeleteAllPhotosButton eventId={eventId} onDone={refresh} />
 
       <ListBase resource="participants" queryOptions={{ meta: { eventId } }}>
         <BulkActionsToolbar>
           <BulkValidateButton eventId={eventId} onDone={refresh} />
         </BulkActionsToolbar>
-        <Datagrid rowClick={false}>
+        <Datagrid
+          rowClick={(id, resource, record) => {
+            setDialog({ mode: 'edit', id: record.id });
+            return false;
+          }}
+        >
           <ParticipantPhotoCell eventId={eventId} onChanged={refresh} />
           <TextField source="nom" label="Nom" />
           <TextField source="prenom" label="Prénom" />
@@ -287,9 +355,12 @@ export function ParticipantsPanel({ eventId, categories, organismes }) {
         <Pagination />
       </ListBase>
 
-      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Ajouter un participant</DialogTitle>
-        <DialogContent>
+      <FormDialog
+        open={!!dialog}
+        onClose={() => setDialog(null)}
+        title={dialog?.mode === 'create' ? 'Ajouter un participant' : 'Modifier le participant'}
+      >
+        {dialog?.mode === 'create' && (
           <CreateBase
             resource="participants"
             mutationOptions={{
@@ -297,17 +368,39 @@ export function ParticipantsPanel({ eventId, categories, organismes }) {
               onSuccess: () => {
                 notify('Participant ajouté.', { type: 'success' });
                 refresh();
-                setCreateOpen(false);
+                setDialog(null);
               },
               onError: (error) => {
                 notify(error.response?.data?.message || "Erreur lors de l'ajout.", { type: 'error' });
               },
             }}
           >
-            <ParticipantForm categories={categories} organismes={organismes} />
+            <ParticipantForm eventId={eventId} categories={categories} organismes={organismes} isEdit={false} />
           </CreateBase>
-        </DialogContent>
-      </Dialog>
+        )}
+        {dialog?.mode === 'edit' && (
+          <EditBase
+            resource="participants"
+            id={dialog.id}
+            queryOptions={{ meta: { eventId } }}
+            mutationMode="pessimistic"
+            transform={pickEditable}
+            mutationOptions={{
+              meta: { eventId },
+              onSuccess: () => {
+                notify('Participant modifié.', { type: 'success' });
+                refresh();
+                setDialog(null);
+              },
+              onError: (error) => {
+                notify(error.response?.data?.message || 'Erreur lors de l’enregistrement.', { type: 'error' });
+              },
+            }}
+          >
+            <ParticipantForm eventId={eventId} categories={categories} organismes={organismes} isEdit />
+          </EditBase>
+        )}
+      </FormDialog>
     </Box>
   );
 }

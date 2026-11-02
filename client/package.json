@@ -32,6 +32,7 @@
     "ra-language-french": "5.15.5",
     "react": "19.3.1",
     "react-admin": "5.15.5",
+    "react-colorful": "5.8.1",
     "react-dom": "19.3.1",
     "react-hook-form": "7.91.0",
     "react-moveable": "0.56.0",

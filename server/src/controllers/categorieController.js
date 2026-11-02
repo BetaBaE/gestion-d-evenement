@@ -2,11 +2,12 @@ import { z } from 'zod';
 import { CategorieEvent } from '../models/CategorieEvent.js';
 import { Participant } from '../models/Participant.js';
 import { ApiError } from '../middlewares/errorHandler.js';
+import { hexColor } from '../validation/badgeElements.js';
 import { parsePagination, paginatedResponse } from '../utils/pagination.js';
 
 const categorieSchema = z.object({
   nom: z.string().min(1, 'Le nom est requis.'),
-  couleur: z.string().optional(),
+  couleur: hexColor.optional(),
   description: z.string().optional(),
 });
 
@@ -21,6 +22,18 @@ export async function listCategories(req, res, next) {
       CategorieEvent.countDocuments(filter),
     ]);
     res.json(paginatedResponse(items, total, page, limit));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getCategorie(req, res, next) {
+  try {
+    const categorie = await CategorieEvent.findOne({ _id: req.params.categorieId, eventId: req.event._id });
+    if (!categorie) {
+      throw new ApiError(404, 'Ressource introuvable');
+    }
+    res.json(categorie);
   } catch (error) {
     next(error);
   }
