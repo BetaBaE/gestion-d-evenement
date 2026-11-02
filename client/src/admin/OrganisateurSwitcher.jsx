@@ -1,31 +1,30 @@
 import { useEffect, useState } from 'react';
-import { useGetIdentity, useDataProvider, useNotify } from 'react-admin';
+import { useGetIdentity, useGetList } from 'react-admin';
 import { MenuItem, Select, FormControl } from '@mui/material';
 import { getSelectedOrganisateurId, setSelectedOrganisateurId } from './organisateurContext.js';
 
 export function OrganisateurSwitcher() {
-  const { identity, isPending } = useGetIdentity();
-  const dataProvider = useDataProvider();
-  const notify = useNotify();
-  const [organisateurs, setOrganisateurs] = useState([]);
+  const { identity, isPending: identityPending } = useGetIdentity();
   const [selected, setSelected] = useState(getSelectedOrganisateurId() || '');
 
+  // useGetList (not a one-shot dataProvider call) so react-admin's query
+  // cache automatically refetches this list whenever an organisateur is
+  // created/updated/deleted elsewhere in the app — otherwise this AppBar
+  // singleton never re-fetches after its first mount.
+  const { data: organisateurs = [] } = useGetList(
+    'organisateurs',
+    { pagination: { page: 1, perPage: 100 }, sort: { field: 'nom', order: 'ASC' } },
+    { enabled: !identityPending && identity?.role === 'SUPER_ADMIN' },
+  );
+
   useEffect(() => {
-    if (isPending || identity?.role !== 'SUPER_ADMIN') return;
+    if (!selected && organisateurs.length > 0) {
+      setSelected(organisateurs[0].id);
+      setSelectedOrganisateurId(organisateurs[0].id);
+    }
+  }, [organisateurs, selected]);
 
-    dataProvider
-      .getList('organisateurs', { pagination: { page: 1, perPage: 100 }, sort: { field: 'nom', order: 'ASC' } })
-      .then(({ data }) => {
-        setOrganisateurs(data);
-        if (!selected && data.length > 0) {
-          setSelected(data[0].id);
-          setSelectedOrganisateurId(data[0].id);
-        }
-      })
-      .catch(() => notify('Impossible de charger les organisateurs.', { type: 'error' }));
-  }, [isPending, identity]);
-
-  if (isPending || identity?.role !== 'SUPER_ADMIN') {
+  if (identityPending || identity?.role !== 'SUPER_ADMIN') {
     return null;
   }
 

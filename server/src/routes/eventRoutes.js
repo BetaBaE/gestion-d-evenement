@@ -10,16 +10,18 @@ import {
   deleteEvent,
   regenerateFormToken,
   regenerateScanToken,
-  uploadBadgeBackground,
-  deleteBadgeBackground,
   uploadBadgeBanniere,
   deleteBadgeBanniere,
   uploadBadgeLogoEvenement,
   deleteBadgeLogoEvenement,
+  applyBadgeTemplate,
+  getBadgeContenu,
+  updateBadgeContenu,
   previewBadge,
   previewBadgeHtml,
   validateEvent,
 } from '../controllers/eventController.js';
+import { uploadBlocImage } from '../controllers/imageController.js';
 import { categorieRoutes } from './categorieRoutes.js';
 import { organismeRoutes } from './organismeRoutes.js';
 import { participantRoutes } from './participantRoutes.js';
@@ -34,12 +36,14 @@ eventRoutes.put('/:eventId', eventScope, validateBody(validateEvent.partial()), 
 eventRoutes.delete('/:eventId', eventScope, deleteEvent);
 eventRoutes.post('/:eventId/regenerer-form-token', eventScope, regenerateFormToken);
 eventRoutes.post('/:eventId/regenerer-scan-token', eventScope, regenerateScanToken);
-eventRoutes.post('/:eventId/badge-fond', eventScope, imageUpload.single('file'), uploadBadgeBackground);
-eventRoutes.delete('/:eventId/badge-fond', eventScope, deleteBadgeBackground);
 eventRoutes.post('/:eventId/badge-banniere', eventScope, imageUpload.single('file'), uploadBadgeBanniere);
 eventRoutes.delete('/:eventId/badge-banniere', eventScope, deleteBadgeBanniere);
 eventRoutes.post('/:eventId/badge-logo-evenement', eventScope, imageUpload.single('file'), uploadBadgeLogoEvenement);
 eventRoutes.delete('/:eventId/badge-logo-evenement', eventScope, deleteBadgeLogoEvenement);
+eventRoutes.post('/:eventId/badge-template', eventScope, applyBadgeTemplate);
+eventRoutes.get('/:eventId/badge-contenu', eventScope, getBadgeContenu);
+eventRoutes.put('/:eventId/badge-contenu', eventScope, updateBadgeContenu);
+eventRoutes.post('/:eventId/badge-image', eventScope, imageUpload.single('file'), uploadBlocImage);
 eventRoutes.get('/:eventId/badge-apercu', eventScope, previewBadge);
 eventRoutes.get('/:eventId/badge-apercu-html', eventScope, previewBadgeHtml);
 

@@ -1,4 +1,5 @@
-import { Admin, Resource, Layout } from 'react-admin';
+import { Admin, Resource, Layout, CustomRoutes } from 'react-admin';
+import { Route } from 'react-router';
 import polyglotI18nProvider from 'ra-i18n-polyglot';
 import frenchMessages from 'ra-language-french';
 import PeopleIcon from '@mui/icons-material/People';
@@ -15,6 +16,7 @@ import { EventList, EventEdit, EventCreate } from './resources/events.jsx';
 import { EventShow } from './resources/EventShow.jsx';
 import { EmailSettingsPage } from './pages/EmailSettingsPage.jsx';
 import { PartenairesPage } from './pages/PartenairesPage.jsx';
+import { BadgeBuilderPage } from './badgeBuilder/BadgeBuilderPage.jsx';
 
 const i18nProvider = polyglotI18nProvider(() => frenchMessages, 'fr');
 
@@ -75,6 +77,9 @@ export function AdminApp() {
             icon={HandshakeIcon}
             options={{ label: 'Partenaires' }}
           />
+          <CustomRoutes>
+            <Route path="/events/:id/badge-builder" element={<BadgeBuilderPage />} />
+          </CustomRoutes>
         </>
       )}
     </Admin>

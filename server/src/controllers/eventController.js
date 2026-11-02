@@ -8,44 +8,21 @@ import { generateToken } from '../utils/tokens.js';
 import { optimizeAndStoreImage, deleteImage } from '../services/imageService.js';
 import { generateSingleBadgePdf, generateBadgeHtmlPreview } from '../services/badgeService.js';
 import { Organisateur } from '../models/Organisateur.js';
+import { BUILTIN_TEMPLATES, hasBlockType, getBlockDefinition } from '../../../shared/badge-renderer/index.js';
 
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Couleur hexadécimale invalide.');
 
-const horaireSchema = z.object({
-  libelleJours: z.string().max(100).optional(),
-  ouverture: z.string().max(10).optional(),
-  fermeture: z.string().max(10).optional(),
-});
-
-const groupePartenaireSchema = z.object({
-  titre: z.string().max(100).optional(),
-  ordre: z.number().int().optional(),
-  panneau: z.enum(['P3', 'P4', 'AUTO']).optional(),
-  tailleLogos: z.enum(['S', 'M', 'L']).optional(),
-  partenaires: z
-    .array(
-      z.object({
-        partenaireId: z.string(),
-        ordre: z.number().int().optional(),
-      }),
-    )
-    .optional(),
-});
-
+// Badge content (panneaux.P1-P4.blocs) is edited via the dedicated
+// getBadgeContenu/updateBadgeContenu endpoints (the drag-and-drop builder,
+// Addendum 3 phase 6b) or set wholesale by applying a built-in template
+// (applyBadgeTemplate). Only format/dimensions/folding/theme stay editable
+// through the regular updateEvent endpoint.
 const badgeConfigSchema = z.object({
   format: z.enum(['A4_PLIE_4', 'A6', 'CARTE']).optional(),
   carteLargeurMm: z.number().positive().optional(),
   carteHauteurMm: z.number().positive().optional(),
-  panneauxActifs: z
-    .object({
-      p2: z.boolean().optional(),
-      p3: z.boolean().optional(),
-      p4: z.boolean().optional(),
-    })
-    .optional(),
   rotationLigneBas180: z.boolean().optional(),
   traitsDePliage: z.boolean().optional(),
-  afficherPhoto: z.boolean().optional(),
   theme: z
     .object({
       couleurPrincipale: hexColor.optional(),
@@ -56,55 +33,6 @@ const badgeConfigSchema = z.object({
       policeTitres: z.string().max(60).optional(),
       policeTexte: z.string().max(60).optional(),
       policeNom: z.string().max(60).optional(),
-    })
-    .optional(),
-  entete: z
-    .object({
-      modeImage: z.boolean().optional(),
-      patronageAr: z.string().max(300).optional(),
-      patronageFr: z.string().max(300).optional(),
-      titreAffiche: z.string().max(300).optional(),
-      sousTitreParLigne: z.string().max(300).optional(),
-      edition: z.string().max(300).optional(),
-      descriptif: z.string().max(300).optional(),
-    })
-    .optional(),
-  siteWeb: z.string().max(300).optional(),
-  reseauxSociaux: z
-    .object({
-      facebook: z.string().max(300).optional(),
-      instagram: z.string().max(300).optional(),
-      linkedin: z.string().max(300).optional(),
-      youtube: z.string().max(300).optional(),
-      x: z.string().max(300).optional(),
-    })
-    .optional(),
-  infosPratiques: z
-    .object({
-      messageValidite: z.string().max(300).optional(),
-      horaires: z.array(horaireSchema).optional(),
-      lieuNom: z.string().max(300).optional(),
-      lieuDetail: z.string().max(300).optional(),
-      droitsEntree: z.string().max(300).optional(),
-      venirAuSalon: z.string().max(300).optional(),
-      noteEncadree: z
-        .object({
-          texte: z.string().max(300).optional(),
-          lien: z.string().max(300).optional(),
-        })
-        .optional(),
-      afficherOrganisateur: z.boolean().optional(),
-    })
-    .optional(),
-  groupesPartenaires: z.array(groupePartenaireSchema).optional(),
-  encartPromo: z
-    .object({
-      actif: z.boolean().optional(),
-      titre: z.string().max(300).optional(),
-      pastille: z.string().max(20).optional(),
-      texte: z.string().max(300).optional(),
-      couleur: hexColor.optional(),
-      partenaireId: z.string().optional(),
     })
     .optional(),
 });
@@ -270,52 +198,18 @@ export async function regenerateScanToken(req, res, next) {
   }
 }
 
-export async function uploadBadgeBackground(req, res, next) {
-  try {
-    if (!req.file) {
-      throw new ApiError(400, 'Une image est requise.');
-    }
-
-    const event = await Event.findOne({ _id: req.params.eventId, organisateurId: req.organisateurId });
-    if (!event) {
-      throw new ApiError(404, 'Ressource introuvable');
-    }
-
-    const previousFondImageId = event.badgeConfig?.fondImageId;
-
-    const image = await optimizeAndStoreImage({
-      buffer: req.file.buffer,
-      type: 'FOND_BADGE',
-      organisateurId: req.organisateurId,
-      eventId: event._id,
-    });
-
-    event.badgeConfig.fondImageId = image._id;
-    await event.save();
-
-    await deleteImage(previousFondImageId);
-
-    res.json(event);
-  } catch (error) {
-    next(error);
+// Images now attach to a specific block's props (e.g. enteteEvenement's
+// banniereImageId/logoImageId) rather than a fixed badgeConfig field, since
+// content is a list of blocks per panel (Addendum 3). Finds the first block
+// of the given type across all panels and returns { bloc } so callers can
+// mutate bloc.props directly before event.save().
+function findFirstBlockByType(event, blockType) {
+  for (const panelKey of ['P1', 'P2', 'P3', 'P4']) {
+    const panneau = event.badgeConfig?.panneaux?.[panelKey];
+    const bloc = (panneau?.blocs || []).find((b) => b.type === blockType);
+    if (bloc) return bloc;
   }
-}
-
-export async function deleteBadgeBackground(req, res, next) {
-  try {
-    const event = await Event.findOne({ _id: req.params.eventId, organisateurId: req.organisateurId });
-    if (!event) {
-      throw new ApiError(404, 'Ressource introuvable');
-    }
-
-    await deleteImage(event.badgeConfig?.fondImageId);
-    event.badgeConfig.fondImageId = undefined;
-    await event.save();
-
-    res.json(event);
-  } catch (error) {
-    next(error);
-  }
+  return null;
 }
 
 export async function uploadBadgeBanniere(req, res, next) {
@@ -329,7 +223,12 @@ export async function uploadBadgeBanniere(req, res, next) {
       throw new ApiError(404, 'Ressource introuvable');
     }
 
-    const previousId = event.badgeConfig?.entete?.banniereImageId;
+    const bloc = findFirstBlockByType(event, 'enteteEvenement');
+    if (!bloc) {
+      throw new ApiError(400, "Ce badge n'a pas de bloc d'en-tête. Appliquez un modèle d'abord.");
+    }
+
+    const previousId = bloc.props?.banniereImageId;
 
     const image = await optimizeAndStoreImage({
       buffer: req.file.buffer,
@@ -338,7 +237,8 @@ export async function uploadBadgeBanniere(req, res, next) {
       eventId: event._id,
     });
 
-    event.badgeConfig.entete.banniereImageId = image._id;
+    bloc.props.banniereImageId = image._id;
+    event.markModified('badgeConfig.panneaux');
     await event.save();
 
     await deleteImage(previousId);
@@ -356,9 +256,13 @@ export async function deleteBadgeBanniere(req, res, next) {
       throw new ApiError(404, 'Ressource introuvable');
     }
 
-    await deleteImage(event.badgeConfig?.entete?.banniereImageId);
-    event.badgeConfig.entete.banniereImageId = undefined;
-    await event.save();
+    const bloc = findFirstBlockByType(event, 'enteteEvenement');
+    if (bloc) {
+      await deleteImage(bloc.props?.banniereImageId);
+      bloc.props.banniereImageId = undefined;
+      event.markModified('badgeConfig.panneaux');
+      await event.save();
+    }
 
     res.json(event);
   } catch (error) {
@@ -377,7 +281,12 @@ export async function uploadBadgeLogoEvenement(req, res, next) {
       throw new ApiError(404, 'Ressource introuvable');
     }
 
-    const previousId = event.badgeConfig?.entete?.logoEvenementImageId;
+    const bloc = findFirstBlockByType(event, 'enteteEvenement');
+    if (!bloc) {
+      throw new ApiError(400, "Ce badge n'a pas de bloc d'en-tête. Appliquez un modèle d'abord.");
+    }
+
+    const previousId = bloc.props?.logoImageId;
 
     const image = await optimizeAndStoreImage({
       buffer: req.file.buffer,
@@ -386,7 +295,8 @@ export async function uploadBadgeLogoEvenement(req, res, next) {
       eventId: event._id,
     });
 
-    event.badgeConfig.entete.logoEvenementImageId = image._id;
+    bloc.props.logoImageId = image._id;
+    event.markModified('badgeConfig.panneaux');
     await event.save();
 
     await deleteImage(previousId);
@@ -404,8 +314,116 @@ export async function deleteBadgeLogoEvenement(req, res, next) {
       throw new ApiError(404, 'Ressource introuvable');
     }
 
-    await deleteImage(event.badgeConfig?.entete?.logoEvenementImageId);
-    event.badgeConfig.entete.logoEvenementImageId = undefined;
+    const bloc = findFirstBlockByType(event, 'enteteEvenement');
+    if (bloc) {
+      await deleteImage(bloc.props?.logoImageId);
+      bloc.props.logoImageId = undefined;
+      event.markModified('badgeConfig.panneaux');
+      await event.save();
+    }
+
+    res.json(event);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function applyBadgeTemplate(req, res, next) {
+  try {
+    const { templateKey } = z.object({ templateKey: z.enum(Object.keys(BUILTIN_TEMPLATES)) }).parse(req.body);
+
+    const event = await Event.findOne({ _id: req.params.eventId, organisateurId: req.organisateurId });
+    if (!event) {
+      throw new ApiError(404, 'Ressource introuvable');
+    }
+
+    const built = BUILTIN_TEMPLATES[templateKey].build();
+    event.badgeConfig.format = built.format;
+    event.badgeConfig.carteLargeurMm = built.carteLargeurMm ?? event.badgeConfig.carteLargeurMm;
+    event.badgeConfig.carteHauteurMm = built.carteHauteurMm ?? event.badgeConfig.carteHauteurMm;
+    event.badgeConfig.rotationLigneBas180 = built.rotationLigneBas180 ?? false;
+    event.badgeConfig.traitsDePliage = built.traitsDePliage ?? true;
+    event.badgeConfig.panneaux = built.panneaux;
+    event.markModified('badgeConfig');
+    await event.save();
+
+    res.json(event);
+  } catch (error) {
+    next(error);
+  }
+}
+
+const PANEL_KEYS = ['P1', 'P2', 'P3', 'P4'];
+
+const blocSchema = z.object({
+  id: z.string().min(1),
+  type: z.string().min(1),
+  props: z.record(z.string(), z.unknown()).optional().default({}),
+  style: z
+    .object({
+      alignement: z.enum(['gauche', 'centre', 'droite']).optional(),
+      margeHaut: z.enum(['aucune', 'S', 'M', 'L']).optional(),
+      margeBas: z.enum(['aucune', 'S', 'M', 'L']).optional(),
+      couleurFond: z.enum(['aucune', 'principale', 'secondaire', 'accent']).optional(),
+      couleurTexte: z.enum(['auto', 'principale', 'accent', 'texte', 'blanc']).optional(),
+      taille: z.enum(['S', 'M', 'L', 'XL']).optional(),
+    })
+    .optional()
+    .default({}),
+});
+
+const panneauContenuSchema = z.object({
+  actif: z.boolean().optional(),
+  blocs: z.array(blocSchema),
+});
+
+const panneauxContenuSchema = z.object({
+  P1: panneauContenuSchema,
+  P2: panneauContenuSchema,
+  P3: panneauContenuSchema,
+  P4: panneauContenuSchema,
+});
+
+export async function getBadgeContenu(req, res, next) {
+  try {
+    const event = await Event.findOne({ _id: req.params.eventId, organisateurId: req.organisateurId });
+    if (!event) {
+      throw new ApiError(404, 'Ressource introuvable');
+    }
+    res.json({ panneaux: event.badgeConfig.panneaux, theme: event.badgeConfig.theme, format: event.badgeConfig.format });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateBadgeContenu(req, res, next) {
+  try {
+    const { panneaux } = z.object({ panneaux: panneauxContenuSchema }).parse(req.body);
+
+    const errors = [];
+    PANEL_KEYS.forEach((key) => {
+      panneaux[key].blocs.forEach((bloc, index) => {
+        if (!hasBlockType(bloc.type)) {
+          errors.push(`${key}[${index}]: type de bloc inconnu "${bloc.type}"`);
+          return;
+        }
+        const result = getBlockDefinition(bloc.type).validateProps(bloc.props);
+        if (!result.valid) {
+          errors.push(`${key}[${index}] (${bloc.type}): ${result.errors.join(', ')}`);
+        }
+      });
+    });
+    if (errors.length > 0) {
+      throw new ApiError(400, 'Contenu de badge invalide.', errors);
+    }
+
+    const event = await Event.findOne({ _id: req.params.eventId, organisateurId: req.organisateurId });
+    if (!event) {
+      throw new ApiError(404, 'Ressource introuvable');
+    }
+
+    event.badgeConfig.panneaux = panneaux;
+    event.markModified('badgeConfig.panneaux');
     await event.save();
 
     res.json(event);

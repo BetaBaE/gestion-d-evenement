@@ -1,49 +1,36 @@
 import mongoose from 'mongoose';
 
-const horaireSchema = new mongoose.Schema(
+// Blocks carry free-form props/style that vary per block type (see
+// /shared/badge-renderer/registry.js) — Mongoose doesn't validate their
+// shape, the renderer's validateProps() does, at render and publish time.
+const blocSchema = new mongoose.Schema(
   {
-    libelleJours: { type: String },
-    ouverture: { type: String },
-    fermeture: { type: String },
+    id: { type: String, required: true },
+    type: { type: String, required: true },
+    props: { type: mongoose.Schema.Types.Mixed, default: {} },
+    style: { type: mongoose.Schema.Types.Mixed, default: {} },
   },
   { _id: false },
 );
 
-const groupePartenaireSchema = new mongoose.Schema(
+const panneauSchema = new mongoose.Schema(
   {
-    titre: { type: String },
-    ordre: { type: Number, default: 0 },
-    panneau: { type: String, enum: ['P3', 'P4', 'AUTO'], default: 'AUTO' },
-    tailleLogos: { type: String, enum: ['S', 'M', 'L'], default: 'M' },
-    partenaires: [
-      new mongoose.Schema(
-        {
-          partenaireId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partenaire' },
-          ordre: { type: Number, default: 0 },
-        },
-        { _id: false },
-      ),
-    ],
+    actif: { type: Boolean, default: true },
+    blocs: { type: [blocSchema], default: [] },
   },
   { _id: false },
 );
 
 const badgeConfigSchema = new mongoose.Schema(
   {
-    // ---- Format ----
+    // ---- Format (kept from Addendum 2) ----
     format: { type: String, enum: ['A4_PLIE_4', 'A6', 'CARTE'], default: 'A4_PLIE_4' },
     carteLargeurMm: { type: Number, default: 85.6 },
     carteHauteurMm: { type: Number, default: 54 },
-    panneauxActifs: {
-      p2: { type: Boolean, default: true },
-      p3: { type: Boolean, default: true },
-      p4: { type: Boolean, default: true },
-    },
     rotationLigneBas180: { type: Boolean, default: false },
     traitsDePliage: { type: Boolean, default: true },
-    afficherPhoto: { type: Boolean, default: false },
 
-    // ---- Theme ----
+    // ---- Theme (kept from Addendum 2) ----
     theme: {
       couleurPrincipale: { type: String, default: '#1971c2' },
       couleurSecondaire: { type: String, default: '#dceefe' },
@@ -55,62 +42,15 @@ const badgeConfigSchema = new mongoose.Schema(
       policeNom: { type: String, default: 'Merriweather' },
     },
 
-    // ---- Header (P1, and compact on P3) ----
-    entete: {
-      modeImage: { type: Boolean, default: false },
-      banniereImageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Image' },
-      logoEvenementImageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Image' },
-      patronageAr: { type: String, maxlength: 300 },
-      patronageFr: { type: String, maxlength: 300 },
-      titreAffiche: { type: String, maxlength: 300 },
-      sousTitreParLigne: { type: String, maxlength: 300 },
-      edition: { type: String, maxlength: 300 },
-      descriptif: { type: String, maxlength: 300 },
+    // ---- Content: blocks per panel (Addendum 3, replaces entete /
+    // infosPratiques / groupesPartenaires / encartPromo / siteWeb /
+    // reseauxSociaux from Addendum 2) ----
+    panneaux: {
+      P1: { type: panneauSchema, default: () => ({ actif: true, blocs: [] }) },
+      P2: { type: panneauSchema, default: () => ({ actif: true, blocs: [] }) },
+      P3: { type: panneauSchema, default: () => ({ actif: true, blocs: [] }) },
+      P4: { type: panneauSchema, default: () => ({ actif: true, blocs: [] }) },
     },
-    siteWeb: { type: String },
-    reseauxSociaux: {
-      facebook: { type: String },
-      instagram: { type: String },
-      linkedin: { type: String },
-      youtube: { type: String },
-      x: { type: String },
-    },
-
-    // ---- P2 ----
-    infosPratiques: {
-      messageValidite: { type: String, maxlength: 300 },
-      horaires: [horaireSchema],
-      lieuNom: { type: String, maxlength: 300 },
-      lieuDetail: { type: String, maxlength: 300 },
-      droitsEntree: { type: String, maxlength: 300 },
-      venirAuSalon: { type: String, maxlength: 300 },
-      noteEncadree: {
-        texte: { type: String, maxlength: 300 },
-        lien: { type: String },
-      },
-      afficherOrganisateur: { type: Boolean, default: true },
-    },
-
-    // ---- P3 / P4 ----
-    groupesPartenaires: [groupePartenaireSchema],
-    encartPromo: {
-      actif: { type: Boolean, default: false },
-      titre: { type: String, maxlength: 300 },
-      pastille: { type: String, maxlength: 20 },
-      texte: { type: String, maxlength: 300 },
-      couleur: { type: String, default: '#e8732c' },
-      partenaireId: { type: mongoose.Schema.Types.ObjectId, ref: 'Partenaire' },
-    },
-
-    // Deprecated single-card fields, kept only for backward-compat reads of
-    // events created before this schema; the back-office always writes the
-    // fields above now. Not exposed in validation.
-    fondImageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Image' },
-    couleurPrincipale: { type: String },
-    afficherLogoOrganisateur: { type: Boolean, default: true },
-    afficherLogoOrganisme: { type: Boolean, default: false },
-    afficherOrganisme: { type: Boolean, default: true },
-    afficherFonction: { type: Boolean, default: true },
   },
   { _id: false },
 );

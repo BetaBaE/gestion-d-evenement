@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router';
-import { useDataProvider, useNotify, Title } from 'react-admin';
+import { useDataProvider, useNotify, useGetList, Title } from 'react-admin';
 import {
   Box,
   Tabs,
@@ -82,13 +82,18 @@ function LinksPanel({ event, onRefresh }) {
         </Typography>
         {scanUrl ? (
           <Stack direction="row" spacing={2} alignItems="flex-start">
-            <Stack spacing={1} flex={1}>
+            <Stack spacing={1} sx={{ flex: 1, minWidth: 0 }}>
               <Stack direction="row" spacing={1} alignItems="center">
                 <MuiTextField value={scanUrl} size="small" fullWidth InputProps={{ readOnly: true }} />
-                <Button startIcon={<ContentCopyIcon />} onClick={() => copyToClipboard(scanUrl)}>
+                <Button startIcon={<ContentCopyIcon />} onClick={() => copyToClipboard(scanUrl)} sx={{ flexShrink: 0 }}>
                   Copier
                 </Button>
-                <Button startIcon={<RefreshIcon />} onClick={regenerateScanToken} color="warning">
+                <Button
+                  startIcon={<RefreshIcon />}
+                  onClick={regenerateScanToken}
+                  color="warning"
+                  sx={{ flexShrink: 0 }}
+                >
                   Régénérer
                 </Button>
               </Stack>
@@ -97,7 +102,7 @@ function LinksPanel({ event, onRefresh }) {
                 {new Date(event.scanTokenValidUntil).toLocaleString('fr-FR')}
               </Typography>
             </Stack>
-            <Box sx={{ background: '#fff', p: 1 }}>
+            <Box sx={{ background: '#fff', p: 1, flexShrink: 0 }}>
               <QRCodeSVG value={scanUrl} size={120} />
             </Box>
           </Stack>
@@ -112,12 +117,24 @@ function LinksPanel({ event, onRefresh }) {
 export function EventShow() {
   const { id: eventId } = useParams();
   const dataProvider = useDataProvider();
-  const notify = useNotify();
   const [tab, setTab] = useState(0);
   const [event, setEvent] = useState(null);
   const [loadError, setLoadError] = useState(null);
-  const [categories, setCategories] = useState([]);
-  const [organismes, setOrganismes] = useState([]);
+
+  // useGetList (not a one-shot dataProvider call) so these share react-admin's
+  // query cache and automatically refetch whenever a category/organisme is
+  // created/updated/deleted anywhere else (e.g. the Catégories tab's own
+  // dialog) — previously this held its own disconnected snapshot in state
+  // that only loaded once per eventId, so the participant form's dropdowns
+  // went stale until a full page reload.
+  const { data: categories = [] } = useGetList(
+    'categories',
+    { pagination: { page: 1, perPage: 100 }, sort: { field: 'nom', order: 'ASC' }, meta: { eventId } },
+  );
+  const { data: organismes = [] } = useGetList(
+    'organismes',
+    { pagination: { page: 1, perPage: 100 }, sort: { field: 'nom', order: 'ASC' }, meta: { eventId } },
+  );
 
   async function loadEvent() {
     try {
@@ -129,30 +146,8 @@ export function EventShow() {
     }
   }
 
-  async function loadRelations() {
-    try {
-      const [catRes, orgRes] = await Promise.all([
-        dataProvider.getList('categories', {
-          pagination: { page: 1, perPage: 100 },
-          sort: { field: 'nom', order: 'ASC' },
-          meta: { eventId },
-        }),
-        dataProvider.getList('organismes', {
-          pagination: { page: 1, perPage: 100 },
-          sort: { field: 'nom', order: 'ASC' },
-          meta: { eventId },
-        }),
-      ]);
-      setCategories(catRes.data);
-      setOrganismes(orgRes.data);
-    } catch (error) {
-      notify('Impossible de charger les catégories ou organismes.', { type: 'error' });
-    }
-  }
-
   useEffect(() => {
     loadEvent();
-    loadRelations();
   }, [eventId]);
 
   if (loadError) {

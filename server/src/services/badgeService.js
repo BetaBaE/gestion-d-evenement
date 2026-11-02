@@ -1,7 +1,8 @@
 import puppeteer from 'puppeteer';
 import { getImageWithData } from './imageService.js';
 import { Partenaire } from '../models/Partenaire.js';
-import { buildBadgeHtml, buildBatchBadgeHtml, imageDataUri } from '../badges/templates/badgeHtml.js';
+import { generateQrCodeSvg } from './qrService.js';
+import { renderBadgeHtml, renderBatchBadgeHtml } from '../../../shared/badge-renderer/index.js';
 
 let browserPromise = null;
 
@@ -21,39 +22,78 @@ async function loadImageDataUri(imageId) {
   if (!imageId) return null;
   const image = await getImageWithData(imageId);
   if (!image?.data) return null;
-  return imageDataUri(image.data, image.mimeType);
+  return `data:${image.mimeType};base64,${image.data.toString('base64')}`;
 }
 
-async function loadImages(event, organisateur, participant, organisme) {
-  const badgeConfig = event.badgeConfig || {};
-  const [fond, banniere, logoEvenement, logoOrganisateur, photo, logoOrganisme] = await Promise.all([
-    loadImageDataUri(badgeConfig.fondImageId),
-    loadImageDataUri(badgeConfig.entete?.banniereImageId),
-    loadImageDataUri(badgeConfig.entete?.logoEvenementImageId),
-    loadImageDataUri(organisateur?.logoImageId),
-    loadImageDataUri(participant.photoImageId),
-    loadImageDataUri(organisme?.logoImageId),
-  ]);
-  return { fond, banniere, logoEvenement, logoOrganisateur, photo, logoOrganisme };
+function allBlocks(event) {
+  const panneaux = event.badgeConfig?.panneaux || {};
+  return ['P1', 'P2', 'P3', 'P4'].flatMap((key) => panneaux[key]?.blocs || []);
 }
 
-async function loadPartenaires(organisateurId, badgeConfig) {
-  const ids = new Set();
-  (badgeConfig.groupesPartenaires || []).forEach((g) => {
-    (g.partenaires || []).forEach((p) => p.partenaireId && ids.add(String(p.partenaireId)));
+function findBlockProps(event, type) {
+  return allBlocks(event).find((b) => b.type === type)?.props;
+}
+
+/**
+ * Scans every block across all panels for image/partner references (they
+ * can live inside any block's props now, not fixed badgeConfig fields) and
+ * resolves them all to data URIs for Puppeteer, which has no network
+ * access to the authenticated /api/images/:id route.
+ */
+async function buildAssets({ event, organisateur, participant, organisme }) {
+  const entete = findBlockProps(event, 'enteteEvenement');
+  const enteteCompact = findBlockProps(event, 'enteteCompact');
+
+  const imageBlockIds = allBlocks(event)
+    .filter((b) => b.type === 'image' && b.props?.imageId)
+    .map((b) => b.props.imageId);
+
+  const partenaireIds = new Set();
+  allBlocks(event).forEach((b) => {
+    if (b.type === 'groupePartenaires') {
+      (b.props?.partenaires || []).forEach((p) => p.partenaireId && partenaireIds.add(String(p.partenaireId)));
+    }
+    if (b.type === 'encartPromo' && b.props?.partenaireId) {
+      partenaireIds.add(String(b.props.partenaireId));
+    }
   });
-  if (badgeConfig.encartPromo?.partenaireId) {
-    ids.add(String(badgeConfig.encartPromo.partenaireId));
-  }
-  if (ids.size === 0) return [];
 
-  const partenaires = await Partenaire.find({ _id: { $in: [...ids] }, organisateurId });
-  return Promise.all(
-    partenaires.map(async (p) => ({
-      _id: p._id,
-      logoDataUri: await loadImageDataUri(p.logoImageId),
-    })),
-  );
+  const [
+    enteteBanniere,
+    enteteLogo,
+    enteteCompactLogo,
+    organisateurLogo,
+    organismeLogo,
+    participantPhoto,
+    blockImageEntries,
+    partenaireEntries,
+  ] = await Promise.all([
+    loadImageDataUri(entete?.banniereImageId),
+    loadImageDataUri(entete?.logoImageId),
+    loadImageDataUri(enteteCompact?.logoImageId),
+    loadImageDataUri(organisateur?.logoImageId),
+    loadImageDataUri(organisme?.logoImageId),
+    loadImageDataUri(participant.photoImageId),
+    Promise.all(imageBlockIds.map(async (id) => [String(id), await loadImageDataUri(id)])),
+    (async () => {
+      if (partenaireIds.size === 0) return [];
+      const partenaires = await Partenaire.find({ _id: { $in: [...partenaireIds] } });
+      return Promise.all(
+        partenaires.map(async (p) => [String(p._id), await loadImageDataUri(p.logoImageId)]),
+      );
+    })(),
+  ]);
+
+  return {
+    enteteBanniere,
+    enteteLogo,
+    enteteCompactLogo,
+    organisateurLogo,
+    organismeLogo,
+    participantPhoto,
+    blockImages: Object.fromEntries(blockImageEntries),
+    partenaireLogos: Object.fromEntries(partenaireEntries),
+  };
 }
 
 async function renderHtmlToPdf(html) {
@@ -68,16 +108,27 @@ async function renderHtmlToPdf(html) {
 }
 
 async function hydrateEntry({ participant, event, categorie, organisme, organisateur }) {
-  const [images, partenaires] = await Promise.all([
-    loadImages(event, organisateur, participant, organisme),
-    loadPartenaires(event.organisateurId, event.badgeConfig || {}),
+  const [assets, qrCodeSvg] = await Promise.all([
+    buildAssets({ event, organisateur, participant, organisme }),
+    generateQrCodeSvg(participant.badgeCode || ''),
   ]);
-  return { participant, event, categorie, organisme, organisateur, images, partenaires };
+  assets.qrCodeSvg = qrCodeSvg;
+
+  return {
+    config: event.badgeConfig,
+    theme: event.badgeConfig.theme,
+    participant,
+    event,
+    organisme,
+    organisateur,
+    categorie,
+    assets,
+  };
 }
 
 export async function generateSingleBadgePdf({ participant, event, categorie, organisme, organisateur }) {
   const hydrated = await hydrateEntry({ participant, event, categorie, organisme, organisateur });
-  const html = await buildBadgeHtml(hydrated);
+  const html = renderBadgeHtml(hydrated);
   return renderHtmlToPdf(html);
 }
 
@@ -87,12 +138,12 @@ export async function generateSingleBadgePdf({ participant, event, categorie, or
  */
 export async function generateBadgeHtmlPreview(args) {
   const hydrated = await hydrateEntry(args);
-  return buildBadgeHtml(hydrated);
+  return renderBadgeHtml(hydrated);
 }
 
 export async function generateBatchBadgesPdf(entries) {
   const hydrated = await Promise.all(entries.map((entry) => hydrateEntry(entry)));
-  const html = await buildBatchBadgeHtml(hydrated);
+  const html = renderBatchBadgeHtml(hydrated);
   return renderHtmlToPdf(html);
 }
 

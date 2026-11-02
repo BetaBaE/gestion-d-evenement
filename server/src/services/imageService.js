@@ -15,6 +15,7 @@ const PROFILES = {
   LOGO_EVENEMENT: { width: 800, fit: 'inside', quality: 82 },
   BANNIERE_BADGE: { width: 1600, fit: 'inside', quality: 82 },
   LOGO_PARTENAIRE: { width: 600, fit: 'inside', quality: 82 },
+  BLOC_IMAGE: { width: 1200, fit: 'inside', quality: 82 },
 };
 
 async function detectRealMimeType(buffer) {

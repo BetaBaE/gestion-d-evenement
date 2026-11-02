@@ -17,6 +17,7 @@ const imageSchema = new mongoose.Schema(
         'LOGO_EVENEMENT',
         'BANNIERE_BADGE',
         'LOGO_PARTENAIRE',
+        'BLOC_IMAGE',
       ],
       required: true,
     },

@@ -42,15 +42,6 @@ export async function deleteOrganismeLogo(organisateurId, eventId, organismeId) 
   return data;
 }
 
-export function uploadBadgeBackground(organisateurId, eventId, file) {
-  return uploadImage(`/admin/organisateurs/${organisateurId}/events/${eventId}/badge-fond`, file);
-}
-
-export async function deleteBadgeBackground(organisateurId, eventId) {
-  const { data } = await axiosClient.delete(`/admin/organisateurs/${organisateurId}/events/${eventId}/badge-fond`);
-  return data;
-}
-
 export function badgePreviewUrl(organisateurId, eventId) {
   return `${axiosClient.defaults.baseURL}/admin/organisateurs/${organisateurId}/events/${eventId}/badge-apercu`;
 }
