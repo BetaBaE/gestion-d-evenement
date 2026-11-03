@@ -44,6 +44,8 @@ function playFeedbackSound(type) {
 export function ScanPage() {
   const { scanToken } = useParams();
   const [accessState, setAccessState] = useState('loading');
+  // 'starting' | 'on' | 'insecure' (http, no camera API) | 'unavailable' (refused / no camera)
+  const [camera, setCamera] = useState('starting');
   const [eventInfo, setEventInfo] = useState(null);
   const [denied, setDenied] = useState(null);
   const [feedback, setFeedback] = useState(null);
@@ -98,11 +100,25 @@ export function ScanPage() {
   );
 
   useEffect(() => {
-    if (accessState !== 'ok') return;
+    if (accessState !== 'ok') return undefined;
 
-    const html5Qrcode = new Html5Qrcode(SCANNER_ELEMENT_ID);
+    // Browsers only expose the camera on https:// (or localhost): on a plain
+    // http LAN address navigator.mediaDevices doesn't even exist.
+    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+      setCamera('insecure');
+      return undefined;
+    }
 
-    html5Qrcode
+    let scanner;
+    let cancelled = false;
+    try {
+      scanner = new Html5Qrcode(SCANNER_ELEMENT_ID);
+    } catch {
+      setCamera('unavailable');
+      return undefined;
+    }
+
+    scanner
       .start(
         { facingMode: 'environment' },
         { fps: 10, qrbox: { width: 250, height: 250 } },
@@ -113,10 +129,18 @@ export function ScanPage() {
         },
         () => {},
       )
-      .catch(() => setAccessState('no-camera'));
+      .then(() => !cancelled && setCamera('on'))
+      .catch(() => !cancelled && setCamera('unavailable'));
 
     return () => {
-      html5Qrcode.stop().catch(() => {});
+      cancelled = true;
+      // html5-qrcode throws synchronously (a plain string) when stopping a
+      // scanner that never started — that used to blank the whole page.
+      try {
+        if (scanner.isScanning) scanner.stop().catch(() => {});
+      } catch {
+        // already stopped
+      }
     };
   }, [accessState, handleResult]);
 
@@ -160,11 +184,19 @@ export function ScanPage() {
         </Title>
       </Box>
 
-      {accessState === 'no-camera' ? (
+      {camera === 'insecure' || camera === 'unavailable' ? (
         <Center p="md">
-          <Alert color="yellow" title="Caméra indisponible" style={{ maxWidth: 400 }}>
-            Impossible d'accéder à la caméra. Utilisez la saisie manuelle ci-dessous.
-          </Alert>
+          {camera === 'insecure' ? (
+            <Alert color="yellow" title="Caméra bloquée : connexion non sécurisée" style={{ maxWidth: 400 }}>
+              Le navigateur n'autorise la caméra que sur une adresse en https://. Ouvrez le lien de scan en https, ou utilisez la saisie
+              manuelle ci-dessous.
+            </Alert>
+          ) : (
+            <Alert color="yellow" title="Caméra indisponible" style={{ maxWidth: 400 }}>
+              Autorisez l'accès à la caméra pour ce site dans le navigateur, puis rechargez la page. En attendant, utilisez la saisie
+              manuelle ci-dessous.
+            </Alert>
+          )}
         </Center>
       ) : (
         <Box id={SCANNER_ELEMENT_ID} style={{ width: '100%' }} />
