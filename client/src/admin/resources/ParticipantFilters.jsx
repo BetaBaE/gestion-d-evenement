@@ -29,7 +29,7 @@ function exportUrl(eventId, filterValues) {
 
 function Select({ label, value, onChange, choices, allLabel }) {
   return (
-    <TextField select size="small" label={label} value={value || ''} onChange={(e) => onChange(e.target.value || undefined)} sx={{ minWidth: 170 }}>
+    <TextField select size="small" label={label} value={value || ''} onChange={(e) => onChange(e.target.value || undefined)} fullWidth>
       <MenuItem value="">{allLabel}</MenuItem>
       {choices.map((c) => (
         <MenuItem key={c.id} value={c.id}>
@@ -67,20 +67,22 @@ export function ParticipantFilterBar({ eventId, organismes = [], categories = []
 
   return (
     <Stack spacing={1.5} sx={{ mb: 2 }}>
-      <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1.5, alignItems: 'center' }}>
+      {/* Search (2 tracks) + 4 filters on a responsive grid: one row on wide screens. */}
+      <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: '2fr repeat(4, 1fr)' } }}>
         <TextField
           size="small"
           placeholder="Nom, prénom, email, fonction…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          sx={{ minWidth: 240, flex: '1 1 240px' }}
+          fullWidth
+          sx={{ gridColumn: { sm: '1 / -1', lg: 'auto' } }}
           slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> } }}
         />
         <Select label="Organisme" value={filterValues.invitedOrganismId} onChange={(v) => set({ invitedOrganismId: v })} allLabel="Tous les organismes" choices={organismes.map((o) => ({ id: o.id, name: o.nom }))} />
         <Select label="Catégorie" value={filterValues.categorieId} onChange={(v) => set({ categorieId: v })} allLabel="Toutes les catégories" choices={categories.map((c) => ({ id: c.id, name: c.nom }))} />
         <Select label="Validation" value={filterValues.statut} onChange={(v) => set({ statut: v })} allLabel="Tous les statuts" choices={STATUT_CHOICES} />
         <Select label="Présence" value={filterValues.presence} onChange={(v) => set({ presence: v })} allLabel="Présents et absents" choices={PRESENCE_CHOICES} />
-      </Stack>
+      </Box>
       <Stack direction="row" sx={{ alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
         <Typography variant="body2" color="text.secondary" sx={{ mr: 'auto' }}>
           {total ?? 0} participant{total > 1 ? 's' : ''}
