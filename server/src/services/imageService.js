@@ -16,6 +16,9 @@ const PROFILES = {
   BANNIERE_BADGE: { width: 1600, fit: 'inside', quality: 82 },
   LOGO_PARTENAIRE: { width: 600, fit: 'inside', quality: 82 },
   BLOC_IMAGE: { width: 1200, fit: 'inside', quality: 82 },
+  // Imported design slices are already cut at 300 dpi to the panel size:
+  // kept at that resolution, quality lowered step by step to fit 2 MB.
+  FOND_PAGE: { fit: 'none', quality: 85, minQuality: 40, maxBytes: 2 * 1024 * 1024 },
 };
 
 async function detectRealMimeType(buffer) {
@@ -38,20 +41,26 @@ export async function optimizeAndStoreImage({ buffer, type, organisateurId, even
 
   if (profile.fit === 'cover') {
     pipeline = pipeline.resize(profile.width, profile.height, { fit: 'cover' });
-  } else {
+  } else if (profile.fit !== 'none') {
     pipeline = pipeline.resize(profile.width, profile.height || null, { fit: 'inside', withoutEnlargement: true });
   }
 
+  const maxBytes = profile.maxBytes ?? MAX_OPTIMIZED_BYTES;
   // sharp strips EXIF/ICC metadata by default unless .withMetadata() is called,
   // so simply not calling it is the metadata-stripping step.
-  const { data: finalBuffer, info } = await pipeline
-    .webp({ quality: profile.quality })
-    .toBuffer({ resolveWithObject: true });
+  let quality = profile.quality;
+  let { data: finalBuffer, info } = await pipeline.clone().webp({ quality }).toBuffer({ resolveWithObject: true });
+  while (finalBuffer.length > maxBytes && profile.minQuality && quality - 10 >= profile.minQuality) {
+    quality -= 10;
+    ({ data: finalBuffer, info } = await pipeline.clone().webp({ quality }).toBuffer({ resolveWithObject: true }));
+  }
 
-  if (finalBuffer.length > MAX_OPTIMIZED_BYTES) {
+  if (finalBuffer.length > maxBytes) {
     throw new ApiError(
       400,
-      `L'image optimisée dépasse la taille maximale autorisée (${Math.round(MAX_OPTIMIZED_BYTES / 1024)} Ko).`,
+      maxBytes >= 1024 * 1024
+        ? `L'image optimisée dépasse la taille maximale autorisée (${Math.round(maxBytes / (1024 * 1024))} Mo).`
+        : `L'image optimisée dépasse la taille maximale autorisée (${Math.round(maxBytes / 1024)} Ko).`,
     );
   }
 

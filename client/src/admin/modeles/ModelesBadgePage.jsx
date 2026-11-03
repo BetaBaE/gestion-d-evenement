@@ -7,6 +7,10 @@ import EditIcon from '@mui/icons-material/Edit';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import StarIcon from '@mui/icons-material/Star';
 import ArchiveIcon from '@mui/icons-material/Archive';
+import FileUploadIcon from '@mui/icons-material/FileUpload';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import WallpaperIcon from '@mui/icons-material/Wallpaper';
+import { ImportDesignDialog } from './ImportDesignDialog.jsx';
 import { axiosClient } from '../../api/axiosClient.js';
 import { getSelectedOrganisateurId } from '../organisateurContext.js';
 import { FormPage, FormSection, Field } from '../../components/form/index.js';
@@ -38,7 +42,38 @@ export function ModelesBadgePage() {
     load();
   }, [load]);
 
-  const openEditor = (id) => navigate(`/admin/modeles-badge/${id}/editeur`);
+  const openEditor = (id, query = '') => navigate(`/admin/modeles-badge/${id}/editeur${query}`);
+  const [designOpen, setDesignOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
+
+  /** .badge.json exported from this app (any organisateur): exact copy. */
+  async function importTemplateFile(file) {
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) {
+      notify('Fichier trop volumineux (20 Mo maximum).', { type: 'error' });
+      return;
+    }
+    setImporting(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const { data } = await axiosClient.post(`${basePath()}/importer`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const { partenairesCrees, partenairesReutilises, renomme } = data.resume;
+      const partenaires =
+        partenairesCrees + partenairesReutilises > 0
+          ? ` ${partenairesCrees} partenaire(s) créé(s), ${partenairesReutilises} réutilisé(s).`
+          : '';
+      notify(`Modèle « ${data.modele.nom} » importé${renomme ? ' (renommé, un modèle porte déjà ce nom)' : ''}.${partenaires}`, {
+        type: 'success',
+        autoHideDuration: 8000,
+      });
+      load();
+    } catch (error) {
+      notify(error.response?.data?.message || "Erreur lors de l'import.", { type: 'error', autoHideDuration: 10000 });
+    } finally {
+      setImporting(false);
+    }
+  }
 
   async function action(promise, message) {
     try {
@@ -61,7 +96,22 @@ export function ModelesBadgePage() {
         <FormSection
           title="Bibliothèque"
           action={
-            <Stack direction="row" spacing={1}>
+            <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', justifyContent: 'flex-end', rowGap: 1 }}>
+              <Button component="label" startIcon={<FileUploadIcon />} disabled={importing}>
+                Importer un modèle
+                <input
+                  type="file"
+                  hidden
+                  accept=".json,application/json"
+                  onChange={(e) => {
+                    importTemplateFile(e.target.files?.[0]);
+                    e.target.value = '';
+                  }}
+                />
+              </Button>
+              <Button startIcon={<WallpaperIcon />} onClick={() => setDesignOpen(true)}>
+                Importer un design (PDF, PNG, JPG)
+              </Button>
               <Button variant="contained" startIcon={<AddIcon />} onClick={() => setDialog({})}>
                 Nouveau modèle
               </Button>
@@ -110,6 +160,9 @@ export function ModelesBadgePage() {
                         >
                           Dupliquer
                         </Button>
+                        <Button size="small" startIcon={<FileDownloadIcon />} component="a" href={`${axiosClient.defaults.baseURL}${basePath()}/${m._id}/exporter`} download>
+                          Exporter
+                        </Button>
                         {!m.parDefaut && (
                           <Button size="small" startIcon={<StarIcon />} onClick={() => action(axiosClient.post(`${basePath()}/${m._id}/defaut`), 'Modèle par défaut défini.')}>
                             Par défaut
@@ -136,6 +189,15 @@ export function ModelesBadgePage() {
           </Field>
         </FormSection>
       </FormPage>
+
+      <ImportDesignDialog
+        open={designOpen}
+        onClose={() => setDesignOpen(false)}
+        onCreated={(modele) => {
+          setDesignOpen(false);
+          openEditor(modele._id, '?astuce=design');
+        }}
+      />
 
       <NewTemplateDialog
         open={!!dialog}

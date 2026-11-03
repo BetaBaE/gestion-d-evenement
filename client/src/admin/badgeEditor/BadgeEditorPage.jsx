@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useParams, Link as RouterLink } from 'react-router';
+import { useParams, useSearchParams, Link as RouterLink } from 'react-router';
 import { Title, useNotify } from 'react-admin';
 import QRCode from 'qrcode';
 import {
@@ -252,6 +252,9 @@ export function BadgeEditorPage({ kind = 'event' }) {
   const source = useMemo(() => badgeSource(kind, id), [kind, id]);
   const [title, setTitle] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Shown once after "Importer un design".
+  const [searchParams] = useSearchParams();
+  const [designTip, setDesignTip] = useState(searchParams.get('astuce') === 'design');
   const notify = useNotify();
 
   const [event, setEvent] = useState(null);
@@ -702,6 +705,13 @@ export function BadgeEditorPage({ kind = 'event' }) {
         </Button>
         </Box>
       </Paper>
+
+      {designTip && (
+        <Alert severity="info" onClose={() => setDesignTip(false)}>
+          Placez le nom, la fonction, l'organisme et le QR code sur les zones vides de votre design. Le fond est verrouillé (calques) pour ne
+          pas le déplacer par erreur.
+        </Alert>
+      )}
 
       {readOnly && (
         <Alert severity="info">

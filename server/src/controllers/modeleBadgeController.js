@@ -5,8 +5,12 @@ import { Partenaire } from '../models/Partenaire.js';
 import { ApiError } from '../middlewares/errorHandler.js';
 import { parsePagination, paginatedResponse } from '../utils/pagination.js';
 import { elementSchema, themeSchema, validateElementTypes } from '../validation/badgeElements.js';
-import { STARTER_TEMPLATES } from '../../../shared/badge-renderer/index.js';
+import { STARTER_TEMPLATES, activePanelKeys, nanoid } from '../../../shared/badge-renderer/index.js';
 import { generateSingleBadgePdf } from '../services/badgeService.js';
+import { Image } from '../models/Image.js';
+import { optimizeAndStoreImage } from '../services/imageService.js';
+import { exportTemplate, parseTemplateFile, importTemplate } from '../services/templateTransfer.js';
+import { inspectDesign, buildDesignSlices } from '../services/designImport.js';
 
 // "Personnalisé" is a single-panel card with free dimensions, within what
 // fits on an A4 sheet.
@@ -156,6 +160,128 @@ export async function createModeleBadge(req, res, next) {
     });
     res.status(201).json(modele);
   } catch (error) {
+    next(error);
+  }
+}
+
+/** Downloads the template as a .badge.json file (images embedded). */
+export async function exportModeleBadge(req, res, next) {
+  try {
+    const modele = await ModeleBadge.findOne({ _id: req.params.modeleId, organisateurId: req.organisateurId });
+    if (!modele) {
+      throw new ApiError(404, 'Ressource introuvable');
+    }
+    const file = await exportTemplate(modele);
+    const slug = modele.nom.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'modele';
+    res.set('Content-Type', 'application/json; charset=utf-8');
+    res.set('Content-Disposition', `attachment; filename="${slug}.badge.json"`);
+    res.send(JSON.stringify(file));
+  } catch (error) {
+    next(error);
+  }
+}
+
+/** Imports a .badge.json file as a new template of the current organisateur. */
+export async function importModeleBadge(req, res, next) {
+  try {
+    if (!req.file) {
+      throw new ApiError(400, 'Choisissez un fichier .badge.json.');
+    }
+    const file = parseTemplateFile(req.file.buffer);
+    const result = await importTemplate(file, { organisateurId: req.organisateurId, userId: req.user.sub });
+    res.status(201).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/** Pages / size of a design file, so the dialog can check the ratio before importing. */
+export async function inspectDesignFile(req, res, next) {
+  try {
+    if (!req.file) {
+      throw new ApiError(400, 'Choisissez un fichier PDF, PNG ou JPEG.');
+    }
+    res.json(await inspectDesign(req.file.buffer, req.file.mimetype));
+  } catch (error) {
+    next(error);
+  }
+}
+
+const importDesignSchema = z.object({
+  nom: z.string().trim().min(1, 'Le nom est requis.').max(200),
+  format: z.enum(['A4_PLIE_4', 'A6', 'CARTE']),
+  carteLargeurMm: z.coerce.number().min(CARTE_LIMITES_MM.largeur.min).max(CARTE_LIMITES_MM.largeur.max).optional(),
+  carteHauteurMm: z.coerce.number().min(CARTE_LIMITES_MM.hauteur.min).max(CARTE_LIMITES_MM.hauteur.max).optional(),
+  panneauxActifs: z
+    .string()
+    .optional()
+    .transform((v) => (v ? v.split(',').filter((p) => ['P1', 'P2', 'P3', 'P4'].includes(p)) : undefined)),
+  page: z.coerce.number().int().min(1).default(1),
+  mode: z.enum(['fit', 'crop']).default('fit'),
+});
+
+/**
+ * New template from a design made elsewhere: the design (PDF page 1 or the
+ * chosen page, or an image) at 300 dpi becomes a locked full-panel
+ * background image on each printed panel (cut in 4 for A4 folded in 4).
+ */
+export async function importDesign(req, res, next) {
+  const createdImageIds = [];
+  try {
+    if (!req.file) {
+      throw new ApiError(400, 'Choisissez un fichier PDF, PNG ou JPEG.');
+    }
+    const data = importDesignSchema.parse(req.body);
+    const layout = {
+      format: data.format,
+      ...(data.format === 'CARTE' ? { carteLargeurMm: data.carteLargeurMm ?? 85.6, carteHauteurMm: data.carteHauteurMm ?? 54 } : {}),
+      ...(data.format === 'A4_PLIE_4' && data.panneauxActifs?.length ? { panneauxActifs: ['P1', ...data.panneauxActifs.filter((p) => p !== 'P1')] } : {}),
+    };
+    const panels = activePanelKeys(layout);
+    const slices = await buildDesignSlices({ buffer: req.file.buffer, mimeType: req.file.mimetype, page: data.page, badge: layout, mode: data.mode, panels });
+
+    const elements = [];
+    for (const slice of slices) {
+      // eslint-disable-next-line no-await-in-loop
+      const image = await optimizeAndStoreImage({ buffer: slice.buffer, type: 'FOND_PAGE', organisateurId: req.organisateurId });
+      createdImageIds.push(image._id);
+      elements.push({
+        id: nanoid(),
+        nom: 'Fond (design importé)',
+        type: 'image',
+        panneau: slice.panneau,
+        x: 0,
+        y: 0,
+        largeur: slice.largeurMm,
+        hauteur: slice.hauteurMm,
+        rotation: 0,
+        z: 0,
+        verrouille: true,
+        masque: false,
+        groupeId: null,
+        visibleSi: null,
+        props: { imageId: String(image._id), ajustement: 'cover' },
+        style: {},
+      });
+    }
+
+    const organisateur = await Organisateur.findById(req.organisateurId).select('brandKit').lean();
+    const modele = await ModeleBadge.create({
+      ...layout,
+      nom: data.nom,
+      description: `Design importé (${req.file.originalname})`,
+      // The design is the printed look: no fold lines drawn over it, no flipped row.
+      traitsDePliage: false,
+      rotationLigneBas180: false,
+      theme: themeFromBrandKit(organisateur?.brandKit),
+      elements,
+      organisateurId: req.organisateurId,
+      createdBy: req.user.sub,
+      updatedBy: req.user.sub,
+    });
+    res.status(201).json(modele);
+  } catch (error) {
+    await Image.deleteMany({ _id: { $in: createdImageIds } });
     next(error);
   }
 }

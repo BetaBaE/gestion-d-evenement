@@ -16,7 +16,14 @@ const elementSchema = new mongoose.Schema(
     masque: { type: Boolean, default: false },
     groupeId: { type: String, default: null },
     visibleSi: {
-      type: new mongoose.Schema({ categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'CategorieEvent' }] }, { _id: false }),
+      type: new mongoose.Schema(
+        {
+          categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'CategorieEvent' }],
+          // Imported templates: names, resolved to the event's categories on apply.
+          categoriesNoms: { type: [String], default: undefined },
+        },
+        { _id: false },
+      ),
       default: null,
     },
     props: { type: mongoose.Schema.Types.Mixed, default: {} },

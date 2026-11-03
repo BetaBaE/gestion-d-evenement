@@ -17,6 +17,11 @@ export function errorHandler(err, req, res, next) {
     return res.status(409).json({ message: 'Cette ressource existe déjà.' });
   }
 
+  // multer: file over the route's size limit.
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ message: 'Fichier trop volumineux.' });
+  }
+
   if (err instanceof ZodError) {
     return res.status(400).json({ message: 'Données invalides.', details: err.issues });
   }

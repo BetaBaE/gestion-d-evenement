@@ -57,7 +57,12 @@ export const elementSchema = z.object({
   masque: z.boolean().optional().default(false),
   groupeId: z.string().max(40).nullable().optional().default(null),
   visibleSi: z
-    .object({ categories: z.array(z.string().regex(/^[0-9a-fA-F]{24}$/)) })
+    .object({
+      categories: z.array(z.string().regex(/^[0-9a-fA-F]{24}$/)).default([]),
+      // Imported templates: category names, matched to the event's
+      // categories when the template is applied.
+      categoriesNoms: z.array(z.string().max(120)).optional(),
+    })
     .nullable()
     .optional()
     .default(null),

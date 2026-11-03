@@ -18,6 +18,8 @@ const imageSchema = new mongoose.Schema(
         'BANNIERE_BADGE',
         'LOGO_PARTENAIRE',
         'BLOC_IMAGE',
+        // Full-panel background of an imported design (300 dpi, up to 2 MB).
+        'FOND_PAGE',
       ],
       required: true,
     },

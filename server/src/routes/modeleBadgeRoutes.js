@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { validateBody } from '../middlewares/validate.js';
-import { imageUpload } from '../middlewares/upload.js';
+import { imageUpload, templateFileUpload, designUpload } from '../middlewares/upload.js';
 import { uploadBlocImage } from '../controllers/imageController.js';
 import {
   listModelesBadge,
@@ -11,6 +11,10 @@ import {
   setDefaultModeleBadge,
   getModeleEditorContext,
   previewModeleBadge,
+  exportModeleBadge,
+  importModeleBadge,
+  inspectDesignFile,
+  importDesign,
   validateModeleBadge,
   validateCreateModeleBadge,
 } from '../controllers/modeleBadgeController.js';
@@ -18,10 +22,14 @@ import {
 export const modeleBadgeRoutes = Router({ mergeParams: true });
 
 modeleBadgeRoutes.get('/', listModelesBadge);
+modeleBadgeRoutes.post('/', validateBody(validateCreateModeleBadge), createModeleBadge);
+modeleBadgeRoutes.post('/importer', templateFileUpload.single('file'), importModeleBadge);
+modeleBadgeRoutes.post('/design/inspecter', designUpload.single('file'), inspectDesignFile);
+modeleBadgeRoutes.post('/importer-design', designUpload.single('file'), importDesign);
 modeleBadgeRoutes.get('/:modeleId', getModeleBadge);
 modeleBadgeRoutes.get('/:modeleId/contexte', getModeleEditorContext);
 modeleBadgeRoutes.get('/:modeleId/apercu', previewModeleBadge);
-modeleBadgeRoutes.post('/', validateBody(validateCreateModeleBadge), createModeleBadge);
+modeleBadgeRoutes.get('/:modeleId/exporter', exportModeleBadge);
 modeleBadgeRoutes.put('/:modeleId', validateBody(validateModeleBadge.partial()), updateModeleBadge);
 modeleBadgeRoutes.delete('/:modeleId', deleteModeleBadge);
 modeleBadgeRoutes.post('/:modeleId/defaut', setDefaultModeleBadge);

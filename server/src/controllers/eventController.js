@@ -7,6 +7,7 @@ import { parsePagination, paginatedResponse } from '../utils/pagination.js';
 import { generateToken } from '../utils/tokens.js';
 import { Scan } from '../models/Scan.js';
 import { describeScanLink } from '../services/scanAccess.js';
+import { resolveCategoryNames } from '../services/templateTransfer.js';
 import { generateSingleBadgePdf, generateBadgeHtmlPreview } from '../services/badgeService.js';
 import { Organisateur } from '../models/Organisateur.js';
 import { ModeleBadge } from '../models/ModeleBadge.js';
@@ -409,6 +410,8 @@ export async function applyBadgeTemplate(req, res, next) {
         });
       }
       badge = badgeFromTemplate(modele, { modeleSourceId: modele._id, modeleSourceVersion: modele.version });
+      // Imported templates name their "visible si" categories: match this event's.
+      badge.elements = await resolveCategoryNames(badge.elements, event._id);
     }
 
     badge.version = (event.badge?.version || 0) + 1;
