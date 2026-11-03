@@ -56,7 +56,11 @@ export async function printSingleBadge(req, res, next) {
     await participant.save();
 
     res.set('Content-Type', 'application/pdf');
-    res.set('Content-Disposition', `inline; filename="badge-${participant.nom}.pdf"`);
+    // Headers must be ASCII: "Hélène" would crash the response. ASCII
+    // fallback + RFC 5987 filename* so browsers still show the real name.
+    const fileName = `badge-${participant.nom}.pdf`;
+    const asciiName = fileName.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w.-]+/g, '_');
+    res.set('Content-Disposition', `inline; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`);
     res.send(pdfBuffer);
   } catch (error) {
     next(error);
