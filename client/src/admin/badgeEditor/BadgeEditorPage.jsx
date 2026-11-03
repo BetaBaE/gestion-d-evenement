@@ -695,22 +695,23 @@ export function BadgeEditorPage({ kind = 'event' }) {
         <Button
           size="small"
           variant="contained"
-          startIcon={<PictureAsPdfIcon />}
-          onClick={async () => {
-            // Open the tab during the click itself: opened after the save
-            // (slow online) it was no longer a user action and the browser
-            // blocked it as a popup.
-            const tab = window.open('', '_blank');
-            if (tab) {
-              tab.document.title = 'Aperçu PDF';
-              tab.document.body.innerHTML = '<p style="font:16px sans-serif;padding:24px">Génération de l’aperçu du badge…</p>';
+          // A real link (new tab): opening tabs from script (window.open) is
+          // blocked or turned into same-tab navigation by popup blockers and
+          // extensions. With unsaved changes the click saves first; the link
+          // works as soon as the badge is saved (autosave runs after 1.5 s).
+          component="a"
+          href={source.previewUrl()}
+          target="_blank"
+          rel="noopener"
+          startIcon={saveStatus === 'saved' ? <PictureAsPdfIcon /> : <CircularProgress size={14} color="inherit" />}
+          onClick={(e) => {
+            if (saveStatus !== 'saved') {
+              e.preventDefault();
+              save();
             }
-            await save();
-            if (tab) tab.location.href = source.previewUrl();
-            else notify("Le navigateur a bloqué l'ouverture de l'aperçu : autorisez les fenêtres pop-up pour ce site (icône dans la barre d'adresse).", { type: 'warning', autoHideDuration: 10000 });
           }}
         >
-          Aperçu PDF
+          {saveStatus === 'saved' ? 'Aperçu PDF' : saveStatus === 'error' ? 'Réessayer l’enregistrement' : 'Enregistrement…'}
         </Button>
         </Box>
       </Paper>

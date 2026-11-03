@@ -217,10 +217,11 @@ function BadgeTemplateSection() {
           <Button variant="outlined" onClick={handleApply} disabled={isApplying || !choice}>
             Appliquer le modèle
           </Button>
-          <Button startIcon={<PreviewIcon />} onClick={() => window.open(badgePreviewUrl(organisateurId, record.id), '_blank')}>
+          {/* Real links: window.open() is blocked or turned into same-tab navigation by popup blockers. */}
+          <Button startIcon={<PreviewIcon />} component="a" href={badgePreviewUrl(organisateurId, record.id)} target="_blank" rel="noopener">
             Aperçu PDF
           </Button>
-          <Button startIcon={<ArticleIcon />} onClick={() => window.open(badgePreviewHtmlUrl(organisateurId, record.id), '_blank')}>
+          <Button startIcon={<ArticleIcon />} component="a" href={badgePreviewHtmlUrl(organisateurId, record.id)} target="_blank" rel="noopener">
             Aperçu HTML
           </Button>
         </Stack>

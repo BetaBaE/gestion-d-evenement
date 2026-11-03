@@ -103,10 +103,6 @@ function ParticipantRowActions({ eventId, onDone }) {
     }
   }
 
-  async function handlePrint(event) {
-    event.stopPropagation();
-    window.open(`${axiosClient.defaults.baseURL}${basePath(eventId)}/${record.id}/badge.pdf`, '_blank');
-  }
 
   return (
     <Stack direction="row" spacing={0.5}>
@@ -124,7 +120,17 @@ function ParticipantRowActions({ eventId, onDone }) {
         <EmailIcon fontSize="small" />
       </IconButton>
       {record.statut === 'VALIDE' && (
-        <IconButton size="small" onClick={handlePrint} aria-label="Imprimer le badge" title="Imprimer le badge">
+        // A real link (new tab), not window.open(): popup blockers don't touch it.
+        <IconButton
+          size="small"
+          component="a"
+          href={`${axiosClient.defaults.baseURL}${basePath(eventId)}/${record.id}/badge.pdf`}
+          target="_blank"
+          rel="noopener"
+          onClick={(e) => e.stopPropagation()}
+          aria-label="Imprimer le badge"
+          title="Imprimer le badge"
+        >
           <PrintIcon fontSize="small" />
         </IconButton>
       )}
