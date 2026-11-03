@@ -69,12 +69,16 @@ export function settleAfterMove(el, badge) {
   );
 }
 
-/** Aligns elements (panel-local coordinates) to the selection's bounding box. */
-export function alignElements(elements, mode) {
-  const minX = Math.min(...elements.map((e) => e.x));
-  const maxX = Math.max(...elements.map((e) => e.x + e.largeur));
-  const minY = Math.min(...elements.map((e) => e.y));
-  const maxY = Math.max(...elements.map((e) => e.y + e.hauteur));
+/**
+ * Aligns elements (panel-local coordinates) to the selection's bounding box,
+ * or — for a single element, given `panel` ({ width, height }) — to its panel.
+ */
+export function alignElements(elements, mode, panel) {
+  const single = elements.length === 1 && panel;
+  const minX = single ? 0 : Math.min(...elements.map((e) => e.x));
+  const maxX = single ? panel.width : Math.max(...elements.map((e) => e.x + e.largeur));
+  const minY = single ? 0 : Math.min(...elements.map((e) => e.y));
+  const maxY = single ? panel.height : Math.max(...elements.map((e) => e.y + e.hauteur));
 
   return elements.map((e) => {
     switch (mode) {

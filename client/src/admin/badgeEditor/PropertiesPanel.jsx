@@ -53,21 +53,31 @@ const VARIABLE_LABELS = {
   'organisateur.siteWeb': "Site web de l'organisateur",
 };
 
+/**
+ * Number input that lets you clear it and type freely: only a complete,
+ * in-range number is applied; on blur it shows the element's real value
+ * again. (Applying every keystroke turned an empty field into 1 mm.)
+ */
 function NumberField({ label, value, onChange, step = 0.5, min, max, suffix }) {
+  const [draft, setDraft] = useState(null);
+  const inRange = (n) => Number.isFinite(n) && (min === undefined || n >= min) && (max === undefined || n <= max);
   return (
     <TextField
       label={label}
       type="number"
       size="small"
-      value={value ?? ''}
+      value={draft ?? value ?? ''}
+      error={draft !== null && draft !== '' && !inRange(parseFloat(draft))}
       slotProps={{
         htmlInput: { step, min, max },
         input: suffix ? { endAdornment: <Typography variant="caption">{suffix}</Typography> } : undefined,
       }}
       onChange={(e) => {
+        setDraft(e.target.value);
         const n = parseFloat(e.target.value);
-        onChange(Number.isFinite(n) ? n : undefined);
+        if (inRange(n)) onChange(n);
       }}
+      onBlur={() => setDraft(null)}
       fullWidth
     />
   );

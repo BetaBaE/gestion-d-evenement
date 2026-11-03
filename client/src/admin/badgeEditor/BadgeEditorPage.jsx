@@ -58,6 +58,7 @@ import {
   clampToPanel,
   distributeElements,
   mmToPx,
+  panelSizeMm,
   round1,
   settleAfterMove,
   sheetSizeMm,
@@ -471,8 +472,14 @@ export function BadgeEditorPage() {
   }[saveStatus];
 
   const multi = movable.length >= 2;
-  const tool = (title, Icon, onClick, disabled) => (
-    <Tooltip title={title}>
+  const panel = panelSizeMm(badge);
+  const align = (mode) => updateSelected((s) => alignElements(s, mode, panel));
+  const alignReason = movable.length === 0 ? (selected.length ? 'élément verrouillé' : 'sélectionnez un élément') : null;
+  // One element aligns to its panel; several align to each other.
+  const alignTip = (label) => (movable.length === 1 ? `${label} (sur le panneau)` : label);
+  // `reason` explains a disabled button in its tooltip.
+  const tool = (title, Icon, onClick, disabled, reason) => (
+    <Tooltip title={disabled && reason ? `${title} — ${reason}` : title}>
       <span>
         <IconButton size="small" onClick={onClick} disabled={disabled}>
           <Icon fontSize="small" />
@@ -493,21 +500,21 @@ export function BadgeEditorPage() {
         {tool('Annuler (Ctrl+Z)', UndoIcon, undo, !canUndo || readOnly)}
         {tool('Rétablir (Ctrl+Y)', RedoIcon, redo, !canRedo || readOnly)}
         <Divider orientation="vertical" flexItem />
-        {tool('Aligner à gauche', AlignHorizontalLeftIcon, () => updateSelected((s) => alignElements(s, 'gauche')), !multi)}
-        {tool('Centrer horizontalement', AlignHorizontalCenterIcon, () => updateSelected((s) => alignElements(s, 'centreH')), !multi)}
-        {tool('Aligner à droite', AlignHorizontalRightIcon, () => updateSelected((s) => alignElements(s, 'droite')), !multi)}
-        {tool('Aligner en haut', AlignVerticalTopIcon, () => updateSelected((s) => alignElements(s, 'haut')), !multi)}
-        {tool('Centrer verticalement', AlignVerticalCenterIcon, () => updateSelected((s) => alignElements(s, 'milieu')), !multi)}
-        {tool('Aligner en bas', AlignVerticalBottomIcon, () => updateSelected((s) => alignElements(s, 'bas')), !multi)}
-        {tool('Répartir horizontalement', HorizontalDistributeIcon, () => updateSelected((s) => distributeElements(s, 'h')), movable.length < 3)}
-        {tool('Répartir verticalement', VerticalDistributeIcon, () => updateSelected((s) => distributeElements(s, 'v')), movable.length < 3)}
+        {tool(alignTip('Aligner à gauche'), AlignHorizontalLeftIcon, () => align('gauche'), !!alignReason, alignReason)}
+        {tool(alignTip('Centrer horizontalement'), AlignHorizontalCenterIcon, () => align('centreH'), !!alignReason, alignReason)}
+        {tool(alignTip('Aligner à droite'), AlignHorizontalRightIcon, () => align('droite'), !!alignReason, alignReason)}
+        {tool(alignTip('Aligner en haut'), AlignVerticalTopIcon, () => align('haut'), !!alignReason, alignReason)}
+        {tool(alignTip('Centrer verticalement'), AlignVerticalCenterIcon, () => align('milieu'), !!alignReason, alignReason)}
+        {tool(alignTip('Aligner en bas'), AlignVerticalBottomIcon, () => align('bas'), !!alignReason, alignReason)}
+        {tool('Répartir horizontalement', HorizontalDistributeIcon, () => updateSelected((s) => distributeElements(s, 'h')), movable.length < 3, 'sélectionnez au moins 3 éléments (Maj+clic)')}
+        {tool('Répartir verticalement', VerticalDistributeIcon, () => updateSelected((s) => distributeElements(s, 'v')), movable.length < 3, 'sélectionnez au moins 3 éléments (Maj+clic)')}
         <Divider orientation="vertical" flexItem />
-        {tool('Premier plan (Ctrl+])', FlipToFrontIcon, () => setElements((els) => shiftLayers(els, movable.map((m) => m.id), 1)), !movable.length)}
-        {tool('Arrière-plan (Ctrl+[)', FlipToBackIcon, () => setElements((els) => shiftLayers(els, movable.map((m) => m.id), -1)), !movable.length)}
-        {tool('Grouper (Ctrl+G)', LinkIcon, () => setGroup(true), !multi)}
-        {tool('Dégrouper (Ctrl+Maj+G)', LinkOffIcon, () => setGroup(false), !movable.some((e) => e.groupeId))}
-        {tool('Dupliquer (Ctrl+D)', ContentCopyIcon, () => pasteElements(selected), !selected.length || readOnly)}
-        {tool('Supprimer (Suppr)', DeleteIcon, deleteSelected, !movable.length)}
+        {tool('Premier plan (Ctrl+])', FlipToFrontIcon, () => setElements((els) => shiftLayers(els, movable.map((m) => m.id), 1)), !movable.length, 'sélectionnez un élément')}
+        {tool('Arrière-plan (Ctrl+[)', FlipToBackIcon, () => setElements((els) => shiftLayers(els, movable.map((m) => m.id), -1)), !movable.length, 'sélectionnez un élément')}
+        {tool('Grouper (Ctrl+G)', LinkIcon, () => setGroup(true), !multi, 'sélectionnez au moins 2 éléments (Maj+clic)')}
+        {tool('Dégrouper (Ctrl+Maj+G)', LinkOffIcon, () => setGroup(false), !movable.some((e) => e.groupeId), 'aucun groupe sélectionné')}
+        {tool('Dupliquer (Ctrl+D)', ContentCopyIcon, () => pasteElements(selected), !selected.length || readOnly, 'sélectionnez un élément')}
+        {tool('Supprimer (Suppr)', DeleteIcon, deleteSelected, !movable.length, 'sélectionnez un élément non verrouillé')}
         <Divider orientation="vertical" flexItem />
         {tool('Zoom arrière', ZoomOutIcon, () => setZoom((z) => Math.max(0.25, round1(z - 0.25))))}
         <Typography variant="body2" sx={{ minWidth: 44, textAlign: 'center' }}>

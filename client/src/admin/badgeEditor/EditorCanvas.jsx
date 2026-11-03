@@ -126,7 +126,16 @@ export function EditorCanvas({
     const host = hostRef.current;
     if (!host) return;
     const find = (id) => host.querySelector(`[data-element-id="${CSS.escape(id)}"]`);
-    setTargets(selectedIds.map(find).filter(Boolean));
+    const found = selectedIds.map(find).filter(Boolean);
+    // Moveable misreads CSS mm (it treats 1mm as 0.1mm), so a resize starting
+    // from "95mm" jumped to ~9.5mm. Hand it the same geometry in px.
+    found.forEach((node) => {
+      ['left', 'top', 'width', 'height'].forEach((prop) => {
+        const value = node.style[prop];
+        if (value?.endsWith('mm')) node.style[prop] = `${mmToPx(parseFloat(value))}px`;
+      });
+    });
+    setTargets(found);
     setGuideElements(
       [...host.querySelectorAll('.el-wrapper')].filter((node) => !selectedIds.includes(node.dataset.elementId)),
     );
