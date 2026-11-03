@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from 'vite';
 import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import basicSsl from '@vitejs/plugin-basic-ssl';
+import { VitePWA } from 'vite-plugin-pwa';
 
 // /shared/badge-renderer lives outside this package's root (sibling of
 // client/ and server/, imported by relative path, see Addendum 3 §4.1) —
@@ -16,7 +17,43 @@ export default defineConfig(({ mode }) => {
   const useHttps = env.VITE_HTTPS === 'true';
 
   return {
-    plugins: [react(), ...(useHttps ? [basicSsl()] : [])],
+    plugins: [
+      react(),
+      ...(useHttps ? [basicSsl()] : []),
+      // Installable app (PWA). The service worker only precaches the built
+      // front-end files; /api is never cached (scans, stats and data are
+      // always live). New deployments are picked up on the next load.
+      VitePWA({
+        registerType: 'autoUpdate',
+        includeAssets: ['favicon.svg', 'favicon-32.png', 'apple-touch-icon.png'],
+        manifest: {
+          name: 'Gestion des inscriptions',
+          short_name: 'Inscriptions',
+          description: 'Inscriptions, badges et contrôle d’accès de vos événements.',
+          lang: 'fr',
+          start_url: '/admin',
+          scope: '/',
+          display: 'standalone',
+          background_color: '#0b2a4a',
+          theme_color: '#1864ab',
+          icons: [
+            { src: '/pwa-192.png', sizes: '192x192', type: 'image/png' },
+            { src: '/pwa-512.png', sizes: '512x512', type: 'image/png' },
+            { src: '/pwa-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          ],
+        },
+        workbox: {
+          navigateFallback: '/index.html',
+          navigateFallbackDenylist: [/^\/api\//],
+          // The admin bundle is ~2.6 MB (react-admin + MUI + editor).
+          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+          cleanupOutdatedCaches: true,
+        },
+        // Also active in `npm run dev`, so the install prompt can be tried on
+        // the LAN (needs VITE_HTTPS=true: browsers only install HTTPS apps).
+        devOptions: { enabled: true, navigateFallbackAllowlist: [/^\/(admin|scan|inscription)/] },
+      }),
+    ],
     server: {
       host: true,
       port: 5173,
