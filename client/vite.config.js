@@ -31,8 +31,11 @@ export default defineConfig(({ mode }) => {
           short_name: 'Inscriptions',
           description: 'Inscriptions, badges et contrôle d’accès de vos événements.',
           lang: 'fr',
-          start_url: '/admin',
-          scope: '/',
+          // Scope limited to the back-office: PDFs (/api/...) and the public
+          // pages open in a normal browser tab, not inside the installed app.
+          start_url: '/admin/',
+          scope: '/admin/',
+          id: '/admin/',
           display: 'standalone',
           background_color: '#0b2a4a',
           theme_color: '#1864ab',

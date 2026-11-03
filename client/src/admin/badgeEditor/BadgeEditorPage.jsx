@@ -707,7 +707,7 @@ export function BadgeEditorPage({ kind = 'event' }) {
             }
             await save();
             if (tab) tab.location.href = source.previewUrl();
-            else window.location.assign(source.previewUrl());
+            else notify("Le navigateur a bloqué l'ouverture de l'aperçu : autorisez les fenêtres pop-up pour ce site (icône dans la barre d'adresse).", { type: 'warning', autoHideDuration: 10000 });
           }}
         >
           Aperçu PDF
