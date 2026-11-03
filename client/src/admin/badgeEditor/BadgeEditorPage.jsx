@@ -697,8 +697,17 @@ export function BadgeEditorPage({ kind = 'event' }) {
           variant="contained"
           startIcon={<PictureAsPdfIcon />}
           onClick={async () => {
+            // Open the tab during the click itself: opened after the save
+            // (slow online) it was no longer a user action and the browser
+            // blocked it as a popup.
+            const tab = window.open('', '_blank');
+            if (tab) {
+              tab.document.title = 'Aperçu PDF';
+              tab.document.body.innerHTML = '<p style="font:16px sans-serif;padding:24px">Génération de l’aperçu du badge…</p>';
+            }
             await save();
-            window.open(source.previewUrl(), '_blank');
+            if (tab) tab.location.href = source.previewUrl();
+            else window.location.assign(source.previewUrl());
           }}
         >
           Aperçu PDF
