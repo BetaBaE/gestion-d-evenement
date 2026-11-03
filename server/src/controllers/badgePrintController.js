@@ -6,6 +6,9 @@ import { InvitedOrganism } from '../models/InvitedOrganism.js';
 import { Organisateur } from '../models/Organisateur.js';
 import { ApiError } from '../middlewares/errorHandler.js';
 import { generateSingleBadgePdf, generateBatchBadgesPdf } from '../services/badgeService.js';
+import { buildParticipantFilter, presenceByParticipant, ABSENT } from '../services/participantFilter.js';
+import { formatScanDate } from '../services/scanWindow.js';
+import { env } from '../config/env.js';
 
 async function hydrateEntries(event, participants) {
   const categorieIds = [...new Set(participants.map((p) => p.categorieId?.toString()).filter(Boolean))];
@@ -99,7 +102,12 @@ export async function printBatchBadges(req, res, next) {
 
 export async function exportParticipants(req, res, next) {
   try {
-    const participants = await Participant.find({ eventId: req.event._id }).sort({ createdAt: -1 });
+    // Same filters as the list on screen (search, organisme, catégorie,
+    // validation, présence): "Exporter" exports what is displayed.
+    const filter = await buildParticipantFilter(req.event._id, req.query);
+    const participants = await Participant.find(filter).sort({ nom: 1, prenom: 1 });
+    const presence = await presenceByParticipant(req.event._id, participants.map((p) => p._id));
+    const inZone = (d) => (d ? formatScanDate(d, env.appTimezone) : '');
     const organismeIds = [...new Set(participants.map((p) => p.invitedOrganismId?.toString()).filter(Boolean))];
     const categorieIds = [...new Set(participants.map((p) => p.categorieId?.toString()).filter(Boolean))];
     const [organismes, categories] = await Promise.all([
@@ -122,10 +130,21 @@ export async function exportParticipants(req, res, next) {
       { header: 'Catégorie', key: 'categorie', width: 16 },
       { header: 'Statut', key: 'statut', width: 14 },
       { header: "Date d'inscription", key: 'createdAt', width: 20 },
+      { header: 'Présence', key: 'presence', width: 12 },
+      { header: 'Première entrée', key: 'premiereEntree', width: 22 },
+      { header: 'Dernière entrée', key: 'derniereEntree', width: 22 },
+      { header: 'Entrées', key: 'nbEntrees', width: 9 },
     ];
+    sheet.getRow(1).font = { bold: true };
+    sheet.views = [{ state: 'frozen', ySplit: 1 }];
 
     participants.forEach((p) => {
+      const pres = presence[String(p._id)] || ABSENT;
       sheet.addRow({
+        presence: pres.present ? 'Présent' : 'Absent',
+        premiereEntree: inZone(pres.premiereEntree),
+        derniereEntree: inZone(pres.derniereEntree),
+        nbEntrees: pres.nbEntrees,
         civilite: p.civilite,
         nom: p.nom,
         prenom: p.prenom,
@@ -134,8 +153,8 @@ export async function exportParticipants(req, res, next) {
         telephone: p.telephone,
         organisme: organismeMap.get(p.invitedOrganismId?.toString()),
         categorie: categorieMap.get(p.categorieId?.toString()),
-        statut: p.statut,
-        createdAt: p.createdAt.toLocaleDateString('fr-FR'),
+        statut: { EN_ATTENTE: 'En attente', VALIDE: 'Validé', REFUSE: 'Refusé' }[p.statut] || p.statut,
+        createdAt: inZone(p.createdAt),
       });
     });
 

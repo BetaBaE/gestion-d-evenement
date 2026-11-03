@@ -68,9 +68,11 @@ function eventBasePath(eventId) {
 // ---- Validation (input-level: react-admin can't mix form- and input-level) ----
 const finApresDebut = (value, all) =>
   value && all?.dateDebut && new Date(value) < new Date(all.dateDebut) ? 'La fin doit être après le début.' : undefined;
-const limiteAvantDebut = (value, all) =>
-  value && all?.dateDebut && new Date(value) > new Date(all.dateDebut)
-    ? "La limite d'inscription doit précéder le début de l'événement."
+// Same rule as the server (eventDates.js): registering during the event is
+// allowed, after its end is not.
+const limiteAvantFin = (value, all) =>
+  value && all?.dateFin && new Date(value) > new Date(all.dateFin)
+    ? "La limite d'inscription ne peut pas dépasser la fin de l'événement."
     : undefined;
 
 /** Picking a start date pre-fills an empty end date with the same value. */
@@ -118,7 +120,7 @@ function InformationsSections() {
           <DateTimeInput source="dateFin" label="Fin" validate={[required(), finApresDebut]} fullWidth />
         </Field>
         <Field w="third">
-          <DateTimeInput source="dateLimiteInscription" label="Limite d'inscription" validate={limiteAvantDebut} fullWidth />
+          <DateTimeInput source="dateLimiteInscription" label="Limite d'inscription" validate={limiteAvantFin} helperText="Facultatif. Sans limite, les inscriptions ferment à la fin de l’événement." fullWidth />
         </Field>
       </FormSection>
 
@@ -348,7 +350,7 @@ function EventTabs() {
         </Stack>
       )}
       {tab === 'scan' && <ScanPanel event={record} onRefresh={refresh} />}
-      {tab === 'statistiques' && <DashboardPanel eventId={eventId} />}
+      {tab === 'statistiques' && <DashboardPanel eventId={eventId} organismes={organismes} categories={categories} />}
     </FormPage>
   );
 }

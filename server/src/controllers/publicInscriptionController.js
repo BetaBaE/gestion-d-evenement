@@ -8,6 +8,7 @@ import { ApiError } from '../middlewares/errorHandler.js';
 import { generateBadgeCode, generateToken } from '../utils/tokens.js';
 import { sendConfirmationEmail } from '../services/emailService.js';
 import { optimizeAndStoreImage } from '../services/imageService.js';
+import { registrationClosedReason } from '../services/eventDates.js';
 
 const participantRowSchema = z.object({
   civilite: z.enum(['M.', 'Mme']).optional(),
@@ -48,8 +49,9 @@ async function loadValidEvent(formToken) {
   if (!event.inscriptionOuverte) {
     throw new ApiError(403, "Les inscriptions pour cet événement sont fermées.");
   }
-  if (event.dateLimiteInscription && new Date() > new Date(event.dateLimiteInscription)) {
-    throw new ApiError(403, "La date limite d'inscription est dépassée.");
+  const closed = registrationClosedReason(event);
+  if (closed) {
+    throw new ApiError(403, closed);
   }
   return event;
 }

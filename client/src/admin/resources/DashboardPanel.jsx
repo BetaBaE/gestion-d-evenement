@@ -1,17 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
+import { PresenceList } from './PresenceList.jsx';
 import {
   Box,
   Grid,
   Paper,
   Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   CircularProgress,
-  Stack,
 } from '@mui/material';
 import {
   BarChart,
@@ -30,7 +24,6 @@ import {
   getPresenceByCategorie,
   getPresenceByOrganisme,
   getArrivalCurve,
-  getNoShowParticipants,
 } from '../../api/statsApi.js';
 
 const STATUS_COLORS = {
@@ -63,7 +56,7 @@ function formatSlotLabel(isoString) {
   return new Date(isoString).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 }
 
-export function DashboardPanel({ eventId }) {
+export function DashboardPanel({ eventId, organismes, categories }) {
   const summaryQuery = useQuery({
     queryKey: ['stats-summary', eventId],
     queryFn: () => getEventSummary(eventId),
@@ -79,10 +72,6 @@ export function DashboardPanel({ eventId }) {
   const arrivalQuery = useQuery({
     queryKey: ['stats-arrivees', eventId],
     queryFn: () => getArrivalCurve(eventId),
-  });
-  const absentsQuery = useQuery({
-    queryKey: ['stats-absents', eventId],
-    queryFn: () => getNoShowParticipants(eventId),
   });
 
   if (summaryQuery.isLoading) {
@@ -211,42 +200,7 @@ export function DashboardPanel({ eventId }) {
         )}
       </Paper>
 
-      <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-          <Typography variant="subtitle1" fontWeight={600}>
-            Participants validés absents
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {absentsQuery.data?.length || 0} participant(s)
-          </Typography>
-        </Stack>
-        {absentsQuery.data?.length > 0 ? (
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Nom</TableCell>
-                  <TableCell>Prénom</TableCell>
-                  <TableCell>Fonction</TableCell>
-                  <TableCell>Email</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {absentsQuery.data.map((p) => (
-                  <TableRow key={p._id} hover>
-                    <TableCell>{p.nom}</TableCell>
-                    <TableCell>{p.prenom}</TableCell>
-                    <TableCell>{p.fonction}</TableCell>
-                    <TableCell>{p.email}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        ) : (
-          <Typography color="text.secondary">Tous les participants validés se sont présentés.</Typography>
-        )}
-      </Paper>
+      <PresenceList eventId={eventId} organismes={organismes} categories={categories} />
     </Box>
   );
 }

@@ -18,6 +18,7 @@ import { useRef, useState } from 'react';
 import { Box, IconButton, Typography } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import { axiosClient } from '../../api/axiosClient.js';
 import { getSelectedOrganisateurId } from '../organisateurContext.js';
 import { FormDialog, DialogForm, FormSection, Field, ImageField, UrlInput } from '../../components/form/index.js';
@@ -155,7 +156,11 @@ export function OrganismesPanel({ eventId }) {
         formData,
         { headers: { 'Content-Type': 'multipart/form-data' } },
       );
-      notify(`${data.created} organisme(s) importé(s).`, { type: 'success' });
+      // Lines that failed validation are listed instead of being silently skipped.
+      const skipped = data.errors?.length
+        ? ` ${data.errors.length} ligne(s) ignorée(s) : ${data.errors.slice(0, 3).map((e) => `ligne ${e.line} (${e.message})`).join(', ')}${data.errors.length > 3 ? '…' : ''}.`
+        : '';
+      notify(`${data.created} organisme(s) importé(s).${skipped}`, { type: skipped ? 'warning' : 'success', autoHideDuration: skipped ? 12000 : 5000 });
       refresh();
     } catch (error) {
       notify(error.response?.data?.message || "Erreur lors de l'import.", { type: 'error' });
@@ -173,6 +178,10 @@ export function OrganismesPanel({ eventId }) {
         sx={{ mb: 2, ml: 1 }}
       >
         <UploadFileIcon />
+      </RaButton>
+      {/* Ready-to-fill CSV (Excel FR: ";" separator, UTF-8): the expected columns, 3 sample rows. */}
+      <RaButton label="Télécharger un exemple" component="a" href="/exemple-organismes.csv" download="exemple-organismes.csv" sx={{ mb: 2, ml: 1 }}>
+        <FileDownloadIcon />
       </RaButton>
       <input
         ref={fileInputRef}

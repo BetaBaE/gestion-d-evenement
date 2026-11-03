@@ -7,6 +7,7 @@ import {
   getEvent,
   createEvent,
   updateEvent,
+  rememberClearedFields,
   deleteEvent,
   regenerateFormToken,
   regenerateScanToken,
@@ -36,7 +37,7 @@ export const eventRoutes = Router({ mergeParams: true });
 eventRoutes.get('/', listEvents);
 eventRoutes.get('/:eventId', eventScope, getEvent);
 eventRoutes.post('/', validateBody(validateEvent), createEvent);
-eventRoutes.put('/:eventId', eventScope, validateBody(validateEvent.partial()), updateEvent);
+eventRoutes.put('/:eventId', eventScope, rememberClearedFields, validateBody(validateEvent.partial()), updateEvent);
 eventRoutes.delete('/:eventId', eventScope, deleteEvent);
 eventRoutes.post('/:eventId/regenerer-form-token', eventScope, regenerateFormToken);
 eventRoutes.post('/:eventId/regenerer-scan-token', eventScope, regenerateScanToken);

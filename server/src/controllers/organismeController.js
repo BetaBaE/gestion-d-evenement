@@ -153,10 +153,16 @@ export async function importOrganismes(req, res, next) {
       throw new ApiError(400, 'Un fichier CSV est requis.');
     }
 
+    // Excel in French saves CSV with ";" — detect the separator from the
+    // header line; "bom" drops Excel's UTF-8 marker before the first column.
+    const header = req.file.buffer.toString('utf8').split(/\r?\n/, 1)[0] || '';
+    const delimiter = (header.match(/;/g) || []).length > (header.match(/,/g) || []).length ? ';' : ',';
     const records = parseCsv(req.file.buffer, {
       columns: true,
       skip_empty_lines: true,
       trim: true,
+      bom: true,
+      delimiter,
     });
 
     const rows = [];

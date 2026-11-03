@@ -8,6 +8,7 @@ import { generateToken } from '../utils/tokens.js';
 import { Scan } from '../models/Scan.js';
 import { describeScanLink } from '../services/scanAccess.js';
 import { resolveCategoryNames } from '../services/templateTransfer.js';
+import { eventDatesError } from '../services/eventDates.js';
 import { generateSingleBadgePdf, generateBadgeHtmlPreview } from '../services/badgeService.js';
 import { Organisateur } from '../models/Organisateur.js';
 import { ModeleBadge } from '../models/ModeleBadge.js';
@@ -99,9 +100,24 @@ export async function getEvent(req, res, next) {
   }
 }
 
+// Optional fields the form can empty. validateBody strips nulls (most
+// optional fields just mean "not provided"), so without this a deadline
+// or a capacity, once set, could never be removed.
+const CLEARABLE_FIELDS = ['dateLimiteInscription', 'capaciteMax'];
+
+/** Express middleware (before validateBody): remembers fields sent as null / "". */
+export function rememberClearedFields(req, res, next) {
+  req.clearedFields = CLEARABLE_FIELDS.filter((key) => key in (req.body || {}) && (req.body[key] === null || req.body[key] === ''));
+  next();
+}
+
 export async function createEvent(req, res, next) {
   try {
     const { badge: _ignoredBadge, ...fields } = req.body;
+    const datesError = eventDatesError(fields);
+    if (datesError) {
+      throw new ApiError(400, datesError);
+    }
     const event = await Event.create({
       ...fields,
       organisateurId: req.organisateurId,
@@ -126,6 +142,17 @@ export async function createEvent(req, res, next) {
 export async function updateEvent(req, res, next) {
   try {
     const { badge, ...rest } = req.body;
+    const cleared = req.clearedFields || [];
+
+    // Check the dates as they will be after this update.
+    const datesError = eventDatesError({
+      dateDebut: rest.dateDebut ?? req.event.dateDebut,
+      dateFin: rest.dateFin ?? req.event.dateFin,
+      dateLimiteInscription: cleared.includes('dateLimiteInscription') ? null : rest.dateLimiteInscription ?? req.event.dateLimiteInscription,
+    });
+    if (datesError) {
+      throw new ApiError(400, datesError);
+    }
 
     // Dot-path keys so a partial badge update merges into the existing
     // sub-document instead of replacing it (and wiping its elements).
@@ -144,7 +171,7 @@ export async function updateEvent(req, res, next) {
 
     const event = await Event.findOneAndUpdate(
       { _id: req.params.eventId, organisateurId: req.organisateurId },
-      { $set: update },
+      cleared.length ? { $set: update, $unset: Object.fromEntries(cleared.map((k) => [k, ''])) } : { $set: update },
       { new: true, runValidators: true },
     );
     if (!event) {

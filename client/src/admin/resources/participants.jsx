@@ -18,7 +18,7 @@ import {
   BulkActionsToolbar,
 } from 'react-admin';
 import { useState } from 'react';
-import { Box, Chip, IconButton, Stack, Typography } from '@mui/material';
+import { Box, IconButton, Stack, Typography } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import EmailIcon from '@mui/icons-material/Email';
@@ -29,29 +29,11 @@ import { Avatar } from '@mui/material';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import { getImageUrl, uploadParticipantPhoto, deleteParticipantPhoto, deleteAllParticipantPhotos } from '../../api/imageApi.js';
 import { FormDialog, DialogForm, FormSection, Field, ImageField } from '../../components/form/index.js';
-
-const statutChoices = [
-  { id: 'EN_ATTENTE', name: 'En attente' },
-  { id: 'VALIDE', name: 'Validé' },
-  { id: 'REFUSE', name: 'Refusé' },
-];
-
-const statutColors = {
-  EN_ATTENTE: 'warning',
-  VALIDE: 'success',
-  REFUSE: 'error',
-};
+import { ParticipantFilterBar, PresenceChip, EntriesField, StatutChip, NameFrom } from './ParticipantFilters.jsx';
 
 function basePath(eventId) {
   const organisateurId = getSelectedOrganisateurId();
   return `/admin/organisateurs/${organisateurId}/events/${eventId}/participants`;
-}
-
-function StatutChip() {
-  const record = useRecordContext();
-  if (!record) return null;
-  const label = statutChoices.find((c) => c.id === record.statut)?.name || record.statut;
-  return <Chip size="small" label={label} color={statutColors[record.statut] || 'default'} />;
 }
 
 function ParticipantRowActions({ eventId, onDone }) {
@@ -339,7 +321,9 @@ export function ParticipantsPanel({ eventId, categories, organismes }) {
       <RaButton label="Ajouter un participant" onClick={() => setDialog({ mode: 'create' })} sx={{ mb: 2 }} />
       <DeleteAllPhotosButton eventId={eventId} onDone={refresh} />
 
-      <ListBase resource="participants" queryOptions={{ meta: { eventId } }}>
+      {/* Filters kept per event; not synced with the URL (it holds ?onglet=). */}
+      <ListBase resource="participants" queryOptions={{ meta: { eventId } }} disableSyncWithLocation storeKey={`participants-${eventId}`}>
+        <ParticipantFilterBar eventId={eventId} organismes={organismes} categories={categories} />
         <BulkActionsToolbar>
           <BulkValidateButton eventId={eventId} onDone={refresh} />
         </BulkActionsToolbar>
@@ -354,9 +338,12 @@ export function ParticipantsPanel({ eventId, categories, organismes }) {
           <TextField source="prenom" label="Prénom" />
           <TextField source="email" label="Email" />
           <TextField source="fonction" label="Fonction" />
-          <CategorieInlineSelect eventId={eventId} categories={categories} onChanged={refresh} />
-          <StatutChip />
-          <ParticipantRowActions eventId={eventId} onDone={refresh} />
+          <NameFrom source="invitedOrganismId" items={organismes} label="Organisme" />
+          <CategorieInlineSelect eventId={eventId} categories={categories} onChanged={refresh} label="Catégorie" />
+          <StatutChip label="Validation" />
+          <PresenceChip label="Présence" />
+          <EntriesField label="Entrées" />
+          <ParticipantRowActions eventId={eventId} onDone={refresh} label="Actions" />
         </Datagrid>
         <Pagination />
       </ListBase>

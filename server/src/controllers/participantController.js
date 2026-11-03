@@ -6,6 +6,7 @@ import { Organisateur } from '../models/Organisateur.js';
 import { EmailLog } from '../models/EmailLog.js';
 import { ApiError } from '../middlewares/errorHandler.js';
 import { parsePagination, paginatedResponse } from '../utils/pagination.js';
+import { buildParticipantFilter, presenceByParticipant, ABSENT } from '../services/participantFilter.js';
 import { generateBadgeCode } from '../utils/tokens.js';
 import { sendConfirmationEmail, sendBadgeEmail } from '../services/emailService.js';
 import { optimizeAndStoreImage, deleteImage } from '../services/imageService.js';
@@ -46,21 +47,16 @@ async function loadRelations(event, participant) {
 export async function listParticipants(req, res, next) {
   try {
     const { page, limit, skip } = parsePagination(req.query);
-    const filter = { eventId: req.event._id };
-
-    if (req.query.statut) filter.statut = req.query.statut;
-    if (req.query.categorieId) filter.categorieId = req.query.categorieId;
-    if (req.query.invitedOrganismId) filter.invitedOrganismId = req.query.invitedOrganismId;
-    if (req.query.search) {
-      const regex = new RegExp(req.query.search, 'i');
-      filter.$or = [{ nom: regex }, { prenom: regex }, { email: regex }];
-    }
+    const filter = await buildParticipantFilter(req.event._id, req.query);
 
     const [items, total] = await Promise.all([
       Participant.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
       Participant.countDocuments(filter),
     ]);
-    res.json(paginatedResponse(items, total, page, limit));
+    // Presence of each listed participant (real scans only: first entry, count).
+    const presence = await presenceByParticipant(req.event._id, items.map((p) => p._id));
+    const withPresence = items.map((p) => ({ ...p.toJSON(), presence: presence[String(p._id)] || ABSENT }));
+    res.json(paginatedResponse(withPresence, total, page, limit));
   } catch (error) {
     next(error);
   }
