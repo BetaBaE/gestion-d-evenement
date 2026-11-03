@@ -13,9 +13,29 @@ const BROWSER_FIT_SCRIPT_PATH = fileURLToPath(
 let browserPromise = null;
 let browserFitScriptPromise = null;
 
+/**
+ * Locally Puppeteer's own Chrome. On Vercel (serverless functions can't
+ * ship that Chrome) the slim @sparticuz/chromium build, loaded only there.
+ */
+async function launchBrowser() {
+  if (process.env.VERCEL) {
+    const { default: chromium } = await import('@sparticuz/chromium');
+    return puppeteer.launch({
+      headless: true,
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      defaultViewport: null,
+    });
+  }
+  return puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+}
+
 async function getBrowser() {
   if (!browserPromise) {
-    browserPromise = puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+    browserPromise = launchBrowser();
+    browserPromise.catch(() => {
+      browserPromise = null;
+    });
     browserPromise.then((browser) => {
       browser.on('disconnected', () => {
         browserPromise = null;

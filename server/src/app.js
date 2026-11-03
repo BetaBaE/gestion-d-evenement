@@ -14,6 +14,10 @@ import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
 
 export const app = express();
 
+// On Vercel every request arrives through its proxy: trust one hop so
+// req.ip is the visitor's address (rate limits per visitor, not shared).
+if (process.env.VERCEL) app.set('trust proxy', 1);
+
 // The app reaches the API through a same-origin proxy (Vite in dev, Nginx
 // in production), so images are same-origin; `same-site` (instead of
 // Helmet's default `same-origin`) leaves headroom for a split subdomain.

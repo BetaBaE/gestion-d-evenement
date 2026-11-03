@@ -151,15 +151,32 @@ Chaque route de back-office imbriquée sous `/api/admin/organisateurs/:organisat
 
 ## Déploiement (Vercel — phase de test)
 
-Le projet est prévu pour un déploiement de test sur Vercel. Points d'attention :
+Tout est hébergé sur un seul projet Vercel, sur un seul domaine : le front (build Vite statique, `client/dist`) et l'API Express en fonction serverless (`api/index.js`, appelée via la réécriture `/api/*` de `vercel.json`). Le cookie de session et les images fonctionnent donc comme avec le proxy de développement. HTTPS est fourni par Vercel : caméra du scan et installation de l'application (PWA) fonctionnent sans réglage.
 
-- **Système de fichiers éphémère** : Vercel ne fournit pas de disque persistant. Le code ne doit écrire ni les PDF de badges, ni les QR codes, ni les images optimisées, ni aucun fichier temporaire sur le disque local — tout est déjà généré et manipulé en mémoire (buffers) dans ce projet (`pdfkit`/`qrcode`/`sharp` lisent et écrivent des buffers, jamais sur disque), donc aucun changement n'est nécessaire sur ce point.
-- **`sharp` sur Vercel** : le paquet `sharp` embarque des binaires natifs par plateforme ; s'assurer que l'installation côté Vercel se fait sur l'environnement cible (généralement automatique via `npm install` au build, mais à vérifier si le déploiement échoue sur l'étape d'installation des dépendances serveur).
-- **Fonction serverless** : `server/src/app.js` exporte l'application Express configurée ; il faut un petit adaptateur (`server/api/index.js` ou équivalent selon la configuration Vercel choisie) qui exporte `app` comme handler serverless, et un `vercel.json` routant `/api/*` vers cette fonction.
-- **Variables d'environnement** : configurer `MONGODB_URI`, `JWT_SECRET`, `CLIENT_URL`, `PUBLIC_APP_URL`, les variables `SMTP_*`, `MAIL_FROM` dans les paramètres du projet Vercel plutôt que dans un fichier `.env`.
-- **Cookie JWT** : le cookie d'authentification est `httpOnly`, `secure` en production (`NODE_ENV=production`) et `sameSite=lax` — s'assurer que le client et l'API sont servis en HTTPS en production pour que le cookie soit transmis.
-- **MongoDB Atlas** : autoriser l'accès réseau depuis les IP de sortie de Vercel (ou `0.0.0.0/0` en phase de test uniquement) dans les règles réseau du cluster Atlas.
-- **Emails en production** : remplacer les variables `SMTP_*` par de vraies informations d'identification (ex. Gmail) avant d'ouvrir l'accès à de vrais participants — tant qu'elles sont vides, l'application utilise Ethereal et aucun email n'atteint de vraie boîte de réception.
+### Mettre en ligne
+
+1. Sur [vercel.com](https://vercel.com) : **Add New → Project**, importer le dépôt GitHub `gestion-d-evenement`. Laisser **Root Directory** à la racine et **Framework Preset** sur *Other* : `vercel.json` fournit l'installation, le build et le dossier de sortie.
+2. **Settings → Environment Variables** (Production) :
+
+   | Variable | Valeur |
+   | --- | --- |
+   | `MONGODB_URI` | chaîne de connexion Atlas (idéalement une base dédiée au test) |
+   | `JWT_SECRET` | une longue valeur aléatoire, différente de celle du poste de dev |
+   | `EMAIL_SETTINGS_ENCRYPTION_KEY` | la **même** que celle de la base utilisée (sinon les mots de passe SMTP enregistrés ne se déchiffrent plus) |
+   | `CLIENT_URL` | `https://<projet>.vercel.app` |
+   | `APP_TIMEZONE` | `Africa/Casablanca` |
+   | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | facultatif (vides = Ethereal, aucun email réel) |
+
+3. **MongoDB Atlas → Network Access** : autoriser `0.0.0.0/0` (les IP de Vercel changent) — uniquement pour la phase de test.
+4. **Deploy**. Chaque `git push` sur `main` redéploie automatiquement.
+
+### Limites propres à Vercel
+
+- **Taille des requêtes : 4,5 Mo maximum** par appel à l'API. Les imports de modèles `.badge.json` et de designs PDF/images (prévus jusqu'à 20 Mo) doivent rester sous cette taille en ligne.
+- **PDF des badges** : Chromium vient de `@sparticuz/chromium` (version 153, Puppeteer cible Chrome 156) — à vérifier en premier après le déploiement (Aperçu PDF d'un badge). Les polices système sont minimales : les textes peuvent s'afficher avec une police de secours.
+- **Durée** : 60 s par requête (`maxDuration` dans `vercel.json`) — l'impression d'un très grand lot de badges peut dépasser.
+- **Limitation des tentatives de connexion** : comptée par instance de fonction (mémoire), donc moins stricte qu'en local.
+- **Système de fichiers éphémère** : rien n'est écrit sur disque (images en base, PDF et QR codes en mémoire).
 
 ## Limitations connues
 
