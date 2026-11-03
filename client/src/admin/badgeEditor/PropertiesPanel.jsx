@@ -23,7 +23,8 @@ import VerticalAlignCenterIcon from '@mui/icons-material/VerticalAlignCenter';
 import VerticalAlignBottomIcon from '@mui/icons-material/VerticalAlignBottom';
 import DataObjectIcon from '@mui/icons-material/DataObject';
 import { ALLOWED_FONTS, listTextVariables, resolveToken } from '../../../../shared/badge-renderer/index.js';
-import { CHAMP_OPTIONS, ELEMENT_CATALOG, ICON_OPTIONS, elementLabel } from './elementCatalog.js';
+import { CHAMP_OPTIONS, ELEMENT_CATALOG, elementLabel } from './elementCatalog.js';
+import { IconPicker } from './IconPicker.jsx';
 import { activePanels } from './geometry.js';
 import { ImagePickerField } from './ImagePickerField.jsx';
 import { ColorField as SharedColorField, useBrandKitColors } from '../../components/form/index.js';
@@ -215,13 +216,7 @@ function TypeProps({ el, onProps, uploadImage, context }) {
       );
     case 'icone':
       return (
-        <TextField select size="small" label="Icône" value={p.icone || 'info'} onChange={(e) => onProps({ icone: e.target.value })}>
-          {ICON_OPTIONS.map((i) => (
-            <MenuItem key={i} value={i}>
-              {i}
-            </MenuItem>
-          ))}
-        </TextField>
+        <IconPicker value={p.icone || 'info'} onChange={(icone) => onProps({ icone })} />
       );
     case 'dates':
       return (
@@ -280,6 +275,9 @@ function StyleSection({ el, onStyle, theme }) {
   const isText = TEXT_TYPES.has(el.type);
   return (
     <Stack spacing={1.5}>
+      {el.type === 'icone' && (
+        <ColorField label="Couleur de l'icône" value={s.couleur} onChange={(v) => onStyle({ couleur: v })} theme={theme} />
+      )}
       {isText && (
         <>
           <TextField select size="small" label="Police" value={s.police || ''} onChange={(e) => onStyle({ police: e.target.value || undefined })}>

@@ -2,6 +2,7 @@ import { registerElement } from '../registry.js';
 import { esc } from '../escape.js';
 import { ok, fail } from '../validate.js';
 import { dynamicTextMarkup } from './texte.js';
+import { ICONS } from '../icons.js';
 
 registerElement('forme', {
   defaultProps: { forme: 'rectangle' },
@@ -35,40 +36,21 @@ registerElement('bandeCategorie', {
   },
 });
 
-const ICON_GLYPHS = {
-  calendrier: '📅',
-  horloge: '🕐',
-  lieu: '📍',
-  ticket: '🎫',
-  itineraire: '➡️',
-  info: 'ℹ️',
-  telephone: '📞',
-  email: '✉️',
-  web: '🌐',
-  wifi: '📶',
-  repas: '🍽️',
-  parking: '🅿️',
-  facebook: '📘',
-  instagram: '📷',
-  linkedin: '💼',
-  youtube: '▶️',
-  x: '✖️',
-};
-
 registerElement('icone', {
   defaultProps: { icone: 'info' },
   defaultSizeMm: { largeur: 8, hauteur: 8 },
   validateProps(props) {
     const icone = props?.icone;
-    if (!icone || !(icone in ICON_GLYPHS)) {
+    if (!icone || !Object.hasOwn(ICONS, icone)) {
       return fail('icône inconnue');
     }
     return ok({ icone });
   },
-  render({ props, box }) {
-    // Glyph sized to the box (the smaller side), not the inherited font size.
-    const sizeMm = Math.max(1, Math.min(box.widthMm, box.heightMm) * 0.8);
-    return `<span class="el-icone" style="font-size:${sizeMm}mm;line-height:1">${ICON_GLYPHS[props.icone]}</span>`;
+  render({ props }) {
+    // Vector icon filling the box, drawn in currentColor: it takes the
+    // element's color (style.couleur → theme token or hex). The markup comes
+    // from the static ICONS table, never from user input.
+    return `<svg class="el-icone" viewBox="0 0 24 24" fill="currentColor" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${ICONS[props.icone].svg}</svg>`;
   },
 });
 

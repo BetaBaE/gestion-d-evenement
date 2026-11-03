@@ -18,6 +18,7 @@ export { esc, renderRichText, isValidHexColor, isValidHttpUrl } from './escape.j
 export { nanoid } from './nanoid.js';
 export { STARTER_TEMPLATES } from './templates.js';
 export { ALL_PANELS, activePanelKeys, elementsHorsPage } from './panels.js';
+export { ICONS } from './icons.js';
 export { checkBadgeRules, hasBlockingRules } from './rules.js';
 export { resolveTextVariables, listTextVariables } from './textVariables.js';
 export { fitText } from './textFit.js';
@@ -62,6 +63,7 @@ function baseCss(theme) {
     .el-nom .el-dynamictext { font-family: ${policeNom}; }
     .el-titres .el-dynamictext { font-family: ${policeTitres}; }
     .el-qr { width: 100%; height: 100%; }
+    .el-icone { width: 100%; height: 100%; display: block; }
     .el-qr svg { width: 100%; height: 100%; }
     .el-photo, .el-photo-placeholder { width: 100%; height: 100%; object-fit: cover; display: block; }
     .el-photo--rond, .el-photo-placeholder.el-photo--rond { border-radius: 50%; }

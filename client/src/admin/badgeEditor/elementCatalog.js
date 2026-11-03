@@ -45,26 +45,6 @@ export const CHAMP_OPTIONS = [
   { value: 'telephone', label: 'Téléphone' },
 ];
 
-export const ICON_OPTIONS = [
-  'calendrier',
-  'horloge',
-  'lieu',
-  'ticket',
-  'itineraire',
-  'info',
-  'telephone',
-  'email',
-  'web',
-  'wifi',
-  'repas',
-  'parking',
-  'facebook',
-  'instagram',
-  'linkedin',
-  'youtube',
-  'x',
-];
-
 const DEFAULT_STYLES = {
   texte: { tailleMax: 10, tailleMin: 6, lignesMax: 3, alignV: 'haut' },
   champ: { tailleMax: 12, tailleMin: 7, lignesMax: 1, alignH: 'centre', alignV: 'milieu' },
