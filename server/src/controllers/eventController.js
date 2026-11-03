@@ -5,6 +5,8 @@ import { Participant } from '../models/Participant.js';
 import { ApiError } from '../middlewares/errorHandler.js';
 import { parsePagination, paginatedResponse } from '../utils/pagination.js';
 import { generateToken } from '../utils/tokens.js';
+import { Scan } from '../models/Scan.js';
+import { describeScanLink } from '../services/scanAccess.js';
 import { generateSingleBadgePdf, generateBadgeHtmlPreview } from '../services/badgeService.js';
 import { Organisateur } from '../models/Organisateur.js';
 import { ModeleBadge } from '../models/ModeleBadge.js';
@@ -197,24 +199,92 @@ export async function regenerateFormToken(req, res, next) {
   }
 }
 
+/**
+ * New scan link. Only the token changes: in AUTO mode the window keeps
+ * following the event dates, in MANUEL mode the stored window is kept.
+ */
 export async function regenerateScanToken(req, res, next) {
   try {
-    const { scanTokenValidFrom, scanTokenValidUntil } = req.body;
-    const event = await Event.findOne({ _id: req.params.eventId, organisateurId: req.organisateurId });
-    if (!event) {
-      throw new ApiError(404, 'Ressource introuvable');
-    }
-
+    const event = req.event;
     event.scanToken = generateToken(32);
-    event.scanTokenValidFrom = scanTokenValidFrom
-      ? new Date(scanTokenValidFrom)
-      : new Date(new Date(event.dateDebut).setHours(0, 0, 0, 0));
-    event.scanTokenValidUntil = scanTokenValidUntil
-      ? new Date(scanTokenValidUntil)
-      : new Date(new Date(event.dateFin).setHours(23, 59, 59, 999));
     await event.save();
-
     res.json(event);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/** Live status of the scan link for the Scan tab. */
+export async function getScanStatus(req, res, next) {
+  try {
+    const nbScansTest = await Scan.countDocuments({ eventId: req.event._id, test: true });
+    res.json({ ...describeScanLink(req.event), nbScansTest });
+  } catch (error) {
+    next(error);
+  }
+}
+
+const scanConfigSchema = z
+  .object({
+    scanWindowMode: z.enum(['AUTO', 'MANUEL']),
+    scanTokenValidFrom: z.coerce.date().optional(),
+    scanTokenValidUntil: z.coerce.date().optional(),
+  })
+  .refine((v) => v.scanWindowMode === 'AUTO' || (v.scanTokenValidFrom && v.scanTokenValidUntil), {
+    message: 'Indiquez le début et la fin de la fenêtre de scan.',
+  })
+  .refine((v) => v.scanWindowMode === 'AUTO' || v.scanTokenValidUntil > v.scanTokenValidFrom, {
+    message: 'La fin de la fenêtre doit être après son début.',
+  });
+
+export const validateScanConfig = scanConfigSchema;
+
+/** Switches between AUTO (follows the dates) and MANUEL (explicit window). */
+export async function updateScanConfig(req, res, next) {
+  try {
+    const event = req.event;
+    event.scanWindowMode = req.body.scanWindowMode;
+    if (req.body.scanWindowMode === 'MANUEL') {
+      event.scanTokenValidFrom = req.body.scanTokenValidFrom;
+      event.scanTokenValidUntil = req.body.scanTokenValidUntil;
+    }
+    await event.save();
+    res.json(describeScanLink(event));
+  } catch (error) {
+    next(error);
+  }
+}
+
+const scanTestSchema = z.object({ heures: z.union([z.literal(1), z.literal(2), z.literal(8)]) });
+export const validateScanTest = scanTestSchema;
+
+/** Test mode: the link works outside its window for 1, 2 or 8 hours. */
+export async function startScanTest(req, res, next) {
+  try {
+    const event = req.event;
+    event.scanTestJusquA = new Date(Date.now() + req.body.heures * 3600 * 1000);
+    await event.save();
+    res.json(describeScanLink(event));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function stopScanTest(req, res, next) {
+  try {
+    const event = req.event;
+    event.scanTestJusquA = undefined;
+    await event.save();
+    res.json(describeScanLink(event));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function purgeTestScans(req, res, next) {
+  try {
+    const { deletedCount } = await Scan.deleteMany({ eventId: req.event._id, test: true });
+    res.json({ deleted: deletedCount });
   } catch (error) {
     next(error);
   }

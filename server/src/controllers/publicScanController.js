@@ -1,38 +1,26 @@
 import { z } from 'zod';
-import { Event } from '../models/Event.js';
 import { Participant } from '../models/Participant.js';
 import { CategorieEvent } from '../models/CategorieEvent.js';
 import { InvitedOrganism } from '../models/InvitedOrganism.js';
 import { Scan } from '../models/Scan.js';
 import { ApiError } from '../middlewares/errorHandler.js';
+import { loadOpenScanEvent } from '../services/scanAccess.js';
+import { formatScanDate } from '../services/scanWindow.js';
+import { env } from '../config/env.js';
 
 const scanSchema = z.object({
   badgeCode: z.string().min(1, 'Code requis.'),
 });
 
-async function loadValidScanEvent(scanToken) {
-  const event = await Event.findOne({ scanToken });
-  if (!event) {
-    throw new ApiError(403, 'Accès refusé.');
-  }
-
-  const now = new Date();
-  if (
-    !event.scanTokenValidFrom ||
-    !event.scanTokenValidUntil ||
-    now < new Date(event.scanTokenValidFrom) ||
-    now > new Date(event.scanTokenValidUntil)
-  ) {
-    throw new ApiError(403, 'Accès refusé.');
-  }
-
-  return event;
-}
-
 export async function checkScanAccess(req, res, next) {
   try {
-    const event = await loadValidScanEvent(req.params.scanToken);
-    res.json({ titre: event.titre, ville: event.ville });
+    const { event, modeTest } = await loadOpenScanEvent(req.params.scanToken);
+    res.json({
+      titre: event.titre,
+      ville: event.ville,
+      modeTest,
+      scanTestJusquALabel: modeTest ? formatScanDate(event.scanTestJusquA, env.appTimezone) : null,
+    });
   } catch (error) {
     next(error);
   }
@@ -41,7 +29,7 @@ export async function checkScanAccess(req, res, next) {
 export async function recordScan(req, res, next) {
   try {
     const { badgeCode } = scanSchema.parse(req.body);
-    const event = await loadValidScanEvent(req.params.scanToken);
+    const { event, modeTest } = await loadOpenScanEvent(req.params.scanToken);
 
     const participant = await Participant.findOne({ eventId: event._id, badgeCode });
     if (!participant || participant.statut !== 'VALIDE') {
@@ -62,6 +50,8 @@ export async function recordScan(req, res, next) {
       participantId: participant._id,
       horodatage: now,
       appareil: req.headers['user-agent'],
+      // Scans made while test mode is on are kept out of the statistics.
+      test: modeTest,
     });
 
     const entryNumber = (await Scan.countDocuments({ participantId: participant._id })) ;
@@ -78,6 +68,7 @@ export async function recordScan(req, res, next) {
       categorie: categorie ? { nom: categorie.nom, couleur: categorie.couleur } : null,
       organisme: organisme ? { nom: organisme.nom } : null,
       entryNumber,
+      modeTest,
       hasPhoto: !!participant.photoImageId,
     });
   } catch (error) {

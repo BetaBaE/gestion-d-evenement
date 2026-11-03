@@ -10,6 +10,13 @@ import {
   deleteEvent,
   regenerateFormToken,
   regenerateScanToken,
+  getScanStatus,
+  updateScanConfig,
+  validateScanConfig,
+  startScanTest,
+  stopScanTest,
+  validateScanTest,
+  purgeTestScans,
   listBadgeTemplates,
   applyBadgeTemplate,
   updateEventBadge,
@@ -33,6 +40,11 @@ eventRoutes.put('/:eventId', eventScope, validateBody(validateEvent.partial()), 
 eventRoutes.delete('/:eventId', eventScope, deleteEvent);
 eventRoutes.post('/:eventId/regenerer-form-token', eventScope, regenerateFormToken);
 eventRoutes.post('/:eventId/regenerer-scan-token', eventScope, regenerateScanToken);
+eventRoutes.get('/:eventId/scan-statut', eventScope, getScanStatus);
+eventRoutes.put('/:eventId/scan-config', eventScope, validateBody(validateScanConfig), updateScanConfig);
+eventRoutes.post('/:eventId/scan-test', eventScope, validateBody(validateScanTest), startScanTest);
+eventRoutes.delete('/:eventId/scan-test', eventScope, stopScanTest);
+eventRoutes.delete('/:eventId/scans-test', eventScope, purgeTestScans);
 eventRoutes.get('/:eventId/badge-templates', eventScope, listBadgeTemplates);
 eventRoutes.post('/:eventId/badge-template', eventScope, applyBadgeTemplate);
 eventRoutes.put('/:eventId/badge', eventScope, updateEventBadge);

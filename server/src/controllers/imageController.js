@@ -1,8 +1,8 @@
 import { Image } from '../models/Image.js';
-import { Event } from '../models/Event.js';
 import { Participant } from '../models/Participant.js';
 import { ApiError } from '../middlewares/errorHandler.js';
 import { optimizeAndStoreImage } from '../services/imageService.js';
+import { loadOpenScanEvent } from '../services/scanAccess.js';
 
 /**
  * Serves image bytes with ETag/Cache-Control. Access control:
@@ -89,17 +89,7 @@ export async function uploadBlocImage(req, res, next) {
 
 export async function servePhotoViaScanToken(req, res, next) {
   try {
-    const event = await Event.findOne({ scanToken: req.params.scanToken });
-    const now = new Date();
-    if (
-      !event ||
-      !event.scanTokenValidFrom ||
-      !event.scanTokenValidUntil ||
-      now < new Date(event.scanTokenValidFrom) ||
-      now > new Date(event.scanTokenValidUntil)
-    ) {
-      throw new ApiError(403, 'Accès refusé.');
-    }
+    const { event } = await loadOpenScanEvent(req.params.scanToken);
 
     const participant = await Participant.findOne({ _id: req.params.participantId, eventId: event._id });
     if (!participant || !participant.photoImageId) {

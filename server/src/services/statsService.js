@@ -5,6 +5,9 @@ import { CategorieEvent } from '../models/CategorieEvent.js';
 import { InvitedOrganism } from '../models/InvitedOrganism.js';
 import { EmailLog } from '../models/EmailLog.js';
 
+// Scans recorded in test mode never count in the statistics.
+const REAL_SCAN = { test: { $ne: true } };
+
 function toObjectId(id) {
   return new mongoose.Types.ObjectId(id);
 }
@@ -24,7 +27,7 @@ export async function getEventSummary(eventId) {
   const inscrits = counts.EN_ATTENTE + counts.VALIDE + counts.REFUSE;
 
   const presentsResult = await Scan.aggregate([
-    { $match: { eventId: eventObjectId } },
+    { $match: { eventId: eventObjectId, ...REAL_SCAN } },
     { $group: { _id: '$participantId' } },
     { $count: 'total' },
   ]);
@@ -33,7 +36,7 @@ export async function getEventSummary(eventId) {
   const tauxPresence = counts.VALIDE > 0 ? presents / counts.VALIDE : 0;
 
   const totalEntriesResult = await Scan.aggregate([
-    { $match: { eventId: eventObjectId } },
+    { $match: { eventId: eventObjectId, ...REAL_SCAN } },
     { $count: 'total' },
   ]);
   const totalEntries = totalEntriesResult[0]?.total || 0;
@@ -61,6 +64,7 @@ export async function getPresenceByCategorie(eventId) {
         from: 'scans',
         localField: '_id',
         foreignField: 'participantId',
+        pipeline: [{ $match: REAL_SCAN }],
         as: 'scans',
       },
     },
@@ -96,6 +100,7 @@ export async function getPresenceByOrganisme(eventId) {
         from: 'scans',
         localField: '_id',
         foreignField: 'participantId',
+        pipeline: [{ $match: REAL_SCAN }],
         as: 'scans',
       },
     },
@@ -124,7 +129,7 @@ export async function getArrivalCurve(eventId) {
   const eventObjectId = toObjectId(eventId);
 
   const firstEntries = await Scan.aggregate([
-    { $match: { eventId: eventObjectId } },
+    { $match: { eventId: eventObjectId, ...REAL_SCAN } },
     { $sort: { horodatage: 1 } },
     { $group: { _id: '$participantId', firstEntry: { $first: '$horodatage' } } },
   ]);
@@ -154,6 +159,7 @@ export async function getNoShowParticipants(eventId) {
         from: 'scans',
         localField: '_id',
         foreignField: 'participantId',
+        pipeline: [{ $match: REAL_SCAN }],
         as: 'scans',
       },
     },
@@ -190,7 +196,8 @@ export async function getParticipantDetail(eventId, participantId) {
     organisme,
     scans,
     emailLogs,
-    firstArrival: scans[0]?.horodatage || null,
-    entryCount: scans.length,
+    // The timeline lists test scans too (flagged test: true); counts don't.
+    firstArrival: scans.find((sc) => !sc.test)?.horodatage || null,
+    entryCount: scans.filter((sc) => !sc.test).length,
   };
 }

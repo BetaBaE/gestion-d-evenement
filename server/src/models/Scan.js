@@ -6,6 +6,8 @@ const scanSchema = new mongoose.Schema(
     participantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Participant', required: true },
     horodatage: { type: Date, required: true, default: Date.now },
     appareil: { type: String },
+    // Recorded while the event's scan test mode was on: excluded from statistics.
+    test: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

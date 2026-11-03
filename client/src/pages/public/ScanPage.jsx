@@ -12,6 +12,13 @@ const FEEDBACK_COLORS = {
 };
 
 const RESUME_DELAY_MS = 1500;
+
+// One title per refusal reason (the server sends the detailed message).
+const DENIED_TITLES = {
+  LIEN_INVALIDE: 'Lien invalide ou remplacé',
+  PAS_ENCORE: 'Scan pas encore ouvert',
+  EXPIRE: 'Scan fermé',
+};
 const SCANNER_ELEMENT_ID = 'scan-reader';
 
 function playFeedbackSound(type) {
@@ -38,6 +45,7 @@ export function ScanPage() {
   const { scanToken } = useParams();
   const [accessState, setAccessState] = useState('loading');
   const [eventInfo, setEventInfo] = useState(null);
+  const [denied, setDenied] = useState(null);
   const [feedback, setFeedback] = useState(null);
   const [manualCode, setManualCode] = useState('');
   const isProcessingRef = useRef(false);
@@ -48,7 +56,15 @@ export function ScanPage() {
         setEventInfo(data);
         setAccessState('ok');
       })
-      .catch(() => setAccessState('denied'));
+      .catch((error) => {
+        const data = error.response?.data;
+        setDenied(
+          data
+            ? { title: DENIED_TITLES[data.details?.code] || 'Accès refusé', message: data.message }
+            : { title: 'Serveur injoignable', message: 'Vérifiez la connexion du téléphone puis rechargez la page.' },
+        );
+        setAccessState('denied');
+      });
   }, [scanToken]);
 
   const handleResult = useCallback(
@@ -123,8 +139,8 @@ export function ScanPage() {
   if (accessState === 'denied') {
     return (
       <Center style={{ height: '100vh', background: '#000' }}>
-        <Alert color="red" title="Accès refusé">
-          Ce lien de scan n'est pas valide ou n'est plus actif.
+        <Alert color="red" title={denied?.title} style={{ maxWidth: 400, margin: 16 }}>
+          {denied?.message}
         </Alert>
       </Center>
     );
@@ -132,6 +148,12 @@ export function ScanPage() {
 
   return (
     <Box style={{ minHeight: '100vh', background: '#000', color: '#fff', position: 'relative' }}>
+      {eventInfo?.modeTest && (
+        <Box p="xs" style={{ background: '#f08c00', color: '#000', textAlign: 'center', fontWeight: 700 }}>
+          MODE TEST — les scans ne comptent pas dans les statistiques
+          {eventInfo.scanTestJusquALabel && ` (jusqu'au ${eventInfo.scanTestJusquALabel})`}
+        </Box>
+      )}
       <Box p="md">
         <Title order={3} ta="center">
           {eventInfo?.titre}
@@ -211,9 +233,16 @@ export function ScanPage() {
               </Title>
             )}
             {feedback.type === 'invalide' && (
-              <Title order={1} c="white">
-                Badge invalide
-              </Title>
+              <>
+                <Title order={1} c="white">
+                  Badge invalide
+                </Title>
+                {feedback.message && feedback.message !== 'Badge invalide.' && (
+                  <Text size="lg" c="white" ta="center" px="md">
+                    {feedback.message}
+                  </Text>
+                )}
+              </>
             )}
           </Stack>
         </Center>

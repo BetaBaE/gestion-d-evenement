@@ -88,8 +88,13 @@ const eventSchema = new mongoose.Schema(
     banniereUrl: { type: String },
     formToken: { type: String, unique: true },
     scanToken: { type: String, unique: true, sparse: true },
+    // AUTO: the scan window follows the event dates (computed at each check).
+    // MANUEL: scanTokenValidFrom / scanTokenValidUntil below are used.
+    scanWindowMode: { type: String, enum: ['AUTO', 'MANUEL'], default: 'AUTO' },
     scanTokenValidFrom: { type: Date },
     scanTokenValidUntil: { type: Date },
+    // Test mode: the link works whatever the window until this time.
+    scanTestJusquA: { type: Date },
     antiDoublonMinutes: { type: Number, default: 2 },
     badge: { type: badgeSchema, default: () => ({}) },
     photoObligatoire: { type: Boolean, default: false },

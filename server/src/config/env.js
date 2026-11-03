@@ -29,6 +29,8 @@ export const env = {
     pass: process.env.SMTP_PASS || '',
   },
   mailFrom: process.env.MAIL_FROM || 'Inscriptions <no-reply@example.com>',
+  // Day boundaries (scan window, "end of day") are computed in this zone.
+  appTimezone: process.env.APP_TIMEZONE || 'Africa/Casablanca',
   superAdmin: {
     email: process.env.SUPERADMIN_EMAIL,
     password: process.env.SUPERADMIN_PASSWORD,

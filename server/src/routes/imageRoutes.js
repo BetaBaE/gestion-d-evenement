@@ -3,6 +3,7 @@ import { serveImage, serveAdminImage, servePhotoViaScanToken } from '../controll
 import { requireAuth, requireRole } from '../middlewares/auth.js';
 import { tenantScope } from '../middlewares/tenantScope.js';
 import { scanRateLimit } from '../middlewares/rateLimit.js';
+import { noStore } from '../services/scanAccess.js';
 
 export const publicImageRoutes = Router();
 publicImageRoutes.get('/:id', serveImage);
@@ -17,4 +18,4 @@ adminImageRoutes.use(
 adminImageRoutes.get('/organisateurs/:organisateurId/images/:id', serveAdminImage);
 
 export const publicScanPhotoRoutes = Router();
-publicScanPhotoRoutes.get('/:scanToken/photo/:participantId', scanRateLimit, servePhotoViaScanToken);
+publicScanPhotoRoutes.get('/:scanToken/photo/:participantId', scanRateLimit, noStore, servePhotoViaScanToken);
