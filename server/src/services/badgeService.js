@@ -127,8 +127,11 @@ async function withFittedPage(html, fn) {
   }
 }
 
+// page.pdf() resolves to a Uint8Array: wrap it in a Buffer so every
+// res.send() treats it as binary (Vercel's response helpers JSON-encode
+// anything that isn't a Buffer).
 function renderPdf(html) {
-  return withFittedPage(html, (page) => page.pdf({ printBackground: true, preferCSSPageSize: true }));
+  return withFittedPage(html, async (page) => Buffer.from(await page.pdf({ printBackground: true, preferCSSPageSize: true })));
 }
 
 export async function generateSingleBadgePdf(args) {
