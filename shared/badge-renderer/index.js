@@ -4,6 +4,7 @@ import './elements/contenu.js';
 import { getElementDefinition, hasElementType } from './registry.js';
 import { styleToCss } from './style.js';
 import { esc } from './escape.js';
+import { activePanelKeys } from './panels.js';
 
 export {
   registerElement,
@@ -16,6 +17,8 @@ export {
 export { esc, renderRichText, isValidHexColor, isValidHttpUrl } from './escape.js';
 export { nanoid } from './nanoid.js';
 export { STARTER_TEMPLATES } from './templates.js';
+export { ALL_PANELS, activePanelKeys, elementsHorsPage } from './panels.js';
+export { checkBadgeRules, hasBlockingRules } from './rules.js';
 export { resolveTextVariables, listTextVariables } from './textVariables.js';
 export { fitText } from './textFit.js';
 export { fitDynamicTextInDom } from './fitDynamicTextInDom.js';
@@ -182,8 +185,9 @@ function renderElement(element, ctx) {
   return `<div class="${classes}" ${dataAttrs} style="${esc(positionCss + styleCss)}">${inner}</div>`;
 }
 
-function renderPanel(panelKey, elements, ctx, showSafeZone, safeZoneMm) {
-  const panelElements = (elements || []).filter((el) => el.panneau === panelKey).sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
+function renderPanel(panelKey, elements, ctx, showSafeZone, safeZoneMm, activePanels = ['P1', 'P2', 'P3', 'P4']) {
+  // Elements on a panel that doesn't print ("hors page") are never rendered.
+  const panelElements = (activePanels.includes(panelKey) ? elements || [] : []).filter((el) => el.panneau === panelKey).sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
   const elementsHtml = panelElements.map((el) => renderElement(el, ctx)).join('');
   const safeZoneHtml = showSafeZone
     ? `<div class="safe-zone" style="left:${safeZoneMm}mm;top:${safeZoneMm}mm;right:${safeZoneMm}mm;bottom:${safeZoneMm}mm;"></div>`
@@ -236,7 +240,7 @@ const EDITOR_CSS = `
 export function renderEditorSheet({ badge, theme, participant, event, organisme, organisateur, categorie, assets, scope }) {
   const ctx = buildCtx({ theme, participant, event, organisme, organisateur, categorie, assets, editorMode: true });
   const safeZoneMm = badge.safeZoneMm ?? SAFE_ZONE_DEFAULT_MM;
-  const panels = ['P1', 'P2', 'P3', 'P4'].map((key) => renderPanel(key, badge.elements, ctx, true, safeZoneMm));
+  const panels = ['P1', 'P2', 'P3', 'P4'].map((key) => renderPanel(key, badge.elements, ctx, true, safeZoneMm, activePanelKeys(badge)));
   const sheetHtml = badge.format === 'A4_PLIE_4' ? panels.join('') : panels[0];
 
   const layout = layoutCss({ ...badge, rotationLigneBas180: false }).replace(/@page[^}]*}/g, '');
@@ -257,7 +261,7 @@ export function renderBadgeHtml({ badge, theme, participant, event, organisme, o
   const ctx = buildCtx({ theme, participant, event, organisme, organisateur, categorie, assets, measureTextWidthMm });
 
   const panels = ['P1', 'P2', 'P3', 'P4'].map((key) =>
-    renderPanel(key, badge.elements, ctx, showSafeZone, badge.safeZoneMm ?? SAFE_ZONE_DEFAULT_MM),
+    renderPanel(key, badge.elements, ctx, showSafeZone, badge.safeZoneMm ?? SAFE_ZONE_DEFAULT_MM, activePanelKeys(badge)),
   );
   const sheetHtml = badge.format === 'A4_PLIE_4' ? panels.join('') : panels[0];
 
@@ -284,7 +288,7 @@ export function renderBatchBadgeHtml(entries) {
 
   const sheets = entries.map(({ participant, event, organisme, organisateur, categorie, assets }) => {
     const ctx = buildCtx({ theme, participant, event, organisme, organisateur, categorie, assets });
-    const panels = ['P1', 'P2', 'P3', 'P4'].map((key) => renderPanel(key, badge.elements, ctx, false, badge.safeZoneMm ?? SAFE_ZONE_DEFAULT_MM));
+    const panels = ['P1', 'P2', 'P3', 'P4'].map((key) => renderPanel(key, badge.elements, ctx, false, badge.safeZoneMm ?? SAFE_ZONE_DEFAULT_MM, activePanelKeys(badge)));
     return badge.format === 'A4_PLIE_4' ? panels.join('') : panels[0];
   });
 

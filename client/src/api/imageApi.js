@@ -112,3 +112,11 @@ export async function updatePartenaire(organisateurId, partenaireId, { nom, site
 export function uploadBadgeImage(organisateurId, eventId, file, options) {
   return uploadImage(`/admin/organisateurs/${organisateurId}/events/${eventId}/badge-image`, file, options);
 }
+
+export function uploadModeleImage(organisateurId, modeleId, file, options) {
+  return uploadImage(`/admin/organisateurs/${organisateurId}/modeles-badge/${modeleId}/badge-image`, file, options);
+}
+
+export function modelePreviewUrl(organisateurId, modeleId) {
+  return `${axiosClient.defaults.baseURL}/admin/organisateurs/${organisateurId}/modeles-badge/${modeleId}/apercu`;
+}

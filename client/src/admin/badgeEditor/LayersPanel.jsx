@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, IconButton, InputBase, Stack, Tooltip, Typography } from '@mui/material';
+import { Box, Button, IconButton, InputBase, Stack, Tooltip, Typography } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import LockIcon from '@mui/icons-material/Lock';
@@ -109,12 +109,41 @@ function LayerRow({ el, selected, onSelect, onToggle, onRename, onDragStart, onD
  * Layers per panel, topmost first (highest z). Dragging a row onto another
  * row of the same panel moves it just above that row in the stacking order.
  */
-export function LayersPanel({ badge, elements, selectedIds, onSelect, onToggle, onRename, onReorder }) {
+export function LayersPanel({ badge, elements, selectedIds, onSelect, onToggle, onRename, onReorder, onBringBack }) {
   const [draggedId, setDraggedId] = useState(null);
+  const panels = activePanels(badge);
+  // Elements on a panel that no longer prints (format or panels changed):
+  // kept, not printed, and can be brought back onto P1.
+  const horsPage = elements.filter((e) => !panels.includes(e.panneau));
 
   return (
     <Box>
-      {activePanels(badge).map((panelKey) => {
+      {horsPage.length > 0 && (
+        <Box sx={{ mb: 1, p: 0.5, borderRadius: 1, border: 1, borderColor: 'warning.main' }}>
+          <Stack direction="row" sx={{ alignItems: 'center' }}>
+            <Typography variant="overline" color="warning.main" sx={{ lineHeight: 2, flex: 1 }}>
+              Hors page · {horsPage.length}
+            </Typography>
+            <Button size="small" onClick={() => onBringBack(horsPage.map((e) => e.id))}>
+              Tout ramener sur P1
+            </Button>
+          </Stack>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 0.5, mb: 0.5 }}>
+            Ces éléments ne sont pas imprimés.
+          </Typography>
+          {horsPage.map((el) => (
+            <Stack key={el.id} direction="row" spacing={0.5} sx={{ alignItems: 'center', px: 0.5 }}>
+              <Typography variant="body2" noWrap sx={{ flex: 1, fontSize: 13 }}>
+                {elementLabel(el)} <Typography component="span" variant="caption" color="text.disabled">({el.panneau})</Typography>
+              </Typography>
+              <Button size="small" onClick={() => onBringBack([el.id])}>
+                Ramener
+              </Button>
+            </Stack>
+          ))}
+        </Box>
+      )}
+      {panels.map((panelKey) => {
         const layers = elements.filter((e) => e.panneau === panelKey).sort((a, b) => (b.z ?? 0) - (a.z ?? 0));
         return (
           <Box key={panelKey} sx={{ mb: 1 }}>

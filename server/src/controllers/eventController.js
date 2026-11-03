@@ -12,7 +12,7 @@ import { Organisateur } from '../models/Organisateur.js';
 import { ModeleBadge } from '../models/ModeleBadge.js';
 import { InvitedOrganism } from '../models/InvitedOrganism.js';
 import { Partenaire } from '../models/Partenaire.js';
-import { STARTER_TEMPLATES } from '../../../shared/badge-renderer/index.js';
+import { STARTER_TEMPLATES, checkBadgeRules } from '../../../shared/badge-renderer/index.js';
 import { elementSchema, themeSchema, validateElementTypes } from '../validation/badgeElements.js';
 
 // Badge elements are set by applying a template (applyBadgeTemplate) or by
@@ -31,6 +31,7 @@ const BADGE_TEMPLATE_FIELDS = [
   'rotationLigneBas180',
   'traitsDePliage',
   'safeZoneMm',
+  'panneauxActifs',
   'theme',
   'elements',
 ];
@@ -399,6 +400,13 @@ export async function applyBadgeTemplate(req, res, next) {
       }).lean();
       if (!modele) {
         throw new ApiError(404, 'Modèle de badge introuvable.');
+      }
+      // A template can be saved with errors (draft), but not used for an event.
+      const bloquants = checkBadgeRules(modele).filter((r) => r.niveau === 'bloquant');
+      if (bloquants.length > 0) {
+        throw new ApiError(409, `Ce modèle n'est pas prêt : ${bloquants.map((r) => r.message.toLowerCase()).join(', ')}.`, {
+          regles: bloquants,
+        });
       }
       badge = badgeFromTemplate(modele, { modeleSourceId: modele._id, modeleSourceVersion: modele.version });
     }

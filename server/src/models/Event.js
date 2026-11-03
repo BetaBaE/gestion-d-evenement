@@ -54,6 +54,8 @@ const badgeSchema = new mongoose.Schema(
     rotationLigneBas180: { type: Boolean, default: false },
     traitsDePliage: { type: Boolean, default: true },
     safeZoneMm: { type: Number, default: 5 },
+    // A4 folded in 4: panels that print besides P1 (unset = all four).
+    panneauxActifs: { type: [{ type: String, enum: ['P1', 'P2', 'P3', 'P4'] }], default: undefined },
     theme: { type: themeSchema, default: () => ({}) },
     elements: { type: [elementSchema], default: [] },
     version: { type: Number, default: 1 },

@@ -117,7 +117,7 @@ function VariableMenu({ onInsert }) {
   );
 }
 
-function TypeProps({ el, onProps, eventId, context }) {
+function TypeProps({ el, onProps, uploadImage, context }) {
   const p = el.props || {};
   switch (el.type) {
     case 'texte':
@@ -187,7 +187,7 @@ function TypeProps({ el, onProps, eventId, context }) {
     case 'image':
       return (
         <Stack spacing={1}>
-          <ImagePickerField eventId={eventId} imageId={p.imageId} onChange={(imageId) => onProps({ imageId })} />
+          <ImagePickerField upload={uploadImage} imageId={p.imageId} onChange={(imageId) => onProps({ imageId })} />
           <TextField select size="small" label="Ajustement" value={p.ajustement || 'contain'} onChange={(e) => onProps({ ajustement: e.target.value })}>
             <MenuItem value="contain">Contenir</MenuItem>
             <MenuItem value="cover">Remplir (recadrer)</MenuItem>
@@ -422,7 +422,7 @@ function ThemeSection({ theme, onTheme }) {
   );
 }
 
-export function PropertiesPanel({ badge, selected, theme, context, eventId, onChangeElement, onTheme }) {
+export function PropertiesPanel({ badge, selected, theme, context, uploadImage, onChangeElement, onTheme }) {
   if (selected.length === 0) {
     return <ThemeSection theme={theme} onTheme={onTheme} />;
   }
@@ -503,7 +503,7 @@ export function PropertiesPanel({ badge, selected, theme, context, eventId, onCh
       </Stack>
 
       <Divider />
-      <TypeProps el={el} eventId={eventId} context={context} onProps={(patch) => change({ props: { ...el.props, ...patch } }, `${el.id}:props`)} />
+      <TypeProps el={el} uploadImage={uploadImage} context={context} onProps={(patch) => change({ props: { ...el.props, ...patch } }, `${el.id}:props`)} />
 
       <Divider />
       <Typography variant="caption" color="text.secondary">

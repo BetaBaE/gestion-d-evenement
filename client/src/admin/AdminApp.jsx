@@ -7,6 +7,7 @@ import BusinessIcon from '@mui/icons-material/Business';
 import EventIcon from '@mui/icons-material/Event';
 import MailIcon from '@mui/icons-material/Mail';
 import HandshakeIcon from '@mui/icons-material/Handshake';
+import BadgeIcon from '@mui/icons-material/Badge';
 import { dataProvider } from './dataProvider.js';
 import { authProvider } from './authProvider.js';
 import { AdminAppBar } from './AdminAppBar.jsx';
@@ -17,6 +18,7 @@ import { EventShowRedirect } from './resources/EventShow.jsx';
 import { EmailSettingsPage } from './pages/EmailSettingsPage.jsx';
 import { PartenairesPage } from './pages/PartenairesPage.jsx';
 import { BadgeEditorPage } from './badgeEditor/BadgeEditorPage.jsx';
+import { ModelesBadgePage } from './modeles/ModelesBadgePage.jsx';
 
 const i18nProvider = polyglotI18nProvider(() => frenchMessages, 'fr');
 
@@ -72,13 +74,20 @@ export function AdminApp() {
             options={{ label: 'Paramètres email' }}
           />
           <Resource
+            name="modeles-badge"
+            list={ModelesBadgePage}
+            icon={BadgeIcon}
+            options={{ label: 'Modèles de badge' }}
+          />
+          <Resource
             name="partenaires"
             list={PartenairesPage}
             icon={HandshakeIcon}
             options={{ label: 'Partenaires' }}
           />
           <CustomRoutes>
-            <Route path="/badge-editor/:id" element={<BadgeEditorPage />} />
+            <Route path="/badge-editor/:id" element={<BadgeEditorPage kind="event" />} />
+            <Route path="/modeles-badge/:id/editeur" element={<BadgeEditorPage kind="modele" key="modele" />} />
           </CustomRoutes>
         </>
       )}

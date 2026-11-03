@@ -42,13 +42,16 @@ import HorizontalDistributeIcon from '@mui/icons-material/ViewWeek';
 import VerticalDistributeIcon from '@mui/icons-material/TableRows';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import SettingsIcon from '@mui/icons-material/Settings';
 import { nanoid } from '../../../../shared/badge-renderer/index.js';
 import { axiosClient } from '../../api/axiosClient.js';
-import { badgePreviewUrl } from '../../api/imageApi.js';
+import { badgePreviewUrl, modelePreviewUrl, uploadBadgeImage, uploadModeleImage } from '../../api/imageApi.js';
 import { getSelectedOrganisateurId } from '../organisateurContext.js';
 import { useBadgeHistory } from './useBadgeHistory.js';
 import { EditorCanvas, PALETTE_DRAG_TYPE } from './EditorCanvas.jsx';
 import { pickActivePanel, placePastedElements } from './placement.js';
+import { RulesPanel } from './RulesPanel.jsx';
+import { TemplateSettingsDialog } from '../modeles/TemplateSettingsDialog.jsx';
 import { PropertiesPanel } from './PropertiesPanel.jsx';
 import { LayersPanel } from './LayersPanel.jsx';
 import { CHAMP_OPTIONS, ELEMENT_CATALOG, createElement } from './elementCatalog.js';
@@ -70,8 +73,65 @@ const MIN_EDITOR_WIDTH = 1280;
 const CLIPBOARD_KEY = 'badgeEditorClipboard';
 const GEOMETRY_KEYS = ['x', 'y', 'largeur', 'hauteur', 'panneau'];
 
-function eventBasePath(eventId) {
-  return `/admin/organisateurs/${getSelectedOrganisateurId()}/events/${eventId}`;
+/**
+ * Where the edited badge lives: an event's own badge, or one of the
+ * organisateur's templates (edited with sample event data).
+ */
+function badgeSource(kind, id) {
+  const org = getSelectedOrganisateurId();
+  if (kind === 'modele') {
+    const base = `/admin/organisateurs/${org}/modeles-badge/${id}`;
+    return {
+      kind,
+      async load() {
+        const [modeleRes, contextRes] = await Promise.all([axiosClient.get(base), axiosClient.get(`${base}/contexte`)]);
+        const { elements = [], theme = {}, ...meta } = modeleRes.data;
+        const now = new Date().toISOString();
+        return {
+          event: { titre: 'Événement exemple', lieu: 'Palais des congrès', ville: 'Casablanca', dateDebut: now, dateFin: now },
+          title: `Modèle — ${meta.nom}`,
+          context: contextRes.data,
+          participants: [],
+          meta,
+          elements,
+          theme,
+        };
+      },
+      save: ({ elements, theme }) => axiosClient.put(base, { elements, theme }),
+      saveSettings: (settings) => axiosClient.put(base, settings).then(({ data }) => data),
+      previewUrl: () => modelePreviewUrl(org, id),
+      upload: (file, options) => uploadModeleImage(org, id, file, options),
+      backTo: '/admin/modeles-badge',
+      loadError: 'Impossible de charger ce modèle de badge.',
+    };
+  }
+  const base = `/admin/organisateurs/${org}/events/${id}`;
+  return {
+    kind,
+    async load() {
+      const [eventRes, contextRes, participantsRes] = await Promise.all([
+        axiosClient.get(base),
+        axiosClient.get(`${base}/badge-contexte`),
+        axiosClient.get(`${base}/participants`, { params: { limit: 100 } }).catch(() => ({ data: { items: [] } })),
+      ]);
+      const ev = eventRes.data;
+      const { elements = [], theme = {}, ...meta } = ev.badge || {};
+      return {
+        event: ev,
+        title: `Badge — ${ev.titre}`,
+        context: contextRes.data,
+        participants: participantsRes.data.items || [],
+        meta,
+        elements,
+        theme,
+      };
+    },
+    save: ({ elements, theme }) => axiosClient.put(`${base}/badge`, { elements, theme }),
+    previewUrl: () => badgePreviewUrl(org, id),
+    upload: (file, options) => uploadBadgeImage(org, id, file, options),
+    backTo: `/admin/events/${id}?onglet=badge`,
+    loadError: 'Impossible de charger le badge de cet événement.',
+  };
 }
 
 function isTypingTarget(target) {
@@ -186,8 +246,12 @@ function AddPalette({ onAdd }) {
   );
 }
 
-export function BadgeEditorPage() {
-  const { id: eventId } = useParams();
+/** `kind`: 'event' (an event's badge) or 'modele' (an organisateur template). */
+export function BadgeEditorPage({ kind = 'event' }) {
+  const { id } = useParams();
+  const source = useMemo(() => badgeSource(kind, id), [kind, id]);
+  const [title, setTitle] = useState('');
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const notify = useNotify();
 
   const [event, setEvent] = useState(null);
@@ -222,30 +286,25 @@ export function BadgeEditorPage() {
   // ---- Loading ----
   useEffect(() => {
     let cancelled = false;
-    const base = eventBasePath(eventId);
-    Promise.all([
-      axiosClient.get(base),
-      axiosClient.get(`${base}/badge-contexte`),
-      axiosClient.get(`${base}/participants`, { params: { limit: 100 } }).catch(() => ({ data: { items: [] } })),
-    ])
-      .then(([eventRes, contextRes, participantsRes]) => {
+    source
+      .load()
+      .then((loaded) => {
         if (cancelled) return;
-        const ev = eventRes.data;
-        const { elements: initial = [], theme: initialTheme = {}, ...meta } = ev.badge || {};
-        setEvent(ev);
-        setContext(contextRes.data);
-        setParticipants(participantsRes.data.items || []);
-        setBadgeMeta(meta);
-        setTheme(initialTheme);
-        resetElements(initial);
+        setEvent(loaded.event);
+        setTitle(loaded.title);
+        setContext(loaded.context);
+        setParticipants(loaded.participants);
+        setBadgeMeta(loaded.meta);
+        setTheme(loaded.theme);
+        resetElements(loaded.elements);
         loadedRef.current = true;
         skipNextSaveRef.current = true;
       })
-      .catch(() => setLoadError("Impossible de charger le badge de cet événement."));
+      .catch(() => setLoadError(source.loadError));
     return () => {
       cancelled = true;
     };
-  }, [eventId, resetElements]);
+  }, [source, resetElements]);
 
   // ---- Autosave (debounced) ----
   const save = useCallback(async () => {
@@ -253,7 +312,7 @@ export function BadgeEditorPage() {
     const { elements: els, theme: th } = latestRef.current;
     setSaveStatus('saving');
     try {
-      await axiosClient.put(`${eventBasePath(eventId)}/badge`, { elements: els, theme: th });
+      await source.save({ elements: els, theme: th });
       setSaveStatus('saved');
     } catch (error) {
       setSaveStatus('error');
@@ -263,7 +322,7 @@ export function BadgeEditorPage() {
         { type: 'error' },
       );
     }
-  }, [eventId, notify]);
+  }, [source, notify]);
 
   useEffect(() => {
     if (!loadedRef.current) return;
@@ -432,6 +491,41 @@ export function BadgeEditorPage() {
     setSelectedIds(created.map((e) => e.id));
   }
 
+  /** Moves "hors page" elements back onto P1, kept inside it. */
+  function bringBackToP1(ids) {
+    const set = new Set(ids);
+    setElements((els) => els.map((e) => (set.has(e.id) ? clampToPanel({ ...e, panneau: 'P1' }, badge) : e)));
+    setSelectedIds(ids);
+  }
+
+  /**
+   * Template settings (name, format, printed panels). Elements on panels
+   * that still print are kept inside the new panel size; the others become
+   * "hors page" (never deleted).
+   */
+  async function saveTemplateSettings(settings) {
+    const nextMeta = { ...badgeMeta, ...settings };
+    const nextBadge = { ...nextMeta, theme };
+    const panels = activePanels(nextBadge);
+    const nextElements = elements.map((el) => (panels.includes(el.panneau) ? clampToPanel(el, nextBadge) : el));
+    const horsAvant = elements.filter((e) => !activePanels(badge).includes(e.panneau)).length;
+    const horsApres = nextElements.filter((e) => !panels.includes(e.panneau)).length;
+    try {
+      await source.saveSettings({ ...settings, elements: nextElements });
+    } catch (error) {
+      notify(error.response?.data?.details?.[0]?.message || error.response?.data?.message || 'Erreur lors de l’enregistrement.', { type: 'error' });
+      throw error;
+    }
+    setBadgeMeta(nextMeta);
+    setTitle(`Modèle — ${settings.nom}`);
+    setElements(nextElements);
+    if (horsApres > horsAvant) {
+      notify(`${horsApres - horsAvant} élément(s) passé(s) hors page : retrouvez-les en haut des calques.`, { type: 'warning' });
+    } else {
+      notify('Paramètres du modèle enregistrés.', { type: 'success' });
+    }
+  }
+
   function setGroup(group) {
     if (movable.length < (group ? 2 : 1)) return;
     const groupeId = group ? nanoid() : null;
@@ -539,12 +633,17 @@ export function BadgeEditorPage() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)', p: 1, gap: 1 }}>
-      <Title title={`Badge — ${event.titre}`} />
+      <Title title={title} />
 
       <Paper sx={{ px: 1, py: 0.5, display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
-        <Button size="small" component={RouterLink} to={`/admin/events/${eventId}`} startIcon={<ArrowBackIcon />}>
+        <Button size="small" component={RouterLink} to={source.backTo} startIcon={<ArrowBackIcon />}>
           Retour
         </Button>
+        {source.kind === 'modele' && (
+          <Button size="small" startIcon={<SettingsIcon />} onClick={() => setSettingsOpen(true)}>
+            Paramètres
+          </Button>
+        )}
         <Divider orientation="vertical" flexItem />
         {tool('Annuler (Ctrl+Z)', UndoIcon, undo, !canUndo || readOnly)}
         {tool('Rétablir (Ctrl+Y)', RedoIcon, redo, !canRedo || readOnly)}
@@ -596,7 +695,7 @@ export function BadgeEditorPage() {
           startIcon={<PictureAsPdfIcon />}
           onClick={async () => {
             await save();
-            window.open(badgePreviewUrl(getSelectedOrganisateurId(), eventId), '_blank');
+            window.open(source.previewUrl(), '_blank');
           }}
         >
           Aperçu PDF
@@ -614,6 +713,8 @@ export function BadgeEditorPage() {
         {!readOnly && (
           <Paper sx={{ width: 200, p: 1, overflowY: 'auto', flexShrink: 0 }}>
             <AddPalette onAdd={addElement} />
+            <Divider sx={{ my: 1 }} />
+            <RulesPanel badge={badge} elements={elements} onFix={(fix) => addElement(fix.type, fix.props, { panneau: 'P1' })} />
           </Paper>
         )}
 
@@ -649,7 +750,7 @@ export function BadgeEditorPage() {
                 selected={selected}
                 theme={theme}
                 context={context}
-                eventId={eventId}
+                uploadImage={source.upload}
                 onChangeElement={changeElement}
                 onTheme={(patch) => setTheme((t) => ({ ...t, ...patch }))}
               />
@@ -665,6 +766,7 @@ export function BadgeEditorPage() {
                 onSelect={(id, additive) => select(additive ? [...selectedIds, id] : [id])}
                 onToggle={(id, field) => changeElement(id, { [field]: !elements.find((e) => e.id === id)?.[field] })}
                 onRename={(id, nom) => changeElement(id, { nom })}
+                onBringBack={bringBackToP1}
                 onReorder={(draggedId, overId) =>
                   setElements((els) => {
                     const dragged = els.find((e) => e.id === draggedId);
@@ -682,6 +784,10 @@ export function BadgeEditorPage() {
           </Stack>
         )}
       </Box>
+
+      {source.kind === 'modele' && (
+        <TemplateSettingsDialog open={settingsOpen} modele={badgeMeta} onClose={() => setSettingsOpen(false)} onSave={saveTemplateSettings} />
+      )}
     </Box>
   );
 }

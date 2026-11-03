@@ -78,7 +78,8 @@ export async function uploadBlocImage(req, res, next) {
       buffer: req.file.buffer,
       type: 'BLOC_IMAGE',
       organisateurId: req.organisateurId,
-      eventId: req.event._id,
+      // Uploaded from a template (no event) or from an event's badge.
+      eventId: req.event?._id,
     });
 
     res.status(201).json({ imageId: image._id, url: `/admin/organisateurs/${req.organisateurId}/images/${image._id}` });

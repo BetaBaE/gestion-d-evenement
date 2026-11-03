@@ -1,4 +1,4 @@
-import { panelSizeMm } from '../../../../shared/badge-renderer/index.js';
+import { activePanelKeys, panelSizeMm } from '../../../../shared/badge-renderer/index.js';
 
 // CSS px are defined at 96 per inch, so 1mm is exactly 96/25.4 CSS px —
 // the same conversion the browser uses for the renderer's mm units.
@@ -12,8 +12,9 @@ export const round1 = (v) => Math.round(v * 10) / 10;
 // top, P2 | P4 below — matches the renderer's grid placement).
 const A4_ORIGINS = { P1: { x: 0, y: 0 }, P3: { x: 105, y: 0 }, P2: { x: 0, y: 148.5 }, P4: { x: 105, y: 148.5 } };
 
+/** Panels that print (A4: P1 + the active ones among P2–P4; other formats: P1). */
 export function activePanels(badge) {
-  return badge.format === 'A4_PLIE_4' ? ['P1', 'P2', 'P3', 'P4'] : ['P1'];
+  return activePanelKeys(badge);
 }
 
 export function panelOrigin(badge, panelKey) {
