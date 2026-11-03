@@ -19,6 +19,7 @@ import { EmailSettingsPage } from './pages/EmailSettingsPage.jsx';
 import { PartenairesPage } from './pages/PartenairesPage.jsx';
 import { BadgeEditorPage } from './badgeEditor/BadgeEditorPage.jsx';
 import { ModelesBadgePage } from './modeles/ModelesBadgePage.jsx';
+import { LoginPage } from './LoginPage.jsx';
 
 const i18nProvider = polyglotI18nProvider(() => frenchMessages, 'fr');
 
@@ -34,6 +35,7 @@ export function AdminApp() {
       authProvider={authProvider}
       i18nProvider={i18nProvider}
       layout={AdminLayout}
+      loginPage={LoginPage}
       requireAuth
     >
       {(permissions) => (
