@@ -1,10 +1,14 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Moveable from 'react-moveable';
 import Selecto from 'react-selecto';
 import { Box } from '@mui/material';
 import { renderEditorSheet, fitDynamicTextInDom } from '../../../../shared/badge-renderer/index.js';
 import { ELEMENT_CATALOG } from './elementCatalog.js';
 import { PX_PER_MM, activePanels, mmToPx, panelOrigin, panelSizeMm, pxToMm, round1, sheetSizeMm } from './geometry.js';
+import { panelAtSheetPoint } from './placement.js';
+
+// MIME type of palette items dragged onto the canvas.
+export const PALETTE_DRAG_TYPE = 'application/x-badge-element';
 
 const SCOPE = 'badge-editor-scope';
 const RULER = 18;
@@ -93,6 +97,10 @@ export function EditorCanvas({
   showGrid,
   shiftHeld,
   readOnly,
+  activePanel,
+  onPanelClick,
+  onCenterPanelChange,
+  onDropElement,
 }) {
   const viewportRef = useRef(null);
   const hostRef = useRef(null);
@@ -103,6 +111,29 @@ export function EditorCanvas({
 
   const sheet = sheetSizeMm(badge);
   const panels = activePanels(badge);
+
+  /** Panel (and panel-local mm) under a screen point, or null outside the sheet. */
+  const panelAtClient = useCallback(
+    (clientX, clientY) => {
+      const rect = hostRef.current?.querySelector('.sheet')?.getBoundingClientRect();
+      if (!rect) return null;
+      return panelAtSheetPoint(badge, pxToMm((clientX - rect.left) / zoom), pxToMm((clientY - rect.top) / zoom));
+    },
+    [badge, zoom],
+  );
+
+  // Panel at the centre of the visible canvas area (third choice for where
+  // new elements go), updated on scroll and zoom.
+  const reportCenterPanel = useCallback(() => {
+    const box = viewportRef.current?.getBoundingClientRect();
+    if (!box || !onCenterPanelChange) return;
+    onCenterPanelChange(panelAtClient(box.left + box.width / 2, box.top + box.height / 2)?.panneau || null);
+  }, [panelAtClient, onCenterPanelChange]);
+
+  useEffect(() => {
+    const timer = setTimeout(reportCenterPanel, 50);
+    return () => clearTimeout(timer);
+  }, [reportCenterPanel]);
 
   const { css, html } = useMemo(
     () =>
@@ -178,7 +209,24 @@ export function EditorCanvas({
   }
 
   return (
-    <Box ref={viewportRef} sx={{ position: 'relative', overflow: 'auto', height: '100%', bgcolor: '#e9ecef' }}>
+    <Box
+      ref={viewportRef}
+      sx={{ position: 'relative', overflow: 'auto', height: '100%', bgcolor: '#e9ecef' }}
+      onScroll={reportCenterPanel}
+      onDragOver={(e) => {
+        if (!readOnly && e.dataTransfer.types.includes(PALETTE_DRAG_TYPE)) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'copy';
+        }
+      }}
+      onDrop={(e) => {
+        const raw = e.dataTransfer.getData(PALETTE_DRAG_TYPE);
+        if (readOnly || !raw) return;
+        e.preventDefault();
+        const hit = panelAtClient(e.clientX, e.clientY);
+        if (hit) onDropElement?.({ ...JSON.parse(raw), panneau: hit.panneau, at: { x: hit.x, y: hit.y } });
+      }}
+    >
       <Ruler orientation="h" lengthMm={sheet.width} zoom={zoom} />
       <Ruler orientation="v" lengthMm={sheet.height} zoom={zoom} />
       <Box sx={{ position: 'relative', width: mmToPx(sheet.width) * zoom + 2 * PAD + RULER, height: mmToPx(sheet.height) * zoom + 2 * PAD + RULER }}>
@@ -203,6 +251,27 @@ export function EditorCanvas({
           {showGrid && (
             <style>{`.${SCOPE} .panel { background: rgba(255,255,255,0.88); }`}</style>
           )}
+          {panels.length > 1 &&
+            panels.includes(activePanel) &&
+            (() => {
+              const o = panelOrigin(badge, activePanel);
+              const size = panelSizeMm(badge);
+              return (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    left: mmToPx(o.x),
+                    top: mmToPx(o.y),
+                    width: mmToPx(size.width),
+                    height: mmToPx(size.height),
+                    outline: `${2 / zoom}px solid rgba(25,113,194,0.55)`,
+                    outlineOffset: -1 / zoom,
+                    pointerEvents: 'none',
+                    zIndex: 1,
+                  }}
+                />
+              );
+            })()}
           {panels.map((key) => {
             const o = panelOrigin(badge, key);
             return (
@@ -299,6 +368,11 @@ export function EditorCanvas({
           }}
           onSelectEnd={(e) => {
             const ids = e.selected.map((node) => node.dataset.elementId).filter((id) => !lockedIds.has(id));
+            // A click on an empty area of a panel makes that panel active.
+            if (e.isClick && e.selected.length === 0) {
+              const hit = panelAtClient(e.inputEvent.clientX, e.inputEvent.clientY);
+              if (hit) onPanelClick?.(hit.panneau);
+            }
             if (e.isDragStart && ids.length > 0) {
               e.inputEvent.preventDefault();
               moveableRef.current?.waitToChangeTarget().then(() => moveableRef.current?.dragStart(e.inputEvent));

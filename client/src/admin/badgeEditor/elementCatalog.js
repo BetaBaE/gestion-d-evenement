@@ -11,7 +11,7 @@ import EmojiSymbolsIcon from '@mui/icons-material/EmojiSymbols';
 import HandshakeIcon from '@mui/icons-material/Handshake';
 import DateRangeIcon from '@mui/icons-material/DateRange';
 import { getDefaultProps, getDefaultSizeMm, nanoid } from '../../../../shared/badge-renderer/index.js';
-import { panelSizeMm, round1 } from './geometry.js';
+import { placeNewElement } from './placement.js';
 
 /**
  * UI metadata per element type. `rotation`: 'free' (15° snap, Shift = free),
@@ -96,28 +96,27 @@ export function elementLabel(el) {
   return ELEMENT_CATALOG[el.type]?.label || el.type;
 }
 
-/** A new element, centred in its panel, on top of everything else. */
-export function createElement(type, { badge, panneau, elements, props }) {
-  const panel = panelSizeMm(badge);
-  const size = getDefaultSizeMm(type);
-  let { largeur, hauteur } = size;
-  let x = (panel.width - largeur) / 2;
-
-  if (type === 'bandeCategorie') {
-    largeur = panel.width;
-    x = 0;
-  }
-
+/**
+ * A new element on top of everything else, placed by placeNewElement:
+ * centred in the panel's safe zone (or on `at`, a drop point), cascaded
+ * if that spot is taken, scaled down if bigger than the panel.
+ */
+export function createElement(type, { badge, panneau, elements, props, at }) {
+  const geometry = placeNewElement({
+    badge,
+    panneau,
+    elements,
+    size: getDefaultSizeMm(type),
+    at,
+    fullWidth: type === 'bandeCategorie',
+  });
   const maxZ = elements.reduce((m, e) => Math.max(m, e.z ?? 0), 0);
 
   return {
     id: nanoid(),
     type,
     panneau,
-    x: round1(x),
-    y: round1((panel.height - hauteur) / 2),
-    largeur: round1(largeur),
-    hauteur: round1(hauteur),
+    ...geometry,
     rotation: 0,
     z: maxZ + 1,
     verrouille: false,

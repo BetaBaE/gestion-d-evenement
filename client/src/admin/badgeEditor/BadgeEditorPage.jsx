@@ -47,7 +47,8 @@ import { axiosClient } from '../../api/axiosClient.js';
 import { badgePreviewUrl } from '../../api/imageApi.js';
 import { getSelectedOrganisateurId } from '../organisateurContext.js';
 import { useBadgeHistory } from './useBadgeHistory.js';
-import { EditorCanvas } from './EditorCanvas.jsx';
+import { EditorCanvas, PALETTE_DRAG_TYPE } from './EditorCanvas.jsx';
+import { pickActivePanel, placePastedElements } from './placement.js';
 import { PropertiesPanel } from './PropertiesPanel.jsx';
 import { LayersPanel } from './LayersPanel.jsx';
 import { CHAMP_OPTIONS, ELEMENT_CATALOG, createElement } from './elementCatalog.js';
@@ -101,7 +102,18 @@ function shiftLayers(elements, ids, direction) {
   return next;
 }
 
-function AddMenuButton({ label, icon: Icon, items, onPick }) {
+/** Palette items can be clicked (added in the active panel) or dragged onto a panel. */
+function paletteDragProps(type, props) {
+  return {
+    draggable: true,
+    onDragStart: (e) => {
+      e.dataTransfer.setData(PALETTE_DRAG_TYPE, JSON.stringify({ type, props }));
+      e.dataTransfer.effectAllowed = 'copy';
+    },
+  };
+}
+
+function AddMenuButton({ label, icon: Icon, items, onPick, dragPayload }) {
   const [anchor, setAnchor] = useState(null);
   return (
     <>
@@ -113,6 +125,8 @@ function AddMenuButton({ label, icon: Icon, items, onPick }) {
           <MenuItem
             key={it.key}
             dense
+            {...paletteDragProps(...dragPayload(it))}
+            onDragEnd={() => setAnchor(null)}
             onClick={() => {
               onPick(it);
               setAnchor(null);
@@ -137,7 +151,8 @@ function AddPalette({ onAdd }) {
         label="Champ participant"
         icon={ELEMENT_CATALOG.champ.icon}
         items={CHAMP_OPTIONS.map((o) => ({ key: o.value, label: o.label }))}
-        onPick={(it) => onAdd('champ', { champ: it.value ?? it.key })}
+        onPick={(it) => onAdd('champ', { champ: it.key })}
+        dragPayload={(it) => ['champ', { champ: it.key }]}
       />
       <AddMenuButton
         label="Forme"
@@ -149,11 +164,20 @@ function AddPalette({ onAdd }) {
           { key: 'ligne', label: 'Ligne' },
         ]}
         onPick={(it) => onAdd('forme', { forme: it.key })}
+        dragPayload={(it) => ['forme', { forme: it.key }]}
       />
       {simple.map((type) => {
         const { label, icon: Icon } = ELEMENT_CATALOG[type];
         return (
-          <Button key={type} fullWidth size="small" startIcon={<Icon />} onClick={() => onAdd(type)} sx={{ justifyContent: 'flex-start', textAlign: 'left', textTransform: 'none', whiteSpace: 'nowrap' }}>
+          <Button
+            key={type}
+            fullWidth
+            size="small"
+            startIcon={<Icon />}
+            onClick={() => onAdd(type)}
+            {...paletteDragProps(type)}
+            sx={{ justifyContent: 'flex-start', textAlign: 'left', textTransform: 'none', whiteSpace: 'nowrap', cursor: 'grab' }}
+          >
             {label}
           </Button>
         );
@@ -175,6 +199,9 @@ export function BadgeEditorPage() {
   const { elements, setElements, resetElements, undo, redo, canUndo, canRedo } = useBadgeHistory([]);
 
   const [selectedIds, setSelectedIds] = useState([]);
+  // Where new elements go: see pickActivePanel (selection > last click > visible centre > P1).
+  const [lastClickedPanel, setLastClickedPanel] = useState(null);
+  const [centerPanel, setCenterPanel] = useState(null);
   const [subjectKey, setSubjectKey] = useState('exemple');
   const [qrCodeSvg, setQrCodeSvg] = useState('');
   const [zoom, setZoom] = useState(1);
@@ -344,11 +371,16 @@ export function BadgeEditorPage() {
     });
   }
 
-  function addElement(type, props) {
-    const panneau = selected[0]?.panneau && activePanels(badge).includes(selected[0].panneau) ? selected[0].panneau : 'P1';
-    const el = createElement(type, { badge, panneau, elements, props });
+  const activePanel = badge
+    ? pickActivePanel({ badge, selectedPanel: selected[0]?.panneau, lastClickedPanel, centerPanel })
+    : 'P1';
+
+  /** Adds an element in the active panel, or at `at` in `panneau` (palette drop). */
+  function addElement(type, props, { panneau = activePanel, at } = {}) {
+    const el = createElement(type, { badge, panneau, elements, props, at });
     setElements((els) => [...els, el]);
     setSelectedIds([el.id]);
+    setLastClickedPanel(panneau);
   }
 
   function deleteSelected() {
@@ -358,9 +390,26 @@ export function BadgeEditorPage() {
     setSelectedIds([]);
   }
 
-  function pasteElements(source, offsetMm = 3) {
+  /**
+   * Duplicate (Ctrl+D): copies stay in their panel, shifted by 3 mm.
+   * Paste (Ctrl+V): copies go to the active panel, at the same relative
+   * position if they fit (else centred), shifted by 3 mm while they would
+   * sit exactly on an existing element.
+   */
+  function pasteElements(source, { mode = 'duplicate' } = {}) {
     if (!source?.length) return;
     const panels = activePanels(badge);
+    let positions;
+    let targetPanel = (el) => (panels.includes(el.panneau) ? el.panneau : 'P1');
+    if (mode === 'paste') {
+      targetPanel = () => activePanel;
+      positions = placePastedElements({ badge, source });
+      const onTarget = elements.filter((e) => e.panneau === activePanel);
+      const stacked = () => positions.some((p) => onTarget.some((e) => Math.abs(e.x - p.x) < 0.05 && Math.abs(e.y - p.y) < 0.05));
+      for (let i = 0; i < 20 && stacked(); i += 1) positions = positions.map((p) => ({ x: p.x + 3, y: p.y + 3 }));
+    } else {
+      positions = source.map((el) => ({ x: el.x + 3, y: el.y + 3 }));
+    }
     const maxZ = elements.reduce((m, e) => Math.max(m, e.z ?? 0), 0);
     const groupMap = new Map();
     const created = source.map((el, i) => {
@@ -369,9 +418,9 @@ export function BadgeEditorPage() {
         {
           ...structuredClone(el),
           id: nanoid(),
-          panneau: panels.includes(el.panneau) ? el.panneau : 'P1',
-          x: el.x + offsetMm,
-          y: el.y + offsetMm,
+          panneau: targetPanel(el),
+          x: positions[i].x,
+          y: positions[i].y,
           z: maxZ + 1 + i,
           groupeId: el.groupeId ? groupMap.get(el.groupeId) : null,
           verrouille: false,
@@ -412,7 +461,7 @@ export function BadgeEditorPage() {
         localStorage.setItem(CLIPBOARD_KEY, JSON.stringify(selected));
       } else if (ctrl && key === 'v') {
         try {
-          pasteElements(JSON.parse(localStorage.getItem(CLIPBOARD_KEY) || '[]'));
+          pasteElements(JSON.parse(localStorage.getItem(CLIPBOARD_KEY) || '[]'), { mode: 'paste' });
         } catch {
           handled = false;
         }
@@ -527,6 +576,11 @@ export function BadgeEditorPage() {
             <GridOnIcon fontSize="small" />
           </IconButton>
         </Tooltip>
+        {activePanels(badge).length > 1 && (
+          <Tooltip title="Les éléments ajoutés vont dans ce panneau. Cliquez dans un panneau pour l'activer.">
+            <Chip size="small" color="primary" variant="outlined" label={`${activePanel} actif`} sx={{ ml: 0.5 }} />
+          </Tooltip>
+        )}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
         <TextField select size="small" label="Aperçu avec" value={subject.key} onChange={(e) => setSubjectKey(e.target.value)} sx={{ width: 230 }}>
           {subjects.map((s) => (
@@ -580,6 +634,10 @@ export function BadgeEditorPage() {
             showGrid={showGrid}
             shiftHeld={shiftHeld}
             readOnly={readOnly}
+            activePanel={activePanel}
+            onPanelClick={setLastClickedPanel}
+            onCenterPanelChange={setCenterPanel}
+            onDropElement={({ type, props, panneau, at }) => addElement(type, props, { panneau, at })}
           />
         </Paper>
 
