@@ -41,3 +41,8 @@ export function isScanTestActive(event, now = new Date()) {
 export function formatScanDate(date, timezone = DEFAULT_TIMEZONE) {
   return DateTime.fromJSDate(new Date(date), { zone: timezone }).setLocale('fr').toFormat("d LLL yyyy 'à' HH:mm");
 }
+
+/** "10:32" in the app time zone (scan page: time of the last scan). */
+export function formatScanTime(date, timezone = DEFAULT_TIMEZONE) {
+  return DateTime.fromJSDate(new Date(date), { zone: timezone }).toFormat('HH:mm');
+}

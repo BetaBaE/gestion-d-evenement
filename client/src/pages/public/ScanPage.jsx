@@ -1,17 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams } from 'react-router';
 import { Html5Qrcode } from 'html5-qrcode';
-import { Box, Center, Loader, Alert, Text, Title, TextInput, Button, Stack, Avatar } from '@mantine/core';
-import { IconUserQuestion } from '@tabler/icons-react';
-import { checkScanAccess, submitScan, scanPhotoUrl } from '../../api/scanApi.js';
-
-const FEEDBACK_COLORS = {
-  ok: '#2f9e44',
-  dejaScanne: '#f08c00',
-  invalide: '#e03131',
-};
-
-const RESUME_DELAY_MS = 1500;
+import { Box, Center, Loader, Alert, Title, TextInput, Button, Stack } from '@mantine/core';
+import { checkScanAccess, submitScan } from '../../api/scanApi.js';
+import { ScanResultCard, RESULT_STYLES, playResultTone } from './ScanResultCard.jsx';
 
 // One title per refusal reason (the server sends the detailed message).
 const DENIED_TITLES = {
@@ -20,26 +12,6 @@ const DENIED_TITLES = {
   EXPIRE: 'Scan fermé',
 };
 const SCANNER_ELEMENT_ID = 'scan-reader';
-
-function playFeedbackSound(type) {
-  try {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    const ctx = new AudioContextClass();
-    const oscillator = ctx.createOscillator();
-    const gain = ctx.createGain();
-    oscillator.connect(gain);
-    gain.connect(ctx.destination);
-    oscillator.frequency.value = type === 'ok' ? 880 : type === 'dejaScanne' ? 440 : 220;
-    gain.gain.setValueAtTime(0.2, ctx.currentTime);
-    oscillator.start();
-    oscillator.stop(ctx.currentTime + 0.2);
-  } catch {
-    // Audio not available; ignore silently.
-  }
-  if (navigator.vibrate) {
-    navigator.vibrate(type === 'ok' ? 100 : [80, 50, 80]);
-  }
-}
 
 export function ScanPage() {
   const { scanToken } = useParams();
@@ -51,6 +23,7 @@ export function ScanPage() {
   const [feedback, setFeedback] = useState(null);
   const [manualCode, setManualCode] = useState('');
   const isProcessingRef = useRef(false);
+  const dismissTimerRef = useRef(null);
 
   useEffect(() => {
     checkScanAccess(scanToken)
@@ -74,30 +47,34 @@ export function ScanPage() {
       if (isProcessingRef.current) return;
       isProcessingRef.current = true;
 
+      let next;
       try {
-        const result = await submitScan(scanToken, badgeCode);
-        setFeedback({ type: 'ok', data: result });
-        playFeedbackSound('ok');
+        // OK / DEJA_SCANNE / NON_VALIDE / INCONNU, with the participant when known.
+        next = await submitScan(scanToken, badgeCode);
       } catch (error) {
-        if (error.response?.data?.dejaScanne) {
-          setFeedback({ type: 'dejaScanne', message: error.response.data.message });
-          playFeedbackSound('dejaScanne');
-        } else {
-          setFeedback({
-            type: 'invalide',
-            message: error.response?.data?.message || 'Badge invalide.',
-          });
-          playFeedbackSound('invalide');
-        }
+        // Link closed or replaced meanwhile, server unreachable…
+        const data = error.response?.data;
+        next = {
+          result: 'ERREUR',
+          message: data ? `${DENIED_TITLES[data.details?.code] ? `${DENIED_TITLES[data.details.code]} — ` : ''}${data.message}` : 'Serveur injoignable. Vérifiez la connexion.',
+        };
       }
+      const style = RESULT_STYLES[next.result] || RESULT_STYLES.ERREUR;
+      setFeedback(next);
+      playResultTone(style.tone);
 
-      setTimeout(() => {
-        setFeedback(null);
-        isProcessingRef.current = false;
-      }, RESUME_DELAY_MS);
+      // Long enough to read the name; a tap on the card closes it sooner.
+      clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = setTimeout(dismissFeedback, style.durationMs);
     },
     [scanToken],
   );
+
+  function dismissFeedback() {
+    clearTimeout(dismissTimerRef.current);
+    setFeedback(null);
+    isProcessingRef.current = false;
+  }
 
   useEffect(() => {
     if (accessState !== 'ok') return undefined;
@@ -217,68 +194,7 @@ export function ScanPage() {
         </form>
       </Box>
 
-      {feedback && (
-        <Center
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: FEEDBACK_COLORS[feedback.type],
-            zIndex: 1000,
-          }}
-        >
-          <Stack align="center" gap="xs">
-            {feedback.type === 'ok' && (
-              <>
-                {feedback.data.hasPhoto ? (
-                  <Avatar
-                    src={scanPhotoUrl(scanToken, feedback.data.participantId)}
-                    size={160}
-                    radius="md"
-                  />
-                ) : (
-                  <Stack align="center" gap={4}>
-                    <Avatar size={160} radius="md" color="gray">
-                      <IconUserQuestion size={80} />
-                    </Avatar>
-                    <Text size="sm" c="white">
-                      Pas de photo, vérifier l'identité
-                    </Text>
-                  </Stack>
-                )}
-                <Title order={1} c="white">
-                  {feedback.data.prenom} {feedback.data.nom}
-                </Title>
-                <Text size="xl" c="white">
-                  {feedback.data.categorie?.nom} — {feedback.data.organisme?.nom}
-                </Text>
-                <Text size="lg" c="white">
-                  Entrée n°{feedback.data.entryNumber}
-                </Text>
-              </>
-            )}
-            {feedback.type === 'dejaScanne' && (
-              <Title order={1} c="white">
-                Déjà scanné
-              </Title>
-            )}
-            {feedback.type === 'invalide' && (
-              <>
-                <Title order={1} c="white">
-                  Badge invalide
-                </Title>
-                {feedback.message && feedback.message !== 'Badge invalide.' && (
-                  <Text size="lg" c="white" ta="center" px="md">
-                    {feedback.message}
-                  </Text>
-                )}
-              </>
-            )}
-          </Stack>
-        </Center>
-      )}
+      {feedback && <ScanResultCard feedback={feedback} onDismiss={dismissFeedback} />}
     </Box>
   );
 }
