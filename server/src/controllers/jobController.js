@@ -4,7 +4,7 @@ import { Job } from '../models/Job.js';
 import { Event } from '../models/Event.js';
 import { ApiError } from '../middlewares/errorHandler.js';
 import { createJob, JOB_TERMINAL } from '../jobs/jobQueue.js';
-import { runPendingWork } from '../jobs/worker.js';
+import { runPendingWork, hasWorkerLoop } from '../jobs/worker.js';
 import { findFile, openFileStream } from '../services/fileStore.js';
 
 const LIST_FIELDS = '-items -etat -params';
@@ -35,11 +35,12 @@ export async function listJobs(req, res, next) {
 
 /**
  * Same list, after running a worker step (≈ 8 s). The panel calls this while
- * jobs are running: on serverless hosting it is what moves them forward.
+ * jobs are running: on serverless hosting it is what moves them forward. A
+ * server with its own worker loop answers at once (no waiting on a step).
  */
 export async function advanceJobs(req, res, next) {
   try {
-    await runPendingWork({ budgetMs: 8000 });
+    if (!hasWorkerLoop()) await runPendingWork({ budgetMs: 8000 });
     res.json({ items: await recentJobs(req.organisateurId) });
   } catch (error) {
     next(error);

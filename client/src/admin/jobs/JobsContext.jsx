@@ -62,11 +62,15 @@ export function JobsProvider({ children }) {
     return () => clearTimeout(timer.current);
   }, [poll]);
 
-  /** Call after starting a job: polls at once and opens the panel. */
+  /** Call after starting a job: shows it at once, opens the panel, then polls. */
   const track = useCallback(
     (jobId, { openPanel = true } = {}) => {
       if (jobId) previous.current.set(jobId, 'EN_ATTENTE');
       if (openPanel) setOpen(true);
+      // A plain list first: advancing (serverless) can take a few seconds.
+      listJobs()
+        .then((items) => setJobs(items))
+        .catch(() => {});
       poll();
     },
     [poll],
