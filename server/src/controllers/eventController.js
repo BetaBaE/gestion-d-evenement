@@ -9,6 +9,7 @@ import { Scan } from '../models/Scan.js';
 import { describeScanLink } from '../services/scanAccess.js';
 import { resolveCategoryNames } from '../services/templateTransfer.js';
 import { eventDatesError } from '../services/eventDates.js';
+import { MODES_VALIDATION } from '../services/validationRules.js';
 import { generateSingleBadgePdf, generateBadgeHtmlPreview } from '../services/badgeService.js';
 import { Organisateur } from '../models/Organisateur.js';
 import { ModeleBadge } from '../models/ModeleBadge.js';
@@ -69,6 +70,13 @@ const eventSchema = z.object({
   banniereUrl: z.string().optional(),
   antiDoublonMinutes: z.number().int().positive().optional(),
   photoObligatoire: z.boolean().optional(),
+  validation: z
+    .object({
+      mode: z.enum(MODES_VALIDATION),
+      categorieIds: z.array(z.string().regex(/^[a-f\d]{24}$/i)).default([]),
+      organismeIds: z.array(z.string().regex(/^[a-f\d]{24}$/i)).default([]),
+    })
+    .optional(),
   badge: badgeSchema.optional(),
 });
 

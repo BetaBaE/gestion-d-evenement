@@ -21,6 +21,8 @@ const manualParticipantSchema = z.object({
   email: z.string().email('Email invalide.'),
   telephone: z.string().optional(),
   commentaire: z.string().optional(),
+  // "Valider et envoyer le badge" checkbox of the manual add form.
+  validerEtEnvoyer: z.boolean().optional(),
 });
 
 const updateParticipantSchema = z.object({
@@ -70,7 +72,7 @@ export async function getParticipant(req, res, next) {
 
 export async function createManualParticipant(req, res, next) {
   try {
-    const data = manualParticipantSchema.parse(req.body);
+    const { validerEtEnvoyer, ...data } = manualParticipantSchema.parse(req.body);
 
     const organisme = await InvitedOrganism.findOne({
       _id: data.invitedOrganismId,
@@ -98,7 +100,9 @@ export async function createManualParticipant(req, res, next) {
       source: 'MANUEL',
       badgeCode: generateBadgeCode(),
       createdBy: req.user.sub,
+      ...(validerEtEnvoyer ? { statut: 'VALIDE', validatedBy: req.user.sub, validatedAt: new Date() } : {}),
     });
+    if (validerEtEnvoyer) await enqueueEmail({ type: 'BADGE', participant, event: req.event });
 
     res.status(201).json(participant);
   } catch (error) {

@@ -14,8 +14,11 @@ import {
   TextInput,
   required,
   email,
+  BooleanInput,
 } from 'react-admin';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useFormContext, useWatch } from 'react-hook-form';
+import { autoValidates } from '../validationMode.js';
 import { Box, IconButton, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -241,7 +244,30 @@ const EDITABLE_FIELDS = ['categorieId', 'civilite', 'nom', 'prenom', 'fonction',
 const pickEditable = (data) =>
   Object.fromEntries(EDITABLE_FIELDS.filter((k) => data[k] !== null && data[k] !== undefined).map((k) => [k, data[k]]));
 
-function ParticipantForm({ eventId, categories, organismes, isEdit }) {
+/**
+ * "Valider et envoyer le badge" on manual add: follows the event's validation
+ * mode for the chosen catégorie / organisme until the user ticks it themselves.
+ */
+function ValiderEtEnvoyerInput({ validation, categories }) {
+  const [categorieId, invitedOrganismId] = useWatch({ name: ['categorieId', 'invitedOrganismId'] });
+  const { setValue, getFieldState } = useFormContext();
+  const defaultCategorieId = categories.find((c) => c.isDefault)?.id;
+  const auto = autoValidates(validation, { categorieId: categorieId || defaultCategorieId, invitedOrganismId });
+  const [initial] = useState(auto); // defaultValue: survives react-admin's form initialisation
+  useEffect(() => {
+    if (!getFieldState('validerEtEnvoyer').isDirty) setValue('validerEtEnvoyer', auto);
+  }, [auto]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <BooleanInput
+      source="validerEtEnvoyer"
+      defaultValue={initial}
+      label="Valider et envoyer le badge"
+      helperText={auto ? 'Coché selon le mode de validation de l’événement.' : 'Sinon, le participant reste en attente de validation.'}
+    />
+  );
+}
+
+function ParticipantForm({ eventId, categories, organismes, isEdit, validation }) {
   return (
     <DialogForm saveLabel={isEdit ? 'Enregistrer' : 'Ajouter le participant'}>
       <FormSection title="Identité">
@@ -292,6 +318,14 @@ function ParticipantForm({ eventId, categories, organismes, isEdit }) {
           <TextInput source="commentaire" label="Commentaire" fullWidth multiline minRows={2} />
         </Field>
       </FormSection>
+
+      {!isEdit && (
+        <FormSection title="Validation">
+          <Field w="full">
+            <ValiderEtEnvoyerInput validation={validation} categories={categories} />
+          </Field>
+        </FormSection>
+      )}
     </DialogForm>
   );
 }
@@ -300,6 +334,7 @@ export function ParticipantsPanel({ eventId, categories, organismes }) {
   const notify = useNotify();
   const refresh = useRefresh();
   const [dialog, setDialog] = useState(null);
+  const event = useRecordContext(); // the event page record (validation mode)
   const [params, setParams] = useSearchParams();
   const vue = params.get('vue') === 'inscriptions' ? 'inscriptions' : 'liste';
 
@@ -373,8 +408,8 @@ export function ParticipantsPanel({ eventId, categories, organismes }) {
             resource="participants"
             mutationOptions={{
               meta: { eventId },
-              onSuccess: () => {
-                notify('Participant ajouté.', { type: 'success' });
+              onSuccess: (created) => {
+                notify(created?.statut === 'VALIDE' ? "Participant ajouté et validé, badge mis en file d'envoi." : 'Participant ajouté.', { type: 'success' });
                 refresh();
                 setDialog(null);
               },
@@ -383,7 +418,7 @@ export function ParticipantsPanel({ eventId, categories, organismes }) {
               },
             }}
           >
-            <ParticipantForm eventId={eventId} categories={categories} organismes={organismes} isEdit={false} />
+            <ParticipantForm eventId={eventId} categories={categories} organismes={organismes} isEdit={false} validation={event?.validation} />
           </CreateBase>
         )}
         {dialog?.mode === 'edit' && (

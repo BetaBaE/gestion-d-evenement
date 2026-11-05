@@ -100,6 +100,12 @@ const eventSchema = new mongoose.Schema(
     antiDoublonMinutes: { type: Number, default: 2 },
     badge: { type: badgeSchema, default: () => ({}) },
     photoObligatoire: { type: Boolean, default: false },
+    // Mode de validation des inscriptions (services/validationRules.js).
+    validation: {
+      mode: { type: String, enum: ['MANUELLE', 'AUTOMATIQUE', 'AUTOMATIQUE_PARTIEL'], default: 'MANUELLE' },
+      categorieIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'CategorieEvent' }],
+      organismeIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'InvitedOrganism' }],
+    },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true },

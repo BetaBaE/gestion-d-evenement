@@ -14,6 +14,8 @@ import {
   SelectInput,
   DateTimeInput,
   NumberInput,
+  RadioButtonGroupInput,
+  AutocompleteArrayInput,
   EditButton,
   required,
   minValue,
@@ -22,7 +24,7 @@ import {
   useRefresh,
   useGetList,
 } from 'react-admin';
-import { Button, Chip, ListSubheader, MenuItem, Paper, Stack, Tab, Tabs, TextField as MuiTextField } from '@mui/material';
+import { Button, Chip, ListSubheader, MenuItem, Paper, Stack, Tab, Tabs, TextField as MuiTextField, Typography } from '@mui/material';
 import PreviewIcon from '@mui/icons-material/Preview';
 import ArticleIcon from '@mui/icons-material/Article';
 import DesignServicesIcon from '@mui/icons-material/DesignServices';
@@ -88,6 +90,69 @@ function DefaultEndDate() {
   return null;
 }
 
+export const MODES_VALIDATION = {
+  MANUELLE: { label: 'Validation manuelle', choix: 'Manuelle — chaque inscription attend la validation d’un gestionnaire' },
+  AUTOMATIQUE: { label: 'Validation automatique', choix: 'Automatique — toute inscription est validée et reçoit son badge par email' },
+  AUTOMATIQUE_PARTIEL: { label: 'Validation automatique partielle', choix: 'Automatique pour certaines catégories / certains organismes' },
+};
+
+/** Mode de validation des inscriptions (server: services/validationRules.js). */
+function ValidationSection() {
+  const record = useRecordContext();
+  const mode = useWatch({ name: 'validation.mode' });
+  const partiel = mode === 'AUTOMATIQUE_PARTIEL';
+  const listParams = { pagination: { page: 1, perPage: 500 }, sort: { field: 'nom', order: 'ASC' }, meta: { eventId: record?.id } };
+  const { data: categories = [] } = useGetList('categories', listParams, { enabled: !!record?.id && partiel });
+  const { data: organismes = [] } = useGetList('organismes', listParams, { enabled: !!record?.id && partiel });
+
+  return (
+    <FormSection
+      title="Validation des inscriptions"
+      description="En validation automatique, l'inscription via le formulaire est validée immédiatement et le badge est envoyé par email (file d'envoi)."
+    >
+      <Field w="full">
+        <RadioButtonGroupInput
+          source="validation.mode"
+          label={false}
+          defaultValue="MANUELLE"
+          choices={Object.entries(MODES_VALIDATION).map(([id, m]) => ({ id, name: m.choix }))}
+          row={false}
+          helperText={false}
+        />
+      </Field>
+      {partiel && !record?.id && (
+        <Field w="full">
+          <Typography variant="body2" color="text.secondary">
+            Les catégories et organismes pourront être choisis une fois l'événement créé.
+          </Typography>
+        </Field>
+      )}
+      {partiel && record?.id && (
+        <>
+          <Field w="half">
+            <AutocompleteArrayInput
+              source="validation.categorieIds"
+              label="Catégories validées automatiquement"
+              choices={categories.map((c) => ({ id: c.id, name: c.nom }))}
+              helperText="Les inscriptions du formulaire reçoivent la catégorie par défaut."
+              fullWidth
+            />
+          </Field>
+          <Field w="half">
+            <AutocompleteArrayInput
+              source="validation.organismeIds"
+              label="Organismes validés automatiquement"
+              choices={organismes.map((o) => ({ id: o.id, name: o.nom }))}
+              helperText={false}
+              fullWidth
+            />
+          </Field>
+        </>
+      )}
+    </FormSection>
+  );
+}
+
 function InformationsSections() {
   return (
     <>
@@ -139,6 +204,8 @@ function InformationsSections() {
           </Stack>
         </Field>
       </FormSection>
+
+      <ValidationSection />
 
       <FormSection title="Scan" description="Délai pendant lequel un second scan du même badge est signalé comme doublon.">
         <Field w="third">
@@ -282,6 +349,26 @@ const TABS = [
   { key: 'statistiques', label: 'Statistiques' },
 ];
 
+/** Active validation mode, next to the event status (changed in Informations). */
+function ValidationModeChip({ validation }) {
+  const mode = validation?.mode || 'MANUELLE';
+  const [, setParams] = useSearchParams();
+  const detail =
+    mode === 'AUTOMATIQUE_PARTIEL'
+      ? ` (${validation.categorieIds?.length || 0} catégorie(s), ${validation.organismeIds?.length || 0} organisme(s))`
+      : '';
+  return (
+    <Chip
+      size="small"
+      variant="outlined"
+      color={mode === 'MANUELLE' ? 'default' : 'info'}
+      label={`${MODES_VALIDATION[mode].label}${detail}`}
+      onClick={() => setParams({}, { replace: true })}
+      title="Modifier dans l'onglet Informations"
+    />
+  );
+}
+
 function EventTitle() {
   return <span>{useRecordContext()?.titre || 'Événement'}</span>;
 }
@@ -313,6 +400,7 @@ function EventTabs() {
         <Stack direction="row" spacing={1.5} component="span" sx={{ alignItems: 'center' }}>
           <span>{record.titre}</span>
           <Chip size="small" label={statutChoices.find((s) => s.id === record.statut)?.name || record.statut} color={STATUT_COLORS[record.statut]} />
+          <ValidationModeChip validation={record.validation} />
         </Stack>
       }
       breadcrumbs={[{ label: 'Événements', to: '/admin/events' }, { label: record.titre }]}

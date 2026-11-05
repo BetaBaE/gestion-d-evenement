@@ -7,6 +7,7 @@ import { Organisateur } from '../models/Organisateur.js';
 import { ApiError } from '../middlewares/errorHandler.js';
 import { generateBadgeCode, generateToken } from '../utils/tokens.js';
 import { enqueueEmail } from '../services/emailQueue.js';
+import { autoValidates } from '../services/validationRules.js';
 import { optimizeAndStoreImage } from '../services/imageService.js';
 import { registrationClosedReason } from '../services/eventDates.js';
 
@@ -184,6 +185,8 @@ export async function submitInscription(req, res, next) {
         photoImageId = image._id;
       }
 
+      // Mode de validation automatique: validated now, the badge email replaces the confirmation.
+      const auto = autoValidates(event.validation, { categorieId: defaultCategorie?._id, invitedOrganismId: organisme._id });
       const participant = await Participant.create({
         eventId: event._id,
         invitedOrganismId: organisme._id,
@@ -194,7 +197,8 @@ export async function submitInscription(req, res, next) {
         fonction: row.fonction,
         email: row.email.toLowerCase(),
         telephone: row.telephone,
-        statut: 'EN_ATTENTE',
+        statut: auto ? 'VALIDE' : 'EN_ATTENTE',
+        validatedAt: auto ? new Date() : undefined,
         source: 'FORMULAIRE',
         inscriptionGroupeId,
         badgeCode: generateBadgeCode(),
@@ -206,7 +210,7 @@ export async function submitInscription(req, res, next) {
       createdParticipants.push(participant);
 
       // Through the queue: sent at the organisateur's rate, retried on errors.
-      await enqueueEmail({ type: 'CONFIRMATION', participant, event });
+      await enqueueEmail({ type: auto ? 'BADGE' : 'CONFIRMATION', participant, event });
     }
 
     res.status(201).json({
