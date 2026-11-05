@@ -18,7 +18,16 @@ const PRESENCE_CHOICES = [
   { id: 'absent', name: 'Absents' },
 ];
 
-const FILTER_KEYS = ['search', 'invitedOrganismId', 'categorieId', 'statut', 'presence'];
+export const FILTER_KEYS = ['search', 'invitedOrganismId', 'categorieId', 'statut', 'presence', 'inscriptionGroupeId', 'source', 'badge', 'email'];
+
+// Quick filters shown as chips (combinable with the selects).
+const QUICK_FILTERS = [
+  { key: 'badge', value: 'jamais', label: 'Badge jamais imprimé' },
+  { key: 'email', value: 'nonEnvoye', label: 'Validé, email non envoyé' },
+  { key: 'email', value: 'echec', label: 'Email en échec' },
+  { key: 'source', value: 'FORMULAIRE', label: 'Via le formulaire' },
+  { key: 'source', value: 'MANUEL', label: 'Ajout manuel' },
+];
 
 /** Query string of the active filters (same params as the list), for the Excel export. */
 function exportUrl(eventId, filterValues) {
@@ -83,6 +92,24 @@ export function ParticipantFilterBar({ eventId, organismes = [], categories = []
         <Select label="Validation" value={filterValues.statut} onChange={(v) => set({ statut: v })} allLabel="Tous les statuts" choices={STATUT_CHOICES} />
         <Select label="Présence" value={filterValues.presence} onChange={(v) => set({ presence: v })} allLabel="Présents et absents" choices={PRESENCE_CHOICES} />
       </Box>
+      <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
+        {QUICK_FILTERS.map((q) => {
+          const on = filterValues[q.key] === q.value;
+          return (
+            <Chip
+              key={`${q.key}-${q.value}`}
+              size="small"
+              label={q.label}
+              color={on ? 'primary' : 'default'}
+              variant={on ? 'filled' : 'outlined'}
+              onClick={() => set({ [q.key]: on ? undefined : q.value })}
+            />
+          );
+        })}
+        {filterValues.inscriptionGroupeId && (
+          <Chip size="small" color="primary" label={`Groupe d'inscription ${filterValues.inscriptionGroupeId}`} onDelete={() => set({ inscriptionGroupeId: undefined })} />
+        )}
+      </Stack>
       <Stack direction="row" sx={{ alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
         <Typography variant="body2" color="text.secondary" sx={{ mr: 'auto' }}>
           {total ?? 0} participant{total > 1 ? 's' : ''}

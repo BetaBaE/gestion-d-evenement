@@ -30,6 +30,7 @@ import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import { getImageUrl, uploadParticipantPhoto, deleteParticipantPhoto, deleteAllParticipantPhotos } from '../../api/imageApi.js';
 import { FormDialog, DialogForm, FormSection, Field, ImageField } from '../../components/form/index.js';
 import { ParticipantFilterBar, PresenceChip, EntriesField, StatutChip, NameFrom } from './ParticipantFilters.jsx';
+import { SelectionProvider, ListStateSync, SelectionBanner } from './ParticipantSelection.jsx';
 
 function basePath(eventId) {
   const organisateurId = getSelectedOrganisateurId();
@@ -317,13 +318,16 @@ export function ParticipantsPanel({ eventId, categories, organismes }) {
   const [dialog, setDialog] = useState(null);
 
   return (
+    <SelectionProvider>
     <Box>
       <RaButton label="Ajouter un participant" onClick={() => setDialog({ mode: 'create' })} sx={{ mb: 2 }} />
       <DeleteAllPhotosButton eventId={eventId} onDone={refresh} />
 
-      {/* Filters kept per event; not synced with the URL (it holds ?onglet=). */}
+      {/* Filters and page live in our own URL params (?f=, ?p=) next to ?onglet=. */}
       <ListBase resource="participants" queryOptions={{ meta: { eventId } }} disableSyncWithLocation storeKey={`participants-${eventId}`}>
+        <ListStateSync storageKey={`selection-participants-${eventId}`} />
         <ParticipantFilterBar eventId={eventId} organismes={organismes} categories={categories} />
+        <SelectionBanner />
         <BulkActionsToolbar>
           <BulkValidateButton eventId={eventId} onDone={refresh} />
         </BulkActionsToolbar>
@@ -395,5 +399,6 @@ export function ParticipantsPanel({ eventId, categories, organismes }) {
         )}
       </FormDialog>
     </Box>
+    </SelectionProvider>
   );
 }
