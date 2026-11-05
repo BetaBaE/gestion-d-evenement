@@ -7,7 +7,7 @@ import { checkBadgeRules } from '../../../../shared/badge-renderer/index.js';
  * until they're fixed, each with a one-click "Ajouter" placing the missing
  * element on P1) and warnings.
  */
-export function RulesPanel({ badge, elements, onFix }) {
+export function RulesPanel({ badge, elements, onFix, onShowElement }) {
   const rules = useMemo(() => checkBadgeRules({ ...badge, elements }), [badge, elements]);
 
   return (
@@ -22,7 +22,7 @@ export function RulesPanel({ badge, elements, onFix }) {
       )}
       {rules.map((rule) => (
         <Alert
-          key={rule.code}
+          key={`${rule.code}:${rule.elementId || ''}`}
           severity={rule.niveau === 'bloquant' ? 'error' : 'warning'}
           sx={{ py: 0, fontSize: 13, '& .MuiAlert-message': { width: '100%' } }}
         >
@@ -30,6 +30,11 @@ export function RulesPanel({ badge, elements, onFix }) {
           {rule.correction && (
             <Button size="small" variant="outlined" color="inherit" sx={{ display: 'flex', mt: 0.5 }} onClick={() => onFix(rule.correction)}>
               Ajouter
+            </Button>
+          )}
+          {rule.elementId && onShowElement && (
+            <Button size="small" variant="outlined" color="inherit" sx={{ display: 'flex', mt: 0.5 }} onClick={() => onShowElement(rule.elementId)}>
+              Sélectionner l'élément
             </Button>
           )}
         </Alert>

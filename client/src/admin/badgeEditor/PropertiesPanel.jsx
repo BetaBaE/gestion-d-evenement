@@ -7,7 +7,6 @@ import {
   Divider,
   FormControlLabel,
   IconButton,
-  Menu,
   MenuItem,
   Stack,
   Switch,
@@ -21,8 +20,8 @@ import FormatAlignRightIcon from '@mui/icons-material/FormatAlignRight';
 import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
 import VerticalAlignCenterIcon from '@mui/icons-material/VerticalAlignCenter';
 import VerticalAlignBottomIcon from '@mui/icons-material/VerticalAlignBottom';
-import DataObjectIcon from '@mui/icons-material/DataObject';
-import { ALLOWED_FONTS, listTextVariables, resolveToken } from '../../../../shared/badge-renderer/index.js';
+import { ALLOWED_FONTS, resolveToken } from '../../../../shared/badge-renderer/index.js';
+import { VariableTextField } from './VariableText.jsx';
 import { CHAMP_OPTIONS, ELEMENT_CATALOG, elementLabel } from './elementCatalog.js';
 import { IconPicker } from './IconPicker.jsx';
 import { activePanels } from './geometry.js';
@@ -39,20 +38,6 @@ const TOKENS = [
   { value: 'noir', label: 'Noir' },
 ];
 
-const VARIABLE_LABELS = {
-  'participant.nomPrenom': 'Nom et prénom',
-  'participant.fonction': 'Fonction',
-  'participant.organisme': 'Organisme',
-  'participant.categorie': 'Catégorie',
-  'event.titre': "Titre de l'événement",
-  'event.dateDebut': 'Date de début',
-  'event.dateFin': 'Date de fin',
-  'event.dates': 'Dates',
-  'event.nbJours': 'Nombre de jours',
-  'event.lieu': 'Lieu',
-  'organisateur.nom': "Nom de l'organisateur",
-  'organisateur.siteWeb': "Site web de l'organisateur",
-};
 
 /**
  * Number input that lets you clear it and type freely: only a complete,
@@ -93,49 +78,12 @@ function ColorField({ label, value, onChange, theme, allowNone }) {
   return <SharedColorField label={label} value={value} onChange={onChange} tokens={tokens} presets={brandColors} allowNone={allowNone} />;
 }
 
-function VariableMenu({ onInsert }) {
-  const [anchor, setAnchor] = useState(null);
-  return (
-    <>
-      <Button size="small" startIcon={<DataObjectIcon />} onClick={(e) => setAnchor(e.currentTarget)}>
-        Insérer une variable
-      </Button>
-      <Menu anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)}>
-        {listTextVariables().map((v) => (
-          <MenuItem
-            key={v}
-            dense
-            onClick={() => {
-              onInsert(`{{${v}}}`);
-              setAnchor(null);
-            }}
-          >
-            {VARIABLE_LABELS[v] || v}
-          </MenuItem>
-        ))}
-      </Menu>
-    </>
-  );
-}
-
-function TypeProps({ el, onProps, uploadImage, context }) {
+function TypeProps({ el, onProps, uploadImage, context, previewCtx }) {
   const p = el.props || {};
   switch (el.type) {
     case 'texte':
       return (
-        <Stack spacing={1}>
-          <TextField
-            label="Contenu"
-            multiline
-            minRows={3}
-            size="small"
-            value={p.contenu || ''}
-            onChange={(e) => onProps({ contenu: e.target.value })}
-            helperText="Les variables {{…}} sont remplacées par les données de chaque participant."
-            fullWidth
-          />
-          <VariableMenu onInsert={(token) => onProps({ contenu: `${p.contenu || ''}${token}` })} />
-        </Stack>
+        <VariableTextField key={el.id} label="Contenu" value={p.contenu || ''} previewCtx={previewCtx} onChange={(contenu) => onProps({ contenu })} />
       );
     case 'champ':
       return (
@@ -420,7 +368,7 @@ function ThemeSection({ theme, onTheme }) {
   );
 }
 
-export function PropertiesPanel({ badge, selected, theme, context, uploadImage, onChangeElement, onTheme }) {
+export function PropertiesPanel({ badge, selected, theme, context, previewCtx, uploadImage, onChangeElement, onTheme }) {
   if (selected.length === 0) {
     return <ThemeSection theme={theme} onTheme={onTheme} />;
   }
@@ -501,7 +449,7 @@ export function PropertiesPanel({ badge, selected, theme, context, uploadImage, 
       </Stack>
 
       <Divider />
-      <TypeProps el={el} uploadImage={uploadImage} context={context} onProps={(patch) => change({ props: { ...el.props, ...patch } }, `${el.id}:props`)} />
+      <TypeProps el={el} uploadImage={uploadImage} context={context} previewCtx={previewCtx} onProps={(patch) => change({ props: { ...el.props, ...patch } }, `${el.id}:props`)} />
 
       <Divider />
       <Typography variant="caption" color="text.secondary">

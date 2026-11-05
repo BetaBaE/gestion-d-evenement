@@ -290,7 +290,7 @@ export async function importDesign(req, res, next) {
 export async function getModeleEditorContext(req, res, next) {
   try {
     const [organisateur, partenaires] = await Promise.all([
-      Organisateur.findById(req.organisateurId).select('nom siteWeb logoImageId brandKit'),
+      Organisateur.findById(req.organisateurId).select('nom sigle adresse ville pays telephone fax email siteWeb logoImageId brandKit'),
       Partenaire.find({ organisateurId: req.organisateurId, actif: { $ne: false } }).select('nom logoImageId').sort({ nom: 1 }),
     ]);
     res.json({ organisateur, categories: [], organismes: [], partenaires });

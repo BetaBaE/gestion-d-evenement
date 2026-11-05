@@ -43,7 +43,7 @@ import VerticalDistributeIcon from '@mui/icons-material/TableRows';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SettingsIcon from '@mui/icons-material/Settings';
-import { nanoid } from '../../../../shared/badge-renderer/index.js';
+import { checkBadgeRules, nanoid } from '../../../../shared/badge-renderer/index.js';
 import { axiosClient } from '../../api/axiosClient.js';
 import { badgePreviewUrl, modelePreviewUrl, uploadBadgeImage, uploadModeleImage } from '../../api/imageApi.js';
 import { getSelectedOrganisateurId } from '../organisateurContext.js';
@@ -372,6 +372,26 @@ export function BadgeEditorPage({ kind = 'event' }) {
   );
 
   const badge = useMemo(() => (badgeMeta ? { ...badgeMeta, theme } : null), [badgeMeta, theme]);
+
+  // Values shown next to each variable in "Insérer une variable".
+  const previewCtx = useMemo(
+    () =>
+      subject && {
+        participant: subject.participant,
+        organisme: subject.organisme,
+        categorie: subject.categorie,
+        numero: subject.numero,
+        event,
+        organisateur: context?.organisateur,
+      },
+    [subject, event, context],
+  );
+
+  // Elements with a blocking rule (e.g. unknown variable): outlined in red on the canvas.
+  const errorIds = useMemo(
+    () => (badge ? checkBadgeRules({ ...badge, elements }).filter((r) => r.niveau === 'bloquant' && r.elementId).map((r) => r.elementId) : []),
+    [badge, elements],
+  );
 
   // ---- Selection ----
   const lockedIds = useMemo(() => new Set(elements.filter((e) => e.verrouille).map((e) => e.id)), [elements]);
@@ -734,7 +754,12 @@ export function BadgeEditorPage({ kind = 'event' }) {
           <Paper sx={{ width: 200, p: 1, overflowY: 'auto', flexShrink: 0 }}>
             <AddPalette onAdd={addElement} />
             <Divider sx={{ my: 1 }} />
-            <RulesPanel badge={badge} elements={elements} onFix={(fix) => addElement(fix.type, fix.props, { panneau: 'P1' })} />
+            <RulesPanel
+              badge={badge}
+              elements={elements}
+              onFix={(fix) => addElement(fix.type, fix.props, { panneau: 'P1' })}
+              onShowElement={(id) => select([id])}
+            />
           </Paper>
         )}
 
@@ -748,6 +773,7 @@ export function BadgeEditorPage({ kind = 'event' }) {
             organisateur={context?.organisateur}
             assets={assets}
             selectedIds={selectedIds}
+            errorIds={errorIds}
             lockedIds={lockedIds}
             onSelect={select}
             onCommit={commitGeometry}
@@ -770,6 +796,7 @@ export function BadgeEditorPage({ kind = 'event' }) {
                 selected={selected}
                 theme={theme}
                 context={context}
+                previewCtx={previewCtx}
                 uploadImage={source.upload}
                 onChangeElement={changeElement}
                 onTheme={(patch) => setTheme((t) => ({ ...t, ...patch }))}

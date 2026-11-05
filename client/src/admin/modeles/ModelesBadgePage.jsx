@@ -58,14 +58,17 @@ export function ModelesBadgePage() {
       const form = new FormData();
       form.append('file', file);
       const { data } = await axiosClient.post(`${basePath()}/importer`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
-      const { partenairesCrees, partenairesReutilises, renomme } = data.resume;
+      const { partenairesCrees, partenairesReutilises, renomme, variablesInconnues = [] } = data.resume;
       const partenaires =
         partenairesCrees + partenairesReutilises > 0
           ? ` ${partenairesCrees} partenaire(s) créé(s), ${partenairesReutilises} réutilisé(s).`
           : '';
-      notify(`Modèle « ${data.modele.nom} » importé${renomme ? ' (renommé, un modèle porte déjà ce nom)' : ''}.${partenaires}`, {
-        type: 'success',
-        autoHideDuration: 8000,
+      const inconnues = variablesInconnues.length
+        ? ` Variable(s) inconnue(s) à corriger dans l'éditeur avant utilisation : ${variablesInconnues.map((k) => `{{${k}}}`).join(', ')}.`
+        : '';
+      notify(`Modèle « ${data.modele.nom} » importé${renomme ? ' (renommé, un modèle porte déjà ce nom)' : ''}.${partenaires}${inconnues}`, {
+        type: inconnues ? 'warning' : 'success',
+        autoHideDuration: inconnues ? 15000 : 8000,
       });
       load();
     } catch (error) {

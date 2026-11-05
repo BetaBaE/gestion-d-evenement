@@ -366,9 +366,10 @@ const applyTemplateSchema = z.union([
 export async function getBadgeEditorContext(req, res, next) {
   try {
     const [organisateur, categories, organismes, partenaires] = await Promise.all([
-      Organisateur.findById(req.organisateurId).select('nom siteWeb logoImageId brandKit'),
-      CategorieEvent.find({ eventId: req.event._id }).select('nom couleur isDefault').sort({ nom: 1 }),
-      InvitedOrganism.find({ eventId: req.event._id }).select('nom logoImageId').sort({ nom: 1 }),
+      Organisateur.findById(req.organisateurId).select('nom sigle adresse ville pays telephone fax email siteWeb logoImageId brandKit'),
+      CategorieEvent.find({ eventId: req.event._id }).select('nom couleur description isDefault').sort({ nom: 1 }),
+      // Fields the text variables read ({{organisme.ville}}…), for the editor preview.
+      InvitedOrganism.find({ eventId: req.event._id }).select('nom siegeSocial adresse ville pays telephone fax email siteWeb contactNom contactFonction logoImageId').sort({ nom: 1 }),
       Partenaire.find({ organisateurId: req.organisateurId, actif: { $ne: false } }).select('nom logoImageId').sort({ nom: 1 }),
     ]);
     res.json({ organisateur, categories, organismes, partenaires });
@@ -393,6 +394,11 @@ export async function updateEventBadge(req, res, next) {
     const errors = validateElementTypes(elements);
     if (errors.length > 0) {
       throw new ApiError(400, 'Badge invalide.', errors);
+    }
+    // Saving an event's badge publishes it: a {{variable}} that doesn't exist would print nothing.
+    const inconnues = checkBadgeRules({ ...req.event.badge?.toObject?.(), elements }).filter((r) => r.code === 'VARIABLE_INCONNUE');
+    if (inconnues.length > 0) {
+      throw new ApiError(409, `Badge non publié. ${inconnues[0].message}`, { regles: inconnues });
     }
 
     const update = { 'badge.elements': elements, 'badge.publieLe': new Date() };

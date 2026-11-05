@@ -20,7 +20,20 @@ export { STARTER_TEMPLATES } from './templates.js';
 export { ALL_PANELS, activePanelKeys, elementsHorsPage } from './panels.js';
 export { ICONS } from './icons.js';
 export { checkBadgeRules, hasBlockingRules } from './rules.js';
-export { resolveTextVariables, listTextVariables } from './textVariables.js';
+export {
+  VARIABLES,
+  VARIABLE_GROUPS,
+  VARIABLE_ALIASES,
+  DEFAULT_TIMEZONE,
+  getVariable,
+  isKnownVariable,
+  resolveVariable,
+  extractVariables,
+  unknownVariables,
+  resolveTextVariables,
+  listTextVariables,
+  listVariablesByGroup,
+} from './variables.js';
 export { fitText } from './textFit.js';
 export { fitDynamicTextInDom } from './fitDynamicTextInDom.js';
 export { styleToCss, resolveToken } from './style.js';
@@ -197,8 +210,10 @@ function renderPanel(panelKey, elements, ctx, showSafeZone, safeZoneMm, activePa
   return `<section class="panel panel-${panelKey}">${elementsHtml}${safeZoneHtml}</section>`;
 }
 
-function buildCtx({ theme, participant, event, organisme, organisateur, categorie, assets, measureTextWidthMm, editorMode }) {
-  return { participant, event, organisme, organisateur, categorie, theme, assets: assets || {}, measureTextWidthMm, editorMode: !!editorMode };
+// timezone (APP_TIMEZONE), numero (participant number in the event) and
+// dateImpression feed the text variables (variables.js).
+function buildCtx({ theme, participant, event, organisme, organisateur, categorie, assets, measureTextWidthMm, editorMode, timezone, numero, dateImpression }) {
+  return { participant, event, organisme, organisateur, categorie, theme, assets: assets || {}, measureTextWidthMm, editorMode: !!editorMode, timezone, numero, dateImpression };
 }
 
 /**
@@ -239,8 +254,8 @@ const EDITOR_CSS = `
  * the bottom-row 180° print rotation not applied (editing upside down would
  * invert every drag).
  */
-export function renderEditorSheet({ badge, theme, participant, event, organisme, organisateur, categorie, assets, scope }) {
-  const ctx = buildCtx({ theme, participant, event, organisme, organisateur, categorie, assets, editorMode: true });
+export function renderEditorSheet({ badge, theme, participant, event, organisme, organisateur, categorie, assets, scope, timezone, numero }) {
+  const ctx = buildCtx({ theme, participant, event, organisme, organisateur, categorie, assets, editorMode: true, timezone, numero });
   const safeZoneMm = badge.safeZoneMm ?? SAFE_ZONE_DEFAULT_MM;
   const panels = ['P1', 'P2', 'P3', 'P4'].map((key) => renderPanel(key, badge.elements, ctx, true, safeZoneMm, activePanelKeys(badge)));
   const sheetHtml = badge.format === 'A4_PLIE_4' ? panels.join('') : panels[0];
@@ -259,8 +274,8 @@ export function renderEditorSheet({ badge, theme, participant, event, organisme,
  * elements/texte.js) — call fitDynamicTextInDom() against the resulting
  * document before treating it as final output.
  */
-export function renderBadgeHtml({ badge, theme, participant, event, organisme, organisateur, categorie, assets, measureTextWidthMm, showSafeZone }) {
-  const ctx = buildCtx({ theme, participant, event, organisme, organisateur, categorie, assets, measureTextWidthMm });
+export function renderBadgeHtml({ badge, theme, participant, event, organisme, organisateur, categorie, assets, measureTextWidthMm, showSafeZone, timezone, numero, dateImpression }) {
+  const ctx = buildCtx({ theme, participant, event, organisme, organisateur, categorie, assets, measureTextWidthMm, timezone, numero, dateImpression });
 
   const panels = ['P1', 'P2', 'P3', 'P4'].map((key) =>
     renderPanel(key, badge.elements, ctx, showSafeZone, badge.safeZoneMm ?? SAFE_ZONE_DEFAULT_MM, activePanelKeys(badge)),
@@ -288,8 +303,8 @@ export function renderBatchBadgeHtml(entries) {
   if (entries.length === 0) return '<!DOCTYPE html><html><body></body></html>';
   const { badge, theme } = entries[0];
 
-  const sheets = entries.map(({ participant, event, organisme, organisateur, categorie, assets }) => {
-    const ctx = buildCtx({ theme, participant, event, organisme, organisateur, categorie, assets });
+  const sheets = entries.map(({ participant, event, organisme, organisateur, categorie, assets, timezone, numero, dateImpression }) => {
+    const ctx = buildCtx({ theme, participant, event, organisme, organisateur, categorie, assets, timezone, numero, dateImpression });
     const panels = ['P1', 'P2', 'P3', 'P4'].map((key) => renderPanel(key, badge.elements, ctx, false, badge.safeZoneMm ?? SAFE_ZONE_DEFAULT_MM, activePanelKeys(badge)));
     return badge.format === 'A4_PLIE_4' ? panels.join('') : panels[0];
   });

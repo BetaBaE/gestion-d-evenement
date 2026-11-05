@@ -41,6 +41,7 @@ export function buildPreviewSubjects({ context, participants }) {
     {
       key: 'exemple',
       label: 'Participant exemple',
+      numero: 1,
       participant: SAMPLE_PARTICIPANT,
       organisme: organismes[0] || { nom: 'Organisme exemple' },
       categorie: defaultCategorie(categories),
@@ -61,6 +62,7 @@ export function buildPreviewSubjects({ context, participants }) {
   subjects.push({
     key: 'pireCas',
     label: 'Pire cas (textes les plus longs)',
+    numero: Math.max(participants.length, 999),
     participant: {
       ...SAMPLE_PARTICIPANT,
       nom: worstUsesRealName ? longestName.p.nom : SYNTHETIC_WORST.nom,
@@ -73,9 +75,12 @@ export function buildPreviewSubjects({ context, participants }) {
     categorie: defaultCategorie(categories),
   });
 
+  // {{participant.numero}}: rank by registration (ids grow with creation time), as on the server.
+  const rank = new Map([...participants].sort((a, b) => String(a.id || a._id).localeCompare(String(b.id || b._id))).map((p, i) => [p, i + 1]));
   participants.forEach((p) => {
     subjects.push({
       key: `p:${p.id || p._id}`,
+      numero: rank.get(p),
       label: `${p.prenom || ''} ${p.nom || ''}`.trim() || 'Participant',
       participant: p,
       organisme: organismeById.get(String(p.invitedOrganismId)) || null,

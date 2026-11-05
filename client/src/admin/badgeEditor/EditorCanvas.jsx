@@ -90,6 +90,7 @@ export function EditorCanvas({
   organisateur,
   assets,
   selectedIds,
+  errorIds = [],
   lockedIds,
   onSelect,
   onCommit,
@@ -146,6 +147,7 @@ export function EditorCanvas({
         organisateur,
         categorie: subject.categorie,
         assets,
+        numero: subject.numero,
         scope: `.${SCOPE}`,
       }),
     [badge, elements, theme, subject, event, organisateur, assets],
@@ -247,6 +249,9 @@ export function EditorCanvas({
           }}
         >
           <style>{css}</style>
+          {errorIds.length > 0 && (
+            <style>{errorIds.map((id) => `.${SCOPE} [data-element-id="${CSS.escape(id)}"]`).join(', ') + ' { outline: 0.6mm solid #d32f2f !important; outline-offset: 0.3mm; }'}</style>
+          )}
           <div className={SCOPE} ref={hostRef} dangerouslySetInnerHTML={{ __html: html }} />
           {showGrid && (
             <style>{`.${SCOPE} .panel { background: rgba(255,255,255,0.88); }`}</style>

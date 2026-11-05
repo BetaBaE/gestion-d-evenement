@@ -69,3 +69,16 @@ test('style values cannot break out of the style attribute', () => {
   assert.ok(!html.includes('<script>alert'));
   assert.ok(!html.includes('<img src=x'));
 });
+
+test('old templates: {{participant.categorie}} / {{participant.organisme}} still render; empty separators cleaned', () => {
+  const badge = {
+    format: 'A6',
+    elements: [
+      { id: 't1', type: 'texte', panneau: 'P1', x: 5, y: 5, largeur: 60, hauteur: 10, props: { contenu: '{{participant.categorie}} — {{participant.organisme}}' }, style: {} },
+      { id: 't2', type: 'texte', panneau: 'P1', x: 5, y: 20, largeur: 60, hauteur: 10, props: { contenu: '{{event.adresse}}, {{event.ville}}' }, style: {} },
+    ],
+  };
+  const html = renderBadgeHtml({ badge, theme: {}, ...sample, event: { ...sample.event, ville: 'Rabat' } });
+  assert.match(html, /data-raw-text="Invité — ATNER"/);
+  assert.match(html, /data-raw-text="Rabat"/);
+});

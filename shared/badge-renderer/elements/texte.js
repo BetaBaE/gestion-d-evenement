@@ -1,6 +1,6 @@
 import { registerElement } from '../registry.js';
 import { esc } from '../escape.js';
-import { resolveTextVariables } from '../textVariables.js';
+import { resolveTextVariables } from '../variables.js';
 import { ok, fail } from '../validate.js';
 
 /**

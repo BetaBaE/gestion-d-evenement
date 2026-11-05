@@ -6,6 +6,8 @@ import { Partenaire } from '../models/Partenaire.js';
 import { CategorieEvent } from '../models/CategorieEvent.js';
 import { InvitedOrganism } from '../models/InvitedOrganism.js';
 import { Organisateur } from '../models/Organisateur.js';
+import { Participant } from '../models/Participant.js';
+import { env } from '../config/env.js';
 import { generateQrCodeSvg } from './qrService.js';
 import { renderBadgeHtml, renderBatchBadgeHtml } from '../../../shared/badge-renderer/index.js';
 
@@ -108,7 +110,13 @@ async function hydrateEntry({ participant, event, categorie, organisme, organisa
   ]);
   assets.qrCodeSvg = qrCodeSvg;
 
-  return { badge, theme: badge.theme || {}, participant, event, organisme, organisateur, categorie, assets };
+  return {
+    badge, theme: badge.theme || {}, participant, event, organisme, organisateur, categorie, assets,
+    // {{participant.numero}}: rank by registration (ids grow with creation time).
+    numero: participant._id && event._id ? await Participant.countDocuments({ eventId: event._id, _id: { $lte: participant._id } }) : undefined,
+    timezone: env.appTimezone,
+    dateImpression: new Date(),
+  };
 }
 
 /**

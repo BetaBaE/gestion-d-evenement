@@ -7,6 +7,7 @@ import { CategorieEvent } from '../models/CategorieEvent.js';
 import { ApiError } from '../middlewares/errorHandler.js';
 import { elementSchema, themeSchema, validateElementTypes } from '../validation/badgeElements.js';
 import { optimizeAndStoreImage } from './imageService.js';
+import { unknownVariables } from '../../../shared/badge-renderer/index.js';
 
 /**
  * Template files (.badge.json): an exact copy of a template, its images and
@@ -114,6 +115,11 @@ const fileSchema = z.object({
     z.object({ nom: z.string().trim().min(1).max(200), siteWeb: z.string().optional(), logoImageId: z.string().nullable() }),
   ),
 });
+
+/** {{variables}} of the template's texts that the registry doesn't know (listed in the import summary). */
+export function templateUnknownVariables(elements) {
+  return [...new Set((elements || []).filter((el) => el.type === 'texte').flatMap((el) => unknownVariables(el.props?.contenu)))];
+}
 
 /** Parses, upgrades and validates a .badge.json buffer. Throws a clear ApiError. */
 export function parseTemplateFile(buffer) {
@@ -245,7 +251,13 @@ export async function importTemplate(file, { organisateurId, userId }) {
 
     return {
       modele,
-      resume: { partenairesCrees: crees, partenairesReutilises: reutilises, images: createdImageIds.length, renomme: nom !== file.modele.nom },
+      resume: {
+        partenairesCrees: crees,
+        partenairesReutilises: reutilises,
+        images: createdImageIds.length,
+        renomme: nom !== file.modele.nom,
+        variablesInconnues: templateUnknownVariables(file.modele.elements),
+      },
     };
   } catch (error) {
     await Image.deleteMany({ _id: { $in: createdImageIds } });
