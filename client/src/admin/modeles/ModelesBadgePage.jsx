@@ -15,6 +15,7 @@ import { axiosClient } from '../../api/axiosClient.js';
 import { getSelectedOrganisateurId } from '../organisateurContext.js';
 import { FormPage, FormSection, Field } from '../../components/form/index.js';
 import { NewTemplateDialog } from './NewTemplateDialog.jsx';
+import { StarterGallery } from './StarterGallery.jsx';
 import { formatLabel } from './BadgeFormatFields.jsx';
 
 function basePath() {
@@ -96,6 +97,21 @@ export function ModelesBadgePage() {
         subtitle="Modèles réutilisables pour les événements de cet organisateur. Un modèle peut être enregistré incomplet, mais il ne peut être appliqué à un événement qu'une fois le nom et le QR code ajoutés."
         breadcrumbs={[{ label: 'Modèles de badge' }]}
       >
+        <FormSection
+          title="Modèles de départ"
+          description="Quatre modèles prêts à l'emploi. « Utiliser » crée une copie modifiable dans la bibliothèque."
+        >
+          <Field w="full">
+            <StarterGallery
+              renderActions={(s) => (
+                <Button size="small" startIcon={<AddIcon />} onClick={() => setDialog({ initial: { depart: 'STARTER', starterKey: s.key, nom: s.label, description: s.description } })}>
+                  Utiliser ce modèle
+                </Button>
+              )}
+            />
+          </Field>
+        </FormSection>
+
         <FormSection
           title="Bibliothèque"
           action={

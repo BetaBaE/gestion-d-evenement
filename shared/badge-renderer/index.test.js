@@ -12,7 +12,7 @@ const sample = {
 };
 
 test('editor CSS is fully scoped (no global reset or body rule leaks)', () => {
-  const badge = STARTER_TEMPLATES.SALON_A4_PLIE_4.build();
+  const badge = STARTER_TEMPLATES.signal.build();
   const { css } = renderEditorSheet({ badge, theme: badge.theme, ...sample, scope: '.badge-editor' });
   const selectors = [...css.matchAll(/(?:^|})\s*([^{}]+)\{/g)].flatMap((m) => m[1].split(',').map((s) => s.trim()));
   assert.ok(selectors.length > 10);

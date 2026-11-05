@@ -129,7 +129,9 @@ export async function createModeleBadge(req, res, next) {
 
     let base = {};
     if (depart === 'STARTER') {
-      base = pick(STARTER_TEMPLATES[starterKey].build(), COPIED_FIELDS);
+      const starter = STARTER_TEMPLATES[starterKey];
+      // starterKey + version 1 = created from this starter and never modified (migrations rely on it).
+      base = { ...pick(starter.build(), COPIED_FIELDS), starterKey, starterVersion: starter.starterVersion };
     } else if (depart === 'DUPLIQUER') {
       const source = await ModeleBadge.findOne({ _id: sourceModeleId, organisateurId: req.organisateurId }).lean();
       if (!source) {
@@ -145,7 +147,7 @@ export async function createModeleBadge(req, res, next) {
     // The format chosen in the dialog only applies to a blank page; a starter
     // or a copy keeps its own layout.
     const layout = depart === 'VIERGE' ? pick(data, ['format', 'carteLargeurMm', 'carteHauteurMm', 'panneauxActifs']) : {};
-    const modeleData = { ...base, ...layout, nom: data.nom, description: data.description };
+    const modeleData = { ...base, ...layout, nom: data.nom, description: data.description ?? (depart === 'STARTER' ? STARTER_TEMPLATES[starterKey].description : undefined) };
 
     const errors = validateElementTypes(modeleData.elements);
     if (errors.length > 0) {
@@ -318,7 +320,9 @@ export async function previewModeleBadge(req, res, next) {
         dateFin: now,
         badge: modele,
       },
-      categorie: { nom: 'Invité', couleur: modele.theme?.couleurPrincipale || '#1971c2' },
+      // Same sample category as the editor (previewData.js): with the theme color, a
+      // category band on a principal-color background (Gala) disappeared.
+      categorie: { nom: 'Invité', couleur: '#1971c2' },
       organisme: { nom: 'Organisme exemple', logoImageId: null },
       organisateur,
     });

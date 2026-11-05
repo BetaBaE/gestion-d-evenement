@@ -11,7 +11,9 @@
     "start": "node src/server.js",
     "seed:superadmin": "node src/scripts/seedSuperAdmin.js",
     "seed:demo": "node src/scripts/seedDemo.js",
-    "test": "node --test"
+    "test": "node --test",
+    "starters:thumbnails": "node src/scripts/starterThumbnails.js",
+    "migrate:starters": "node src/scripts/migrateStarters.js"
   },
   "dependencies": {
     "@napi-rs/canvas": "1.1.0",

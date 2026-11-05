@@ -1,0 +1,262 @@
+{
+  "application": "gestion-evenements-badges",
+  "schemaVersion": 1,
+  "exporteLe": "2026-11-05T10:00:00.000Z",
+  "modele": {
+    "nom": "Pass",
+    "description": "Carte 85,6 × 54 mm (format carte bancaire, paysage) pour porte-badge carte ou impression PVC. En-tête à la couleur principale, identité à gauche, QR de 30 mm à droite, bande de catégorie en pied.",
+    "format": "CARTE",
+    "carteLargeurMm": 85.6,
+    "carteHauteurMm": 54,
+    "rotationLigneBas180": false,
+    "traitsDePliage": false,
+    "safeZoneMm": 3,
+    "panneauxActifs": [
+      "P1"
+    ],
+    "theme": {
+      "couleurPrincipale": "#3B1F6B",
+      "couleurSecondaire": "#F1ECF9",
+      "couleurAccent": "#C2410C",
+      "couleurTexte": "#1C1530",
+      "policeTitres": "Montserrat",
+      "policeTexte": "Open Sans",
+      "policeNom": "Montserrat"
+    },
+    "elements": [
+      {
+        "id": "p1-head",
+        "type": "forme",
+        "panneau": "P1",
+        "x": 0,
+        "y": 0,
+        "largeur": 85.6,
+        "hauteur": 11,
+        "rotation": 0,
+        "z": 1,
+        "verrouille": true,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "principale"
+        },
+        "nom": "En-tête"
+      },
+      {
+        "id": "p1-logo",
+        "type": "logoOrganisateur",
+        "panneau": "P1",
+        "x": 3,
+        "y": 3,
+        "largeur": 18,
+        "hauteur": 6,
+        "rotation": 0,
+        "z": 2,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {},
+        "style": {
+          "alignH": "gauche",
+          "fond": "#FFFFFF",
+          "rayonMm": 1,
+          "paddingMm": 0.8
+        }
+      },
+      {
+        "id": "p1-title",
+        "type": "texte",
+        "panneau": "P1",
+        "x": 23,
+        "y": 3,
+        "largeur": 59.6,
+        "hauteur": 6,
+        "rotation": 0,
+        "z": 3,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "{{event.titre}}"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 2,
+          "tailleMax": 8.5,
+          "tailleMin": 6,
+          "graisse": 700,
+          "couleur": "#FFFFFF",
+          "alignH": "droite",
+          "interligne": 1.1
+        }
+      },
+      {
+        "id": "p1-name",
+        "type": "champ",
+        "panneau": "P1",
+        "x": 3,
+        "y": 14,
+        "largeur": 47,
+        "hauteur": 12,
+        "rotation": 0,
+        "z": 4,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "champ": "nomPrenom",
+          "formatNom": "Prénom NOM"
+        },
+        "style": {
+          "couleur": "texte",
+          "tailleMax": 13,
+          "tailleMin": 10,
+          "lignesMax": 2,
+          "graisse": 800,
+          "police": "Montserrat",
+          "alignH": "gauche",
+          "alignV": "haut",
+          "interligne": 1.05
+        }
+      },
+      {
+        "id": "p1-role",
+        "type": "champ",
+        "panneau": "P1",
+        "x": 3,
+        "y": 27,
+        "largeur": 47,
+        "hauteur": 4,
+        "rotation": 0,
+        "z": 5,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "champ": "fonction"
+        },
+        "style": {
+          "couleur": "#6B7280",
+          "tailleMax": 7,
+          "tailleMin": 6,
+          "alignH": "gauche",
+          "alignV": "milieu",
+          "lignesMax": 1
+        }
+      },
+      {
+        "id": "p1-company",
+        "type": "champ",
+        "panneau": "P1",
+        "x": 3,
+        "y": 31,
+        "largeur": 47,
+        "hauteur": 4,
+        "rotation": 0,
+        "z": 6,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "champ": "organisme"
+        },
+        "style": {
+          "couleur": "accent",
+          "tailleMax": 7,
+          "tailleMin": 6,
+          "graisse": 700,
+          "majuscules": true,
+          "alignH": "gauche",
+          "alignV": "milieu",
+          "lignesMax": 1
+        }
+      },
+      {
+        "id": "p1-dates",
+        "type": "dates",
+        "panneau": "P1",
+        "x": 3,
+        "y": 37,
+        "largeur": 47,
+        "hauteur": 4,
+        "rotation": 0,
+        "z": 7,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "format": "court"
+        },
+        "style": {
+          "couleur": "texte",
+          "tailleMax": 6.5,
+          "tailleMin": 6,
+          "alignH": "gauche",
+          "alignV": "milieu",
+          "lignesMax": 1
+        }
+      },
+      {
+        "id": "p1-qr",
+        "type": "qrCode",
+        "panneau": "P1",
+        "x": 52.6,
+        "y": 13,
+        "largeur": 30,
+        "hauteur": 30,
+        "rotation": 0,
+        "z": 8,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {},
+        "style": {
+          "fond": "#FFFFFF"
+        }
+      },
+      {
+        "id": "p1-band",
+        "type": "bandeCategorie",
+        "panneau": "P1",
+        "x": 0,
+        "y": 45,
+        "largeur": 85.6,
+        "hauteur": 9,
+        "rotation": 0,
+        "z": 9,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "texte": "auto"
+        },
+        "style": {
+          "fond": "categorie",
+          "couleur": "blanc",
+          "graisse": 800,
+          "majuscules": true,
+          "tailleMax": 9,
+          "tailleMin": 6.5,
+          "espacementLettres": 3,
+          "alignH": "centre",
+          "alignV": "milieu",
+          "lignesMax": 1
+        }
+      }
+    ]
+  },
+  "images": {},
+  "partenaires": {}
+}

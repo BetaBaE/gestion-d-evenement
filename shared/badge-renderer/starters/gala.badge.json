@@ -1,0 +1,1331 @@
+{
+  "application": "gestion-evenements-badges",
+  "schemaVersion": 1,
+  "exporteLe": "2026-11-05T10:00:00.000Z",
+  "modele": {
+    "nom": "Gala",
+    "description": "A4 plié en 4, style soirée / cérémonie. Recto sombre avec cadre doré, nom en serif centré, QR sur carte blanche, catégorie en pastille. Intérieur clair : programme horaire, lieu, partenaires ; dos sombre de remerciement et contacts.",
+    "format": "A4_PLIE_4",
+    "rotationLigneBas180": false,
+    "traitsDePliage": true,
+    "safeZoneMm": 5,
+    "panneauxActifs": [
+      "P1",
+      "P2",
+      "P3",
+      "P4"
+    ],
+    "theme": {
+      "couleurPrincipale": "#15233B",
+      "couleurSecondaire": "#F3EFE6",
+      "couleurAccent": "#C8A24A",
+      "couleurTexte": "#1E2430",
+      "policeTitres": "Merriweather",
+      "policeTexte": "Open Sans",
+      "policeNom": "Merriweather"
+    },
+    "elements": [
+      {
+        "id": "p1-bg",
+        "type": "forme",
+        "panneau": "P1",
+        "x": 0,
+        "y": 0,
+        "largeur": 105,
+        "hauteur": 148.5,
+        "rotation": 0,
+        "z": 1,
+        "verrouille": true,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "principale"
+        },
+        "nom": "Fond"
+      },
+      {
+        "id": "p1-frame",
+        "type": "forme",
+        "panneau": "P1",
+        "x": 5,
+        "y": 5,
+        "largeur": 95,
+        "hauteur": 138.5,
+        "rotation": 0,
+        "z": 2,
+        "verrouille": true,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "aucun",
+          "bordure": {
+            "couleur": "accent",
+            "epaisseurMm": 0.35
+          }
+        },
+        "nom": "Cadre"
+      },
+      {
+        "id": "p1-org",
+        "type": "texte",
+        "panneau": "P1",
+        "x": 10,
+        "y": 12,
+        "largeur": 85,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 3,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "{{organisateur.nom}}"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 6.5,
+          "tailleMin": 6,
+          "majuscules": true,
+          "graisse": 600,
+          "espacementLettres": 2.5,
+          "couleur": "accent",
+          "alignH": "centre"
+        }
+      },
+      {
+        "id": "p1-title",
+        "type": "texte",
+        "panneau": "P1",
+        "x": 10,
+        "y": 17.5,
+        "largeur": 85,
+        "hauteur": 12,
+        "rotation": 0,
+        "z": 4,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "{{event.titre}}"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 2,
+          "tailleMax": 15,
+          "tailleMin": 9,
+          "graisse": 700,
+          "police": "Merriweather",
+          "couleur": "#FFFFFF",
+          "alignH": "centre",
+          "interligne": 1.15
+        }
+      },
+      {
+        "id": "p1-dates",
+        "type": "dates",
+        "panneau": "P1",
+        "x": 10,
+        "y": 30.5,
+        "largeur": 85,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 5,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "format": "long"
+        },
+        "style": {
+          "couleur": "#C9CED6",
+          "tailleMax": 7.5,
+          "tailleMin": 6,
+          "alignH": "centre",
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "majuscules": true,
+          "espacementLettres": 1
+        }
+      },
+      {
+        "id": "p1-orn-l",
+        "type": "forme",
+        "panneau": "P1",
+        "x": 33,
+        "y": 39.5,
+        "largeur": 14,
+        "hauteur": 0.3,
+        "rotation": 0,
+        "z": 6,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "accent"
+        }
+      },
+      {
+        "id": "p1-orn-c",
+        "type": "forme",
+        "panneau": "P1",
+        "x": 51,
+        "y": 38.2,
+        "largeur": 3,
+        "hauteur": 3,
+        "rotation": 0,
+        "z": 7,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "cercle"
+        },
+        "style": {
+          "fond": "accent"
+        }
+      },
+      {
+        "id": "p1-orn-r",
+        "type": "forme",
+        "panneau": "P1",
+        "x": 58,
+        "y": 39.5,
+        "largeur": 14,
+        "hauteur": 0.3,
+        "rotation": 0,
+        "z": 8,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "accent"
+        }
+      },
+      {
+        "id": "p1-name",
+        "type": "champ",
+        "panneau": "P1",
+        "x": 10,
+        "y": 46,
+        "largeur": 85,
+        "hauteur": 18,
+        "rotation": 0,
+        "z": 9,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "champ": "nomPrenom",
+          "formatNom": "Prénom NOM"
+        },
+        "style": {
+          "couleur": "#FFFFFF",
+          "tailleMax": 21,
+          "tailleMin": 12,
+          "lignesMax": 2,
+          "graisse": 700,
+          "police": "Merriweather",
+          "alignH": "centre",
+          "alignV": "milieu",
+          "interligne": 1.1
+        }
+      },
+      {
+        "id": "p1-role",
+        "type": "champ",
+        "panneau": "P1",
+        "x": 10,
+        "y": 65,
+        "largeur": 85,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 10,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "champ": "fonction"
+        },
+        "style": {
+          "couleur": "#C9CED6",
+          "tailleMax": 9,
+          "tailleMin": 6.5,
+          "italique": true,
+          "alignH": "centre",
+          "alignV": "milieu",
+          "lignesMax": 1
+        }
+      },
+      {
+        "id": "p1-company",
+        "type": "champ",
+        "panneau": "P1",
+        "x": 10,
+        "y": 70,
+        "largeur": 85,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 11,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "champ": "organisme"
+        },
+        "style": {
+          "couleur": "accent",
+          "tailleMax": 8.5,
+          "tailleMin": 6.5,
+          "graisse": 700,
+          "majuscules": true,
+          "espacementLettres": 1.5,
+          "alignH": "centre",
+          "alignV": "milieu",
+          "lignesMax": 1
+        }
+      },
+      {
+        "id": "p1-qr-card",
+        "type": "forme",
+        "panneau": "P1",
+        "x": 27.5,
+        "y": 78,
+        "largeur": 50,
+        "hauteur": 50,
+        "rotation": 0,
+        "z": 12,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "#FFFFFF",
+          "rayonMm": 3
+        },
+        "nom": "Carte QR"
+      },
+      {
+        "id": "p1-qr",
+        "type": "qrCode",
+        "panneau": "P1",
+        "x": 30,
+        "y": 80.5,
+        "largeur": 45,
+        "hauteur": 45,
+        "rotation": 0,
+        "z": 13,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {},
+        "style": {
+          "fond": "#FFFFFF"
+        }
+      },
+      {
+        "id": "p1-band",
+        "type": "bandeCategorie",
+        "panneau": "P1",
+        "x": 22.5,
+        "y": 131,
+        "largeur": 60,
+        "hauteur": 8,
+        "rotation": 0,
+        "z": 14,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "texte": "auto"
+        },
+        "style": {
+          "fond": "categorie",
+          "couleur": "blanc",
+          "graisse": 800,
+          "majuscules": true,
+          "tailleMax": 9,
+          "tailleMin": 6.5,
+          "espacementLettres": 2.5,
+          "alignH": "centre",
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "rayonMm": 4
+        }
+      },
+      {
+        "id": "p2-title",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 8,
+        "y": 12,
+        "largeur": 89,
+        "hauteur": 9,
+        "rotation": 0,
+        "z": 15,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Le programme"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 15,
+          "tailleMin": 10,
+          "graisse": 700,
+          "police": "Merriweather",
+          "couleur": "principale",
+          "alignH": "centre"
+        }
+      },
+      {
+        "id": "p2-orn",
+        "type": "forme",
+        "panneau": "P2",
+        "x": 45,
+        "y": 23,
+        "largeur": 15,
+        "hauteur": 0.4,
+        "rotation": 0,
+        "z": 16,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "accent"
+        }
+      },
+      {
+        "id": "p2-h0",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 10,
+        "y": 30,
+        "largeur": 18,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 17,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "09:00"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 8.5,
+          "tailleMin": 6.5,
+          "graisse": 700,
+          "couleur": "accent"
+        }
+      },
+      {
+        "id": "p2-s0",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 30,
+        "y": 30,
+        "largeur": 65,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 18,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Accueil des participants"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 8.5,
+          "tailleMin": 6.5,
+          "couleur": "texte"
+        }
+      },
+      {
+        "id": "p2-l0",
+        "type": "forme",
+        "panneau": "P2",
+        "x": 10,
+        "y": 37.5,
+        "largeur": 85,
+        "hauteur": 0.2,
+        "rotation": 0,
+        "z": 19,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "#E5E7EB"
+        }
+      },
+      {
+        "id": "p2-h1",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 10,
+        "y": 41,
+        "largeur": 18,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 20,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "09:30"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 8.5,
+          "tailleMin": 6.5,
+          "graisse": 700,
+          "couleur": "accent"
+        }
+      },
+      {
+        "id": "p2-s1",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 30,
+        "y": 41,
+        "largeur": 65,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 21,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Ouverture officielle"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 8.5,
+          "tailleMin": 6.5,
+          "couleur": "texte"
+        }
+      },
+      {
+        "id": "p2-l1",
+        "type": "forme",
+        "panneau": "P2",
+        "x": 10,
+        "y": 48.5,
+        "largeur": 85,
+        "hauteur": 0.2,
+        "rotation": 0,
+        "z": 22,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "#E5E7EB"
+        }
+      },
+      {
+        "id": "p2-h2",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 10,
+        "y": 52,
+        "largeur": 18,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 23,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "10:30"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 8.5,
+          "tailleMin": 6.5,
+          "graisse": 700,
+          "couleur": "accent"
+        }
+      },
+      {
+        "id": "p2-s2",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 30,
+        "y": 52,
+        "largeur": 65,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 24,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Session plénière"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 8.5,
+          "tailleMin": 6.5,
+          "couleur": "texte"
+        }
+      },
+      {
+        "id": "p2-l2",
+        "type": "forme",
+        "panneau": "P2",
+        "x": 10,
+        "y": 59.5,
+        "largeur": 85,
+        "hauteur": 0.2,
+        "rotation": 0,
+        "z": 25,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "#E5E7EB"
+        }
+      },
+      {
+        "id": "p2-h3",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 10,
+        "y": 63,
+        "largeur": 18,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 26,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "12:30"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 8.5,
+          "tailleMin": 6.5,
+          "graisse": 700,
+          "couleur": "accent"
+        }
+      },
+      {
+        "id": "p2-s3",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 30,
+        "y": 63,
+        "largeur": 65,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 27,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Déjeuner"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 8.5,
+          "tailleMin": 6.5,
+          "couleur": "texte"
+        }
+      },
+      {
+        "id": "p2-l3",
+        "type": "forme",
+        "panneau": "P2",
+        "x": 10,
+        "y": 70.5,
+        "largeur": 85,
+        "hauteur": 0.2,
+        "rotation": 0,
+        "z": 28,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "#E5E7EB"
+        }
+      },
+      {
+        "id": "p2-h4",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 10,
+        "y": 74,
+        "largeur": 18,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 29,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "14:00"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 8.5,
+          "tailleMin": 6.5,
+          "graisse": 700,
+          "couleur": "accent"
+        }
+      },
+      {
+        "id": "p2-s4",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 30,
+        "y": 74,
+        "largeur": 65,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 30,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Ateliers thématiques"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 8.5,
+          "tailleMin": 6.5,
+          "couleur": "texte"
+        }
+      },
+      {
+        "id": "p2-l4",
+        "type": "forme",
+        "panneau": "P2",
+        "x": 10,
+        "y": 81.5,
+        "largeur": 85,
+        "hauteur": 0.2,
+        "rotation": 0,
+        "z": 31,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "#E5E7EB"
+        }
+      },
+      {
+        "id": "p2-h5",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 10,
+        "y": 85,
+        "largeur": 18,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 32,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "16:30"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 8.5,
+          "tailleMin": 6.5,
+          "graisse": 700,
+          "couleur": "accent"
+        }
+      },
+      {
+        "id": "p2-s5",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 30,
+        "y": 85,
+        "largeur": 65,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 33,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Clôture"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 8.5,
+          "tailleMin": 6.5,
+          "couleur": "texte"
+        }
+      },
+      {
+        "id": "p2-l5",
+        "type": "forme",
+        "panneau": "P2",
+        "x": 10,
+        "y": 92.5,
+        "largeur": 85,
+        "hauteur": 0.2,
+        "rotation": 0,
+        "z": 34,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "#E5E7EB"
+        }
+      },
+      {
+        "id": "p2-note",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 10,
+        "y": 101,
+        "largeur": 85,
+        "hauteur": 8,
+        "rotation": 0,
+        "z": 35,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Programme indicatif, susceptible d'évoluer."
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 2,
+          "tailleMax": 7,
+          "tailleMin": 6,
+          "couleur": "#9CA3AF",
+          "italique": true,
+          "alignH": "centre"
+        }
+      },
+      {
+        "id": "p2-box",
+        "type": "forme",
+        "panneau": "P2",
+        "x": 10,
+        "y": 116,
+        "largeur": 85,
+        "hauteur": 17,
+        "rotation": 0,
+        "z": 36,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "secondaire",
+          "rayonMm": 2
+        }
+      },
+      {
+        "id": "p2-box-ico",
+        "type": "icone",
+        "panneau": "P2",
+        "x": 14,
+        "y": 119,
+        "largeur": 5,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 37,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "icone": "lieu"
+        },
+        "style": {
+          "couleur": "principale",
+          "alignH": "centre",
+          "alignV": "milieu"
+        }
+      },
+      {
+        "id": "p2-box-l",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 22,
+        "y": 118.5,
+        "largeur": 70,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 38,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "{{event.lieu}}"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 9,
+          "tailleMin": 6.5,
+          "graisse": 700,
+          "couleur": "principale"
+        }
+      },
+      {
+        "id": "p2-box-a",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 22,
+        "y": 123.5,
+        "largeur": 70,
+        "hauteur": 8,
+        "rotation": 0,
+        "z": 39,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "{{event.adresse}}, {{event.ville}}"
+        },
+        "style": {
+          "alignV": "haut",
+          "lignesMax": 2,
+          "tailleMax": 8,
+          "tailleMin": 6.5,
+          "couleur": "texte",
+          "interligne": 1.25
+        }
+      },
+      {
+        "id": "p3-title",
+        "type": "texte",
+        "panneau": "P3",
+        "x": 8,
+        "y": 12,
+        "largeur": 89,
+        "hauteur": 9,
+        "rotation": 0,
+        "z": 40,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Avec le soutien de"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 13,
+          "tailleMin": 9,
+          "graisse": 700,
+          "police": "Merriweather",
+          "couleur": "principale",
+          "alignH": "centre"
+        }
+      },
+      {
+        "id": "p3-orn",
+        "type": "forme",
+        "panneau": "P3",
+        "x": 45,
+        "y": 23,
+        "largeur": 15,
+        "hauteur": 0.4,
+        "rotation": 0,
+        "z": 41,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "accent"
+        }
+      },
+      {
+        "id": "p3-grid",
+        "type": "grillePartenaires",
+        "panneau": "P3",
+        "x": 8,
+        "y": 30,
+        "largeur": 89,
+        "hauteur": 82,
+        "rotation": 0,
+        "z": 42,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "partenaires": [],
+          "colonnes": 2,
+          "espacementMm": 5
+        },
+        "style": {},
+        "nom": "Logos partenaires"
+      },
+      {
+        "id": "p3-sep",
+        "type": "forme",
+        "panneau": "P3",
+        "x": 8,
+        "y": 118,
+        "largeur": 89,
+        "hauteur": 0.2,
+        "rotation": 0,
+        "z": 43,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "#E5E7EB"
+        }
+      },
+      {
+        "id": "p3-by",
+        "type": "texte",
+        "panneau": "P3",
+        "x": 8,
+        "y": 122,
+        "largeur": 89,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 44,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Une organisation"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 6.5,
+          "tailleMin": 6,
+          "majuscules": true,
+          "graisse": 700,
+          "espacementLettres": 1.2,
+          "couleur": "#6B7280",
+          "alignH": "centre"
+        }
+      },
+      {
+        "id": "p3-logo",
+        "type": "logoOrganisateur",
+        "panneau": "P3",
+        "x": 32.5,
+        "y": 128,
+        "largeur": 40,
+        "hauteur": 13,
+        "rotation": 0,
+        "z": 45,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {},
+        "style": {}
+      },
+      {
+        "id": "p4-bg",
+        "type": "forme",
+        "panneau": "P4",
+        "x": 0,
+        "y": 0,
+        "largeur": 105,
+        "hauteur": 148.5,
+        "rotation": 0,
+        "z": 46,
+        "verrouille": true,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "principale"
+        },
+        "nom": "Fond"
+      },
+      {
+        "id": "p4-title",
+        "type": "texte",
+        "panneau": "P4",
+        "x": 10,
+        "y": 40,
+        "largeur": 85,
+        "hauteur": 10,
+        "rotation": 0,
+        "z": 47,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Merci de votre présence"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 2,
+          "tailleMax": 14,
+          "tailleMin": 9,
+          "graisse": 700,
+          "police": "Merriweather",
+          "couleur": "#FFFFFF",
+          "alignH": "centre"
+        }
+      },
+      {
+        "id": "p4-orn",
+        "type": "forme",
+        "panneau": "P4",
+        "x": 45,
+        "y": 54,
+        "largeur": 15,
+        "hauteur": 0.4,
+        "rotation": 0,
+        "z": 48,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "accent"
+        }
+      },
+      {
+        "id": "p4-txt",
+        "type": "texte",
+        "panneau": "P4",
+        "x": 12,
+        "y": 60,
+        "largeur": 81,
+        "hauteur": 22,
+        "rotation": 0,
+        "z": 49,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Pour toute question pendant l'événement, adressez-vous à l'accueil ou contactez l'équipe organisatrice."
+        },
+        "style": {
+          "alignV": "haut",
+          "lignesMax": 4,
+          "tailleMax": 8.5,
+          "tailleMin": 6.5,
+          "couleur": "#C9CED6",
+          "alignH": "centre",
+          "interligne": 1.4
+        }
+      },
+      {
+        "id": "p4-ico-e",
+        "type": "icone",
+        "panneau": "P4",
+        "x": 49.5,
+        "y": 88,
+        "largeur": 6,
+        "hauteur": 6,
+        "rotation": 0,
+        "z": 50,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "icone": "email"
+        },
+        "style": {
+          "couleur": "accent",
+          "alignH": "centre",
+          "alignV": "milieu"
+        }
+      },
+      {
+        "id": "p4-email",
+        "type": "texte",
+        "panneau": "P4",
+        "x": 10,
+        "y": 96,
+        "largeur": 85,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 51,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "{{organisateur.email}}"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 8.5,
+          "tailleMin": 6.5,
+          "couleur": "#FFFFFF",
+          "alignH": "centre"
+        }
+      },
+      {
+        "id": "p4-tel",
+        "type": "texte",
+        "panneau": "P4",
+        "x": 10,
+        "y": 101.5,
+        "largeur": 85,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 52,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "{{organisateur.telephone}}"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 8.5,
+          "tailleMin": 6.5,
+          "couleur": "#FFFFFF",
+          "alignH": "centre"
+        }
+      },
+      {
+        "id": "p4-web",
+        "type": "texte",
+        "panneau": "P4",
+        "x": 10,
+        "y": 107,
+        "largeur": 85,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 53,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "{{organisateur.siteWeb}}"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 8.5,
+          "tailleMin": 6.5,
+          "couleur": "accent",
+          "alignH": "centre",
+          "graisse": 600
+        }
+      }
+    ]
+  },
+  "images": {},
+  "partenaires": {}
+}

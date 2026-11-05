@@ -1,0 +1,1567 @@
+{
+  "application": "gestion-evenements-badges",
+  "schemaVersion": 1,
+  "exporteLe": "2026-11-05T10:00:00.000Z",
+  "modele": {
+    "nom": "Signal",
+    "description": "A4 plié en 4. Bande de catégorie en haut et rail latéral à la couleur de la catégorie, identité alignée à gauche, QR en bas à droite. Intérieur : infos pratiques, partenaires, contacts et notes.",
+    "format": "A4_PLIE_4",
+    "rotationLigneBas180": false,
+    "traitsDePliage": true,
+    "safeZoneMm": 5,
+    "panneauxActifs": [
+      "P1",
+      "P2",
+      "P3",
+      "P4"
+    ],
+    "theme": {
+      "couleurPrincipale": "#0F5F5C",
+      "couleurSecondaire": "#E7F3F1",
+      "couleurAccent": "#D9822B",
+      "couleurTexte": "#14211F",
+      "policeTitres": "Montserrat",
+      "policeTexte": "Open Sans",
+      "policeNom": "Montserrat"
+    },
+    "elements": [
+      {
+        "id": "p1-band",
+        "type": "bandeCategorie",
+        "panneau": "P1",
+        "x": 0,
+        "y": 0,
+        "largeur": 105,
+        "hauteur": 16,
+        "rotation": 0,
+        "z": 1,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "texte": "auto"
+        },
+        "style": {
+          "fond": "categorie",
+          "couleur": "blanc",
+          "graisse": 800,
+          "majuscules": true,
+          "tailleMax": 13,
+          "tailleMin": 8,
+          "espacementLettres": 4,
+          "alignH": "gauche",
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "paddingMm": 8
+        }
+      },
+      {
+        "id": "p1-rail",
+        "type": "forme",
+        "panneau": "P1",
+        "x": 0,
+        "y": 16,
+        "largeur": 3,
+        "hauteur": 132.5,
+        "rotation": 0,
+        "z": 2,
+        "verrouille": true,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "categorie"
+        },
+        "nom": "Rail catégorie"
+      },
+      {
+        "id": "p1-org",
+        "type": "texte",
+        "panneau": "P1",
+        "x": 9,
+        "y": 22,
+        "largeur": 88,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 3,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "{{organisateur.nom}}"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 7,
+          "tailleMin": 6,
+          "majuscules": true,
+          "graisse": 700,
+          "espacementLettres": 1.2,
+          "couleur": "principale"
+        }
+      },
+      {
+        "id": "p1-title",
+        "type": "texte",
+        "panneau": "P1",
+        "x": 9,
+        "y": 26.5,
+        "largeur": 88,
+        "hauteur": 11,
+        "rotation": 0,
+        "z": 4,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "{{event.titre}}"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 2,
+          "tailleMax": 14,
+          "tailleMin": 9,
+          "graisse": 800,
+          "police": "Montserrat",
+          "couleur": "texte",
+          "interligne": 1.1
+        }
+      },
+      {
+        "id": "p1-dates",
+        "type": "dates",
+        "panneau": "P1",
+        "x": 9,
+        "y": 38,
+        "largeur": 88,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 5,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "format": "long"
+        },
+        "style": {
+          "couleur": "accent",
+          "tailleMax": 8.5,
+          "tailleMin": 6.5,
+          "graisse": 700,
+          "alignV": "milieu",
+          "lignesMax": 1
+        }
+      },
+      {
+        "id": "p1-sep",
+        "type": "forme",
+        "panneau": "P1",
+        "x": 9,
+        "y": 46,
+        "largeur": 88,
+        "hauteur": 0.3,
+        "rotation": 0,
+        "z": 6,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "#E5E7EB"
+        }
+      },
+      {
+        "id": "p1-name",
+        "type": "champ",
+        "panneau": "P1",
+        "x": 9,
+        "y": 51,
+        "largeur": 88,
+        "hauteur": 18,
+        "rotation": 0,
+        "z": 7,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "champ": "nomPrenom",
+          "formatNom": "Prénom NOM"
+        },
+        "style": {
+          "couleur": "texte",
+          "tailleMax": 22,
+          "tailleMin": 12,
+          "lignesMax": 2,
+          "graisse": 800,
+          "police": "Montserrat",
+          "alignH": "gauche",
+          "alignV": "haut",
+          "interligne": 1.05
+        }
+      },
+      {
+        "id": "p1-role",
+        "type": "champ",
+        "panneau": "P1",
+        "x": 9,
+        "y": 70,
+        "largeur": 88,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 8,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "champ": "fonction"
+        },
+        "style": {
+          "couleur": "#6B7280",
+          "tailleMax": 9.5,
+          "tailleMin": 6.5,
+          "alignH": "gauche",
+          "alignV": "milieu",
+          "lignesMax": 1
+        }
+      },
+      {
+        "id": "p1-company",
+        "type": "champ",
+        "panneau": "P1",
+        "x": 9,
+        "y": 75,
+        "largeur": 88,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 9,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "champ": "organisme"
+        },
+        "style": {
+          "couleur": "principale",
+          "tailleMax": 9.5,
+          "tailleMin": 6.5,
+          "graisse": 700,
+          "majuscules": true,
+          "espacementLettres": 0.8,
+          "alignH": "gauche",
+          "alignV": "milieu",
+          "lignesMax": 1
+        }
+      },
+      {
+        "id": "p1-qr",
+        "type": "qrCode",
+        "panneau": "P1",
+        "x": 50,
+        "y": 89,
+        "largeur": 47,
+        "hauteur": 47,
+        "rotation": 0,
+        "z": 10,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {},
+        "style": {
+          "fond": "#FFFFFF",
+          "paddingMm": 1.5
+        }
+      },
+      {
+        "id": "p1-logo",
+        "type": "logoOrganisateur",
+        "panneau": "P1",
+        "x": 9,
+        "y": 112,
+        "largeur": 34,
+        "hauteur": 16,
+        "rotation": 0,
+        "z": 11,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {},
+        "style": {}
+      },
+      {
+        "id": "p1-hint",
+        "type": "texte",
+        "panneau": "P1",
+        "x": 9,
+        "y": 130,
+        "largeur": 36,
+        "hauteur": 6,
+        "rotation": 0,
+        "z": 12,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Présentez ce code à l'entrée"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 2,
+          "tailleMax": 6.5,
+          "tailleMin": 6,
+          "couleur": "#9CA3AF",
+          "italique": true,
+          "interligne": 1.2
+        }
+      },
+      {
+        "id": "p2-kicker",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 8,
+        "y": 10,
+        "largeur": 89,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 13,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Infos pratiques"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 6.5,
+          "tailleMin": 6,
+          "majuscules": true,
+          "graisse": 700,
+          "espacementLettres": 1.2,
+          "couleur": "accent"
+        }
+      },
+      {
+        "id": "p2-title",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 8,
+        "y": 15,
+        "largeur": 89,
+        "hauteur": 8,
+        "rotation": 0,
+        "z": 14,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Bienvenue"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 16,
+          "tailleMin": 10,
+          "graisse": 800,
+          "couleur": "texte",
+          "police": "Montserrat"
+        }
+      },
+      {
+        "id": "p2-d-dot",
+        "type": "forme",
+        "panneau": "P2",
+        "x": 8,
+        "y": 30,
+        "largeur": 9,
+        "hauteur": 9,
+        "rotation": 0,
+        "z": 15,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "cercle"
+        },
+        "style": {
+          "fond": "secondaire"
+        }
+      },
+      {
+        "id": "p2-d-ico",
+        "type": "icone",
+        "panneau": "P2",
+        "x": 10.25,
+        "y": 32.25,
+        "largeur": 4.5,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 16,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "icone": "calendrier"
+        },
+        "style": {
+          "couleur": "principale",
+          "alignH": "centre",
+          "alignV": "milieu"
+        }
+      },
+      {
+        "id": "p2-d-lbl",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 21,
+        "y": 29.5,
+        "largeur": 76,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 17,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Dates"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 6.5,
+          "tailleMin": 6,
+          "majuscules": true,
+          "graisse": 700,
+          "espacementLettres": 1.2,
+          "couleur": "#6B7280"
+        }
+      },
+      {
+        "id": "p2-d-val",
+        "type": "dates",
+        "panneau": "P2",
+        "x": 21,
+        "y": 34,
+        "largeur": 76,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 18,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "format": "long"
+        },
+        "style": {
+          "couleur": "texte",
+          "tailleMax": 9,
+          "tailleMin": 6.5,
+          "graisse": 600,
+          "alignV": "milieu",
+          "lignesMax": 1
+        }
+      },
+      {
+        "id": "p2-l-dot",
+        "type": "forme",
+        "panneau": "P2",
+        "x": 8,
+        "y": 45,
+        "largeur": 9,
+        "hauteur": 9,
+        "rotation": 0,
+        "z": 19,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "cercle"
+        },
+        "style": {
+          "fond": "secondaire"
+        }
+      },
+      {
+        "id": "p2-l-ico",
+        "type": "icone",
+        "panneau": "P2",
+        "x": 10.25,
+        "y": 47.25,
+        "largeur": 4.5,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 20,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "icone": "lieu"
+        },
+        "style": {
+          "couleur": "principale",
+          "alignH": "centre",
+          "alignV": "milieu"
+        }
+      },
+      {
+        "id": "p2-l-lbl",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 21,
+        "y": 44.5,
+        "largeur": 76,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 21,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Lieu"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 6.5,
+          "tailleMin": 6,
+          "majuscules": true,
+          "graisse": 700,
+          "espacementLettres": 1.2,
+          "couleur": "#6B7280"
+        }
+      },
+      {
+        "id": "p2-l-val",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 21,
+        "y": 49,
+        "largeur": 76,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 22,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "{{event.lieu}}"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "couleur": "texte",
+          "tailleMax": 9,
+          "tailleMin": 6.5,
+          "graisse": 600,
+          "interligne": 1.25
+        }
+      },
+      {
+        "id": "p2-a-dot",
+        "type": "forme",
+        "panneau": "P2",
+        "x": 8,
+        "y": 60,
+        "largeur": 9,
+        "hauteur": 9,
+        "rotation": 0,
+        "z": 23,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "cercle"
+        },
+        "style": {
+          "fond": "secondaire"
+        }
+      },
+      {
+        "id": "p2-a-ico",
+        "type": "icone",
+        "panneau": "P2",
+        "x": 10.25,
+        "y": 62.25,
+        "largeur": 4.5,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 24,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "icone": "itineraire"
+        },
+        "style": {
+          "couleur": "principale",
+          "alignH": "centre",
+          "alignV": "milieu"
+        }
+      },
+      {
+        "id": "p2-a-lbl",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 21,
+        "y": 59.5,
+        "largeur": 76,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 25,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Adresse"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 6.5,
+          "tailleMin": 6,
+          "majuscules": true,
+          "graisse": 700,
+          "espacementLettres": 1.2,
+          "couleur": "#6B7280"
+        }
+      },
+      {
+        "id": "p2-a-val",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 21,
+        "y": 64,
+        "largeur": 76,
+        "hauteur": 9.0,
+        "rotation": 0,
+        "z": 26,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "{{event.adresse}}, {{event.ville}}"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 2,
+          "couleur": "texte",
+          "tailleMax": 9,
+          "tailleMin": 6.5,
+          "graisse": 600,
+          "interligne": 1.25
+        }
+      },
+      {
+        "id": "p2-c-dot",
+        "type": "forme",
+        "panneau": "P2",
+        "x": 8,
+        "y": 79,
+        "largeur": 9,
+        "hauteur": 9,
+        "rotation": 0,
+        "z": 27,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "cercle"
+        },
+        "style": {
+          "fond": "secondaire"
+        }
+      },
+      {
+        "id": "p2-c-ico",
+        "type": "icone",
+        "panneau": "P2",
+        "x": 10.25,
+        "y": 81.25,
+        "largeur": 4.5,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 28,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "icone": "ticket"
+        },
+        "style": {
+          "couleur": "principale",
+          "alignH": "centre",
+          "alignV": "milieu"
+        }
+      },
+      {
+        "id": "p2-c-lbl",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 21,
+        "y": 78.5,
+        "largeur": 76,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 29,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Votre accès"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 6.5,
+          "tailleMin": 6,
+          "majuscules": true,
+          "graisse": 700,
+          "espacementLettres": 1.2,
+          "couleur": "#6B7280"
+        }
+      },
+      {
+        "id": "p2-c-val",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 21,
+        "y": 83,
+        "largeur": 76,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 30,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "{{categorie.nom}}"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "couleur": "texte",
+          "tailleMax": 9,
+          "tailleMin": 6.5,
+          "graisse": 600,
+          "interligne": 1.25
+        }
+      },
+      {
+        "id": "p2-card",
+        "type": "forme",
+        "panneau": "P2",
+        "x": 8,
+        "y": 104,
+        "largeur": 89,
+        "hauteur": 27,
+        "rotation": 0,
+        "z": 31,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "principale",
+          "rayonMm": 3
+        }
+      },
+      {
+        "id": "p2-card-t",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 13,
+        "y": 109,
+        "largeur": 79,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 32,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Bon à savoir"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 6.5,
+          "tailleMin": 6,
+          "majuscules": true,
+          "graisse": 700,
+          "espacementLettres": 1.2,
+          "couleur": "accent"
+        }
+      },
+      {
+        "id": "p2-card-b",
+        "type": "texte",
+        "panneau": "P2",
+        "x": 13,
+        "y": 114,
+        "largeur": 79,
+        "hauteur": 13,
+        "rotation": 0,
+        "z": 33,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Votre badge est nominatif. Gardez-le visible pendant tout l'événement : il est scanné à chaque entrée."
+        },
+        "style": {
+          "alignV": "haut",
+          "lignesMax": 4,
+          "couleur": "#FFFFFF",
+          "tailleMax": 8.5,
+          "tailleMin": 6.5,
+          "interligne": 1.35
+        }
+      },
+      {
+        "id": "p3-k",
+        "type": "texte",
+        "panneau": "P3",
+        "x": 8,
+        "y": 10,
+        "largeur": 89,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 34,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Partenaires"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 6.5,
+          "tailleMin": 6,
+          "majuscules": true,
+          "graisse": 700,
+          "espacementLettres": 1.2,
+          "couleur": "accent"
+        }
+      },
+      {
+        "id": "p3-sep",
+        "type": "forme",
+        "panneau": "P3",
+        "x": 8,
+        "y": 16,
+        "largeur": 89,
+        "hauteur": 0.3,
+        "rotation": 0,
+        "z": 35,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "#E5E7EB"
+        }
+      },
+      {
+        "id": "p3-grid",
+        "type": "grillePartenaires",
+        "panneau": "P3",
+        "x": 8,
+        "y": 21,
+        "largeur": 89,
+        "hauteur": 78,
+        "rotation": 0,
+        "z": 36,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "partenaires": [],
+          "colonnes": 3,
+          "espacementMm": 4
+        },
+        "style": {},
+        "nom": "Logos partenaires"
+      },
+      {
+        "id": "p3-foot-bg",
+        "type": "forme",
+        "panneau": "P3",
+        "x": 0,
+        "y": 108,
+        "largeur": 105,
+        "hauteur": 40.5,
+        "rotation": 0,
+        "z": 37,
+        "verrouille": true,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "secondaire"
+        },
+        "nom": "Fond pied"
+      },
+      {
+        "id": "p3-by",
+        "type": "texte",
+        "panneau": "P3",
+        "x": 8,
+        "y": 114,
+        "largeur": 89,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 38,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Organisé par"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 6.5,
+          "tailleMin": 6,
+          "majuscules": true,
+          "graisse": 700,
+          "espacementLettres": 1.2,
+          "couleur": "#6B7280",
+          "alignH": "centre"
+        }
+      },
+      {
+        "id": "p3-logo",
+        "type": "logoOrganisateur",
+        "panneau": "P3",
+        "x": 30,
+        "y": 120,
+        "largeur": 45,
+        "hauteur": 15,
+        "rotation": 0,
+        "z": 39,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {},
+        "style": {}
+      },
+      {
+        "id": "p3-web",
+        "type": "texte",
+        "panneau": "P3",
+        "x": 8,
+        "y": 137,
+        "largeur": 89,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 40,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "{{organisateur.siteWeb}}"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 8,
+          "tailleMin": 6.5,
+          "graisse": 600,
+          "couleur": "principale",
+          "alignH": "centre"
+        }
+      },
+      {
+        "id": "p4-k",
+        "type": "texte",
+        "panneau": "P4",
+        "x": 8,
+        "y": 10,
+        "largeur": 89,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 41,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Contact"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 6.5,
+          "tailleMin": 6,
+          "majuscules": true,
+          "graisse": 700,
+          "espacementLettres": 1.2,
+          "couleur": "accent"
+        }
+      },
+      {
+        "id": "p4-title",
+        "type": "texte",
+        "panneau": "P4",
+        "x": 8,
+        "y": 15,
+        "largeur": 89,
+        "hauteur": 8,
+        "rotation": 0,
+        "z": 42,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Une question ?"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 16,
+          "tailleMin": 10,
+          "graisse": 800,
+          "couleur": "texte",
+          "police": "Montserrat"
+        }
+      },
+      {
+        "id": "p4-t-dot",
+        "type": "forme",
+        "panneau": "P4",
+        "x": 8,
+        "y": 30,
+        "largeur": 9,
+        "hauteur": 9,
+        "rotation": 0,
+        "z": 43,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "cercle"
+        },
+        "style": {
+          "fond": "secondaire"
+        }
+      },
+      {
+        "id": "p4-t-ico",
+        "type": "icone",
+        "panneau": "P4",
+        "x": 10.25,
+        "y": 32.25,
+        "largeur": 4.5,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 44,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "icone": "telephone"
+        },
+        "style": {
+          "couleur": "principale",
+          "alignH": "centre",
+          "alignV": "milieu"
+        }
+      },
+      {
+        "id": "p4-t-lbl",
+        "type": "texte",
+        "panneau": "P4",
+        "x": 21,
+        "y": 29.5,
+        "largeur": 76,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 45,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Téléphone"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 6.5,
+          "tailleMin": 6,
+          "majuscules": true,
+          "graisse": 700,
+          "espacementLettres": 1.2,
+          "couleur": "#6B7280"
+        }
+      },
+      {
+        "id": "p4-t-val",
+        "type": "texte",
+        "panneau": "P4",
+        "x": 21,
+        "y": 34,
+        "largeur": 76,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 46,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "{{organisateur.telephone}}"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "couleur": "texte",
+          "tailleMax": 9,
+          "tailleMin": 6.5,
+          "graisse": 600,
+          "interligne": 1.25
+        }
+      },
+      {
+        "id": "p4-e-dot",
+        "type": "forme",
+        "panneau": "P4",
+        "x": 8,
+        "y": 45,
+        "largeur": 9,
+        "hauteur": 9,
+        "rotation": 0,
+        "z": 47,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "cercle"
+        },
+        "style": {
+          "fond": "secondaire"
+        }
+      },
+      {
+        "id": "p4-e-ico",
+        "type": "icone",
+        "panneau": "P4",
+        "x": 10.25,
+        "y": 47.25,
+        "largeur": 4.5,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 48,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "icone": "email"
+        },
+        "style": {
+          "couleur": "principale",
+          "alignH": "centre",
+          "alignV": "milieu"
+        }
+      },
+      {
+        "id": "p4-e-lbl",
+        "type": "texte",
+        "panneau": "P4",
+        "x": 21,
+        "y": 44.5,
+        "largeur": 76,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 49,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Email"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 6.5,
+          "tailleMin": 6,
+          "majuscules": true,
+          "graisse": 700,
+          "espacementLettres": 1.2,
+          "couleur": "#6B7280"
+        }
+      },
+      {
+        "id": "p4-e-val",
+        "type": "texte",
+        "panneau": "P4",
+        "x": 21,
+        "y": 49,
+        "largeur": 76,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 50,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "{{organisateur.email}}"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "couleur": "texte",
+          "tailleMax": 9,
+          "tailleMin": 6.5,
+          "graisse": 600,
+          "interligne": 1.25
+        }
+      },
+      {
+        "id": "p4-w-dot",
+        "type": "forme",
+        "panneau": "P4",
+        "x": 8,
+        "y": 60,
+        "largeur": 9,
+        "hauteur": 9,
+        "rotation": 0,
+        "z": 51,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "cercle"
+        },
+        "style": {
+          "fond": "secondaire"
+        }
+      },
+      {
+        "id": "p4-w-ico",
+        "type": "icone",
+        "panneau": "P4",
+        "x": 10.25,
+        "y": 62.25,
+        "largeur": 4.5,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 52,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "icone": "web"
+        },
+        "style": {
+          "couleur": "principale",
+          "alignH": "centre",
+          "alignV": "milieu"
+        }
+      },
+      {
+        "id": "p4-w-lbl",
+        "type": "texte",
+        "panneau": "P4",
+        "x": 21,
+        "y": 59.5,
+        "largeur": 76,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 53,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Site web"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 6.5,
+          "tailleMin": 6,
+          "majuscules": true,
+          "graisse": 700,
+          "espacementLettres": 1.2,
+          "couleur": "#6B7280"
+        }
+      },
+      {
+        "id": "p4-w-val",
+        "type": "texte",
+        "panneau": "P4",
+        "x": 21,
+        "y": 64,
+        "largeur": 76,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 54,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "{{organisateur.siteWeb}}"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "couleur": "texte",
+          "tailleMax": 9,
+          "tailleMin": 6.5,
+          "graisse": 600,
+          "interligne": 1.25
+        }
+      },
+      {
+        "id": "p4-notes",
+        "type": "texte",
+        "panneau": "P4",
+        "x": 8,
+        "y": 82,
+        "largeur": 89,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 55,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Notes"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 6.5,
+          "tailleMin": 6,
+          "majuscules": true,
+          "graisse": 700,
+          "espacementLettres": 1.2,
+          "couleur": "#6B7280"
+        }
+      },
+      {
+        "id": "p4-line-0",
+        "type": "forme",
+        "panneau": "P4",
+        "x": 8,
+        "y": 94,
+        "largeur": 89,
+        "hauteur": 0.25,
+        "rotation": 0,
+        "z": 56,
+        "verrouille": true,
+        "masque": false,
+        "groupeId": "p4-lignes",
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "#E5E7EB"
+        },
+        "nom": "Ligne 1"
+      },
+      {
+        "id": "p4-line-1",
+        "type": "forme",
+        "panneau": "P4",
+        "x": 8,
+        "y": 102,
+        "largeur": 89,
+        "hauteur": 0.25,
+        "rotation": 0,
+        "z": 57,
+        "verrouille": true,
+        "masque": false,
+        "groupeId": "p4-lignes",
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "#E5E7EB"
+        },
+        "nom": "Ligne 2"
+      },
+      {
+        "id": "p4-line-2",
+        "type": "forme",
+        "panneau": "P4",
+        "x": 8,
+        "y": 110,
+        "largeur": 89,
+        "hauteur": 0.25,
+        "rotation": 0,
+        "z": 58,
+        "verrouille": true,
+        "masque": false,
+        "groupeId": "p4-lignes",
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "#E5E7EB"
+        },
+        "nom": "Ligne 3"
+      },
+      {
+        "id": "p4-line-3",
+        "type": "forme",
+        "panneau": "P4",
+        "x": 8,
+        "y": 118,
+        "largeur": 89,
+        "hauteur": 0.25,
+        "rotation": 0,
+        "z": 59,
+        "verrouille": true,
+        "masque": false,
+        "groupeId": "p4-lignes",
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "#E5E7EB"
+        },
+        "nom": "Ligne 4"
+      },
+      {
+        "id": "p4-line-4",
+        "type": "forme",
+        "panneau": "P4",
+        "x": 8,
+        "y": 126,
+        "largeur": 89,
+        "hauteur": 0.25,
+        "rotation": 0,
+        "z": 60,
+        "verrouille": true,
+        "masque": false,
+        "groupeId": "p4-lignes",
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "#E5E7EB"
+        },
+        "nom": "Ligne 5"
+      },
+      {
+        "id": "p4-line-5",
+        "type": "forme",
+        "panneau": "P4",
+        "x": 8,
+        "y": 134,
+        "largeur": 89,
+        "hauteur": 0.25,
+        "rotation": 0,
+        "z": 61,
+        "verrouille": true,
+        "masque": false,
+        "groupeId": "p4-lignes",
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "#E5E7EB"
+        },
+        "nom": "Ligne 6"
+      },
+      {
+        "id": "p4-foot",
+        "type": "texte",
+        "panneau": "P4",
+        "x": 8,
+        "y": 139,
+        "largeur": 89,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 62,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "{{event.titre}} · {{event.dates}}"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 6.5,
+          "tailleMin": 6,
+          "couleur": "#9CA3AF",
+          "alignH": "centre"
+        }
+      }
+    ]
+  },
+  "images": {},
+  "partenaires": {}
+}

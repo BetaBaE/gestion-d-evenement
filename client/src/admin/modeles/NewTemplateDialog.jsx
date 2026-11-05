@@ -14,12 +14,11 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { STARTER_TEMPLATES } from '../../../../shared/badge-renderer/index.js';
 import { axiosClient } from '../../api/axiosClient.js';
 import { getSelectedOrganisateurId } from '../organisateurContext.js';
 import { BadgeFormatFields, formatErrors, formatPayload, formatStateFrom } from './BadgeFormatFields.jsx';
 
-const STARTERS = Object.entries(STARTER_TEMPLATES).map(([key, t]) => ({ key, label: t.label }));
+import { STARTERS, StarterGallery } from './StarterGallery.jsx';
 
 /**
  * "Nouveau modèle": a blank page (brand-kit theme, no elements, any
@@ -41,6 +40,7 @@ export function NewTemplateDialog({ open, modeles, initial, onClose, onCreated }
     setNom(initial?.nom || '');
     setDescription(initial?.description || '');
     setDepart(initial?.depart || 'VIERGE');
+    setStarterKey(initial?.starterKey || STARTERS[0]?.key || '');
     setSourceModeleId(initial?.sourceModeleId || modeles[0]?._id || '');
     setFormat(formatStateFrom());
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -72,7 +72,7 @@ export function NewTemplateDialog({ open, modeles, initial, onClose, onCreated }
   }
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>Nouveau modèle</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
@@ -92,13 +92,7 @@ export function NewTemplateDialog({ open, modeles, initial, onClose, onCreated }
 
           {depart === 'VIERGE' && <BadgeFormatFields value={format} onChange={setFormat} />}
           {depart === 'STARTER' && (
-            <TextField select size="small" label="Modèle de départ" value={starterKey} onChange={(e) => setStarterKey(e.target.value)} fullWidth>
-              {STARTERS.map((s) => (
-                <MenuItem key={s.key} value={s.key}>
-                  {s.label}
-                </MenuItem>
-              ))}
-            </TextField>
+            <StarterGallery compact selectedKey={starterKey} onSelect={setStarterKey} />
           )}
           {depart === 'DUPLIQUER' && (
             <TextField select size="small" label="Modèle à dupliquer" value={sourceModeleId} onChange={(e) => setSourceModeleId(e.target.value)} fullWidth>

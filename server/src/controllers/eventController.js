@@ -15,7 +15,7 @@ import { Organisateur } from '../models/Organisateur.js';
 import { ModeleBadge } from '../models/ModeleBadge.js';
 import { InvitedOrganism } from '../models/InvitedOrganism.js';
 import { Partenaire } from '../models/Partenaire.js';
-import { STARTER_TEMPLATES, checkBadgeRules } from '../../../shared/badge-renderer/index.js';
+import { STARTER_TEMPLATES, DEFAULT_STARTER_KEY, checkBadgeRules } from '../../../shared/badge-renderer/index.js';
 import { elementSchema, themeSchema, validateElementTypes } from '../validation/badgeElements.js';
 
 // Badge elements are set by applying a template (applyBadgeTemplate) or by
@@ -52,7 +52,7 @@ async function defaultBadgeForOrganisateur(organisateurId) {
   if (modele) {
     return badgeFromTemplate(modele, { modeleSourceId: modele._id, modeleSourceVersion: modele.version });
   }
-  return badgeFromTemplate(STARTER_TEMPLATES.SALON_A4_PLIE_4.build());
+  return badgeFromTemplate(STARTER_TEMPLATES[DEFAULT_STARTER_KEY].build());
 }
 
 const eventSchema = z.object({
@@ -329,7 +329,7 @@ export async function purgeTestScans(req, res, next) {
 
 /**
  * Lists everything that can be applied to an event's badge: the read-only
- * starter templates defined in code, plus this organisateur's own
+ * built-in starter templates (shared/badge-renderer/starters), plus this organisateur's own
  * (non-archived) ModeleBadge templates.
  */
 export async function listBadgeTemplates(req, res, next) {
@@ -339,7 +339,7 @@ export async function listBadgeTemplates(req, res, next) {
       .select('nom description format parDefaut version');
 
     res.json({
-      starters: Object.entries(STARTER_TEMPLATES).map(([key, t]) => ({ key, nom: t.label })),
+      starters: Object.values(STARTER_TEMPLATES).map((t) => ({ key: t.key, nom: t.label, description: t.description, format: t.format })),
       modeles,
     });
   } catch (error) {

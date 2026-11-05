@@ -16,7 +16,7 @@ export {
 } from './registry.js';
 export { esc, renderRichText, isValidHexColor, isValidHttpUrl } from './escape.js';
 export { nanoid } from './nanoid.js';
-export { STARTER_TEMPLATES } from './templates.js';
+export { STARTER_TEMPLATES, DEFAULT_STARTER_KEY, FORMAT_LABELS } from './templates.js';
 export { ALL_PANELS, activePanelKeys, elementsHorsPage } from './panels.js';
 export { ICONS } from './icons.js';
 export { checkBadgeRules, hasBlockingRules } from './rules.js';

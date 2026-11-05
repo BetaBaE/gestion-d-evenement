@@ -1,0 +1,366 @@
+{
+  "application": "gestion-evenements-badges",
+  "schemaVersion": 1,
+  "exporteLe": "2026-11-05T10:00:00.000Z",
+  "modele": {
+    "nom": "Épure",
+    "description": "A6 simple (une page). Design typographique sur fond blanc, très économe en encre : grand nom aligné à gauche, QR en bas à gauche, catégorie signalée par une pastille et un liseré de couleur.",
+    "format": "A6",
+    "rotationLigneBas180": false,
+    "traitsDePliage": false,
+    "safeZoneMm": 5,
+    "panneauxActifs": [
+      "P1"
+    ],
+    "theme": {
+      "couleurPrincipale": "#111111",
+      "couleurSecondaire": "#F4F4F5",
+      "couleurAccent": "#2563EB",
+      "couleurTexte": "#111111",
+      "policeTitres": "Montserrat",
+      "policeTexte": "Open Sans",
+      "policeNom": "Montserrat"
+    },
+    "elements": [
+      {
+        "id": "p1-logo",
+        "type": "logoOrganisateur",
+        "panneau": "P1",
+        "x": 8,
+        "y": 8,
+        "largeur": 30,
+        "hauteur": 12,
+        "rotation": 0,
+        "z": 1,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {},
+        "style": {
+          "alignH": "gauche"
+        }
+      },
+      {
+        "id": "p1-dates",
+        "type": "dates",
+        "panneau": "P1",
+        "x": 45,
+        "y": 8,
+        "largeur": 52,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 2,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "format": "court"
+        },
+        "style": {
+          "couleur": "texte",
+          "tailleMax": 8,
+          "tailleMin": 6.5,
+          "graisse": 700,
+          "alignH": "droite",
+          "alignV": "milieu",
+          "lignesMax": 1
+        }
+      },
+      {
+        "id": "p1-lieu",
+        "type": "texte",
+        "panneau": "P1",
+        "x": 45,
+        "y": 13.5,
+        "largeur": 52,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 3,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "{{event.ville}}"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 7.5,
+          "tailleMin": 6.5,
+          "couleur": "#6B7280",
+          "alignH": "droite"
+        }
+      },
+      {
+        "id": "p1-title",
+        "type": "texte",
+        "panneau": "P1",
+        "x": 8,
+        "y": 26,
+        "largeur": 89,
+        "hauteur": 10,
+        "rotation": 0,
+        "z": 4,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "{{event.titre}}"
+        },
+        "style": {
+          "alignV": "haut",
+          "lignesMax": 2,
+          "tailleMax": 10,
+          "tailleMin": 7,
+          "graisse": 600,
+          "couleur": "#6B7280",
+          "interligne": 1.2
+        }
+      },
+      {
+        "id": "p1-sep",
+        "type": "forme",
+        "panneau": "P1",
+        "x": 8,
+        "y": 38,
+        "largeur": 12,
+        "hauteur": 0.8,
+        "rotation": 0,
+        "z": 5,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "categorie"
+        }
+      },
+      {
+        "id": "p1-name",
+        "type": "champ",
+        "panneau": "P1",
+        "x": 8,
+        "y": 43,
+        "largeur": 89,
+        "hauteur": 22,
+        "rotation": 0,
+        "z": 6,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "champ": "nomPrenom",
+          "formatNom": "Prénom NOM"
+        },
+        "style": {
+          "couleur": "texte",
+          "tailleMax": 24,
+          "tailleMin": 13,
+          "lignesMax": 2,
+          "graisse": 800,
+          "police": "Montserrat",
+          "alignH": "gauche",
+          "alignV": "haut",
+          "interligne": 1.0
+        }
+      },
+      {
+        "id": "p1-role",
+        "type": "champ",
+        "panneau": "P1",
+        "x": 8,
+        "y": 66,
+        "largeur": 89,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 7,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "champ": "fonction"
+        },
+        "style": {
+          "couleur": "texte",
+          "tailleMax": 10,
+          "tailleMin": 7,
+          "alignH": "gauche",
+          "alignV": "milieu",
+          "lignesMax": 1
+        }
+      },
+      {
+        "id": "p1-company",
+        "type": "champ",
+        "panneau": "P1",
+        "x": 8,
+        "y": 71.5,
+        "largeur": 89,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 8,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "champ": "organisme"
+        },
+        "style": {
+          "couleur": "#6B7280",
+          "tailleMax": 10,
+          "tailleMin": 7,
+          "alignH": "gauche",
+          "alignV": "milieu",
+          "lignesMax": 1
+        }
+      },
+      {
+        "id": "p1-qr",
+        "type": "qrCode",
+        "panneau": "P1",
+        "x": 8,
+        "y": 90,
+        "largeur": 45,
+        "hauteur": 45,
+        "rotation": 0,
+        "z": 9,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {},
+        "style": {
+          "fond": "#FFFFFF"
+        }
+      },
+      {
+        "id": "p1-cat-dot",
+        "type": "forme",
+        "panneau": "P1",
+        "x": 58,
+        "y": 93,
+        "largeur": 4,
+        "hauteur": 4,
+        "rotation": 0,
+        "z": 10,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "cercle"
+        },
+        "style": {
+          "fond": "categorie"
+        }
+      },
+      {
+        "id": "p1-cat",
+        "type": "texte",
+        "panneau": "P1",
+        "x": 64,
+        "y": 92.5,
+        "largeur": 33,
+        "hauteur": 5,
+        "rotation": 0,
+        "z": 11,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "{{categorie.nom}}"
+        },
+        "style": {
+          "alignV": "milieu",
+          "lignesMax": 1,
+          "tailleMax": 9,
+          "tailleMin": 6.5,
+          "graisse": 800,
+          "majuscules": true,
+          "espacementLettres": 1,
+          "couleur": "texte"
+        }
+      },
+      {
+        "id": "p1-org-logo",
+        "type": "logoOrganisme",
+        "panneau": "P1",
+        "x": 58,
+        "y": 102,
+        "largeur": 39,
+        "hauteur": 14,
+        "rotation": 0,
+        "z": 12,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {},
+        "style": {
+          "alignH": "gauche"
+        }
+      },
+      {
+        "id": "p1-hint",
+        "type": "texte",
+        "panneau": "P1",
+        "x": 58,
+        "y": 126,
+        "largeur": 39,
+        "hauteur": 8,
+        "rotation": 0,
+        "z": 13,
+        "verrouille": false,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "contenu": "Badge nominatif — à présenter à l'entrée"
+        },
+        "style": {
+          "alignV": "bas",
+          "lignesMax": 2,
+          "tailleMax": 6.5,
+          "tailleMin": 6,
+          "couleur": "#9CA3AF",
+          "interligne": 1.2
+        }
+      },
+      {
+        "id": "p1-foot",
+        "type": "forme",
+        "panneau": "P1",
+        "x": 0,
+        "y": 144,
+        "largeur": 105,
+        "hauteur": 4.5,
+        "rotation": 0,
+        "z": 14,
+        "verrouille": true,
+        "masque": false,
+        "groupeId": null,
+        "visibleSi": null,
+        "props": {
+          "forme": "rectangle"
+        },
+        "style": {
+          "fond": "categorie"
+        },
+        "nom": "Liseré catégorie"
+      }
+    ]
+  },
+  "images": {},
+  "partenaires": {}
+}

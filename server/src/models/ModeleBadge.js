@@ -60,6 +60,10 @@ const modeleBadgeSchema = new mongoose.Schema(
     panneauxActifs: { type: [{ type: String, enum: ['P1', 'P2', 'P3', 'P4'] }], default: undefined },
     theme: { type: themeSchema, default: () => ({}) },
     elements: { type: [elementSchema], default: [] },
+    // Created from a built-in starter (shared/badge-renderer/starters): which one, which
+    // version. With version 1 (never saved since), the template is that starter, unmodified.
+    starterKey: { type: String, default: null },
+    starterVersion: { type: Number, default: null },
     miniatureImageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Image', default: null },
     parDefaut: { type: Boolean, default: false },
     version: { type: Number, default: 1 },
