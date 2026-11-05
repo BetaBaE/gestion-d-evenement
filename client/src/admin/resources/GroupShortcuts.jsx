@@ -7,6 +7,7 @@ import PrintIcon from '@mui/icons-material/Print';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import { getGroupCounts } from '../../api/bulkApi.js';
 import { BulkConfirmDialog } from './BulkConfirmDialog.jsx';
+import { PrintBadgesDialog } from './PrintBadgesDialog.jsx';
 
 /**
  * Group shortcuts ("Valider tout (8)", "Imprimer le groupe"…): each one is a
@@ -15,21 +16,32 @@ import { BulkConfirmDialog } from './BulkConfirmDialog.jsx';
  */
 const GroupActionContext = createContext(null);
 
-export function GroupActionsProvider({ eventId, onPrint, children }) {
+export function GroupActionsProvider({ eventId, children }) {
+  const event = useRecordContext(); // rendered on the event page, outside any list row
   const [request, setRequest] = useState(null);
+  const [printing, setPrinting] = useState(null); // { selection, onStarted }
   const value = {
     run: (action, filtre, options = {}) => setRequest({ action, selection: { mode: 'filtre', filtre }, options }),
-    print: onPrint ? (filtre) => onPrint({ mode: 'filtre', filtre }) : null,
+    // A filter ({ invitedOrganismId }) or a full selection ({ mode, … }) from the list.
+    print: (selectionOrFiltre, onStarted) =>
+      setPrinting({ selection: selectionOrFiltre.mode ? selectionOrFiltre : { mode: 'filtre', filtre: selectionOrFiltre }, onStarted }),
   };
   return (
     <GroupActionContext.Provider value={value}>
       {children}
       <BulkConfirmDialog eventId={eventId} request={request} onClose={() => setRequest(null)} />
+      <PrintBadgesDialog
+        eventId={eventId}
+        selection={printing?.selection || null}
+        badgeFormat={event?.badge?.format}
+        onClose={() => setPrinting(null)}
+        onStarted={printing?.onStarted}
+      />
     </GroupActionContext.Provider>
   );
 }
 
-const useGroupAction = () => useContext(GroupActionContext) || { run: () => {}, print: null };
+export const useGroupAction = () => useContext(GroupActionContext) || { run: () => {}, print: null };
 
 /** Refetched by react-admin's refresh (e.g. when a job finishes). */
 export function useGroupCounts(eventId) {

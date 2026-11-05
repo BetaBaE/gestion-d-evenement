@@ -10,8 +10,8 @@ function bucket() {
   return new mongoose.mongo.GridFSBucket(mongoose.connection.db, { bucketName: 'fichiers' });
 }
 
-export async function saveFile(buffer, { filename, contentType, expireLe, organisateurId, jobId }) {
-  const upload = bucket().openUploadStream(filename, { metadata: { contentType, expireLe, organisateurId, jobId } });
+export async function saveFile(buffer, { filename, contentType, expireLe, organisateurId, jobId, extra = {} }) {
+  const upload = bucket().openUploadStream(filename, { metadata: { ...extra, contentType, expireLe, organisateurId, jobId } });
   await new Promise((resolve, reject) => {
     Readable.from(buffer).pipe(upload).on('finish', resolve).on('error', reject);
   });
@@ -38,6 +38,15 @@ export async function deleteFile(fileId) {
   } catch {
     // already gone
   }
+}
+
+/** Files of a job matching extra metadata (e.g. { chunk: 40 }), as fichiers.files documents. */
+export function findJobFiles(jobId, metadata = {}) {
+  const query = { 'metadata.jobId': jobId };
+  Object.entries(metadata).forEach(([k, v]) => {
+    query[`metadata.${k}`] = v;
+  });
+  return mongoose.connection.db.collection('fichiers.files').find(query).toArray();
 }
 
 export async function cleanupExpiredFiles(now = new Date()) {

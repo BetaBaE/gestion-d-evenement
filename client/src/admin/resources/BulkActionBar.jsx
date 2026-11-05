@@ -12,16 +12,18 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import { useCurrentSelection, useSelectionMode } from './ParticipantSelection.jsx';
 import { BulkConfirmDialog } from './BulkConfirmDialog.jsx';
+import { useGroupAction } from './GroupShortcuts.jsx';
 
 /**
  * Sticky bar at the bottom of the participant list as soon as something is
  * selected. Every action goes through the confirmation dialog (server-side
  * eligibility summary) and then runs as a background job.
  */
-export function BulkActionBar({ eventId, categories, onPrint }) {
+export function BulkActionBar({ eventId, categories }) {
   const { selection, count } = useCurrentSelection();
   const { onUnselectItems } = useListContext();
   const { setFilterMode } = useSelectionMode();
+  const { print } = useGroupAction();
   const [request, setRequest] = useState(null);
   const [menu, setMenu] = useState(null); // { kind: 'categorie' | 'email', anchor }
 
@@ -60,8 +62,8 @@ export function BulkActionBar({ eventId, categories, onPrint }) {
             <Button size="small" startIcon={<CategoryIcon />} endIcon={<ArrowDropDownIcon />} onClick={(e) => setMenu({ kind: 'categorie', anchor: e.currentTarget })}>
               Changer la catégorie
             </Button>
-            {onPrint && (
-              <Button size="small" startIcon={<PrintIcon />} onClick={() => onPrint(selection)}>
+            {print && (
+              <Button size="small" startIcon={<PrintIcon />} onClick={() => print(selection, clearSelection)}>
                 Imprimer les badges
               </Button>
             )}

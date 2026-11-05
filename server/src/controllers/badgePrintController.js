@@ -1,34 +1,9 @@
 import { z } from 'zod';
 import { Participant } from '../models/Participant.js';
-import { CategorieEvent } from '../models/CategorieEvent.js';
-import { InvitedOrganism } from '../models/InvitedOrganism.js';
-import { Organisateur } from '../models/Organisateur.js';
 import { ApiError } from '../middlewares/errorHandler.js';
-import { generateSingleBadgePdf, generateBatchBadgesPdf } from '../services/badgeService.js';
+import { generateSingleBadgePdf, generateBatchBadgesPdf, loadBadgeEntries as hydrateEntries } from '../services/badgeService.js';
 import { buildParticipantFilter } from '../services/participantFilter.js';
 import { participantsWorkbook } from '../services/participantExport.js';
-
-async function hydrateEntries(event, participants) {
-  const categorieIds = [...new Set(participants.map((p) => p.categorieId?.toString()).filter(Boolean))];
-  const organismeIds = [...new Set(participants.map((p) => p.invitedOrganismId?.toString()).filter(Boolean))];
-
-  const [categories, organismes, organisateur] = await Promise.all([
-    CategorieEvent.find({ _id: { $in: categorieIds } }),
-    InvitedOrganism.find({ _id: { $in: organismeIds } }),
-    Organisateur.findById(event.organisateurId),
-  ]);
-
-  const categorieMap = new Map(categories.map((c) => [c._id.toString(), c]));
-  const organismeMap = new Map(organismes.map((o) => [o._id.toString(), o]));
-
-  return participants.map((participant) => ({
-    participant,
-    event,
-    categorie: categorieMap.get(participant.categorieId?.toString()),
-    organisme: organismeMap.get(participant.invitedOrganismId?.toString()),
-    organisateur,
-  }));
-}
 
 export async function printSingleBadge(req, res, next) {
   try {

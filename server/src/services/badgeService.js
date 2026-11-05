@@ -3,6 +3,9 @@ import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer';
 import { getImageWithData } from './imageService.js';
 import { Partenaire } from '../models/Partenaire.js';
+import { CategorieEvent } from '../models/CategorieEvent.js';
+import { InvitedOrganism } from '../models/InvitedOrganism.js';
+import { Organisateur } from '../models/Organisateur.js';
 import { generateQrCodeSvg } from './qrService.js';
 import { renderBadgeHtml, renderBatchBadgeHtml } from '../../../shared/badge-renderer/index.js';
 
@@ -149,6 +152,29 @@ export async function generateBadgeHtmlPreview(args) {
   const fitScript = await getBrowserFitScript();
   const bootstrap = `<script>${fitScript}</script><script>document.fonts.ready.then(function(){window.__badgeRendererFit();});</script>`;
   return html.replace('</body>', `${bootstrap}</body>`);
+}
+
+/** { participant, event, categorie, organisme, organisateur } for each participant (badge rendering input). */
+export async function loadBadgeEntries(event, participants) {
+  const categorieIds = [...new Set(participants.map((p) => p.categorieId?.toString()).filter(Boolean))];
+  const organismeIds = [...new Set(participants.map((p) => p.invitedOrganismId?.toString()).filter(Boolean))];
+
+  const [categories, organismes, organisateur] = await Promise.all([
+    CategorieEvent.find({ _id: { $in: categorieIds } }),
+    InvitedOrganism.find({ _id: { $in: organismeIds } }),
+    Organisateur.findById(event.organisateurId),
+  ]);
+
+  const categorieMap = new Map(categories.map((c) => [c._id.toString(), c]));
+  const organismeMap = new Map(organismes.map((o) => [o._id.toString(), o]));
+
+  return participants.map((participant) => ({
+    participant,
+    event,
+    categorie: categorieMap.get(participant.categorieId?.toString()),
+    organisme: organismeMap.get(participant.invitedOrganismId?.toString()),
+    organisateur,
+  }));
 }
 
 export async function generateBatchBadgesPdf(entries) {

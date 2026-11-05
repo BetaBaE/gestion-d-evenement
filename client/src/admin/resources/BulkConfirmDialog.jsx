@@ -26,33 +26,48 @@ const plural = (n, word) => `${n} ${word}${n > 1 ? 's' : ''}`;
  * followed in the "Tâches" panel. The requestId is created when the dialog
  * opens, so a double click on "Confirmer" starts a single job.
  *
- * request: { action, selection, options } — null when closed.
+ * request: { action, selection, options } — null when closed. children:
+ * option controls shown above the summary (the summary is recomputed when
+ * the request changes).
  */
-export function BulkConfirmDialog({ eventId, request, onClose, onStarted }) {
+export function BulkConfirmDialog({ eventId, request, onClose, onStarted, title, children }) {
   const notify = useNotify();
   const { track } = useJobs();
   const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [typed, setTyped] = useState('');
   const [sending, setSending] = useState(false);
   const requestId = useMemo(() => (request ? newRequestId() : null), [request]);
+  const opened = !!request;
+
+  useEffect(() => {
+    if (!opened) {
+      setSummary(null);
+      setTyped('');
+    }
+  }, [opened]);
 
   useEffect(() => {
     if (!request) return undefined;
     let cancelled = false;
-    setSummary(null);
+    setLoading(true);
     setError(null);
-    setTyped('');
     previewBulkAction(eventId, request)
       .then((s) => !cancelled && setSummary(s))
-      .catch((e) => !cancelled && setError(e.response?.data?.message || "Impossible de préparer l'action."));
+      .catch((e) => {
+        if (cancelled) return;
+        setSummary(null);
+        setError(e.response?.data?.message || "Impossible de préparer l'action.");
+      })
+      .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
     };
   }, [eventId, request]);
 
   const isDelete = request?.action === 'SUPPRIMER';
-  const canConfirm = summary && summary.eligibles > 0 && !sending && (!isDelete || Number(typed) === summary.eligibles);
+  const canConfirm = summary && !loading && summary.eligibles > 0 && !sending && (!isDelete || Number(typed) === summary.eligibles);
 
   async function confirm() {
     setSending(true);
@@ -71,8 +86,9 @@ export function BulkConfirmDialog({ eventId, request, onClose, onStarted }) {
 
   return (
     <Dialog open={!!request} onClose={sending ? undefined : onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{summary?.libelle || 'Action groupée'}</DialogTitle>
+      <DialogTitle>{title || summary?.libelle || 'Action groupée'}</DialogTitle>
       <DialogContent>
+        {children}
         {!summary && !error && (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
             <CircularProgress size={28} />
@@ -80,7 +96,7 @@ export function BulkConfirmDialog({ eventId, request, onClose, onStarted }) {
         )}
         {error && <Alert severity="error">{error}</Alert>}
         {summary && (
-          <Stack spacing={1.5}>
+          <Stack spacing={1.5} sx={{ opacity: loading ? 0.5 : 1, transition: 'opacity 120ms' }}>
             <Typography>
               <strong>{plural(summary.total, 'sélectionné')}</strong> → <strong>{summary.eligibles}</strong> {summary.verbe}
               {summary.ignores.map((i) => (
@@ -99,7 +115,8 @@ export function BulkConfirmDialog({ eventId, request, onClose, onStarted }) {
             )}
             {summary.dejaImprimes > 0 && (
               <Alert severity="warning">
-                {plural(summary.dejaImprimes, 'badge')} {summary.dejaImprimes > 1 ? 'ont' : 'a'} déjà été imprimé{summary.dejaImprimes > 1 ? 's' : ''}.
+                Réimpression : {plural(summary.dejaImprimes, 'badge')} {summary.dejaImprimes > 1 ? 'ont' : 'a'} déjà été imprimé
+                {summary.dejaImprimes > 1 ? 's' : ''}. Cochez « Seulement les badges jamais imprimés » pour {summary.dejaImprimes > 1 ? 'les' : 'le'} exclure.
               </Alert>
             )}
             {isDelete && summary.eligibles > 0 && (

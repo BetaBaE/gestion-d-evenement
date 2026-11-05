@@ -4,7 +4,9 @@ import { Participant } from '../models/Participant.js';
 import { Scan } from '../models/Scan.js';
 import { CategorieEvent } from '../models/CategorieEvent.js';
 import { ApiError } from '../middlewares/errorHandler.js';
-import { BULK_ACTIONS, summarize } from '../services/bulkRules.js';
+import { InvitedOrganism } from '../models/InvitedOrganism.js';
+import { BULK_ACTIONS, eligibility, summarize } from '../services/bulkRules.js';
+import { sortForPrint } from '../services/printPlan.js';
 import { normalizeSelection, resolveSelection, MAX_SELECTION, tooMany } from '../services/participantFilter.js';
 import { emailSummary } from '../services/emailQueue.js';
 import { estimatedMinutes } from '../services/emailRules.js';
@@ -41,13 +43,18 @@ async function prepare(req) {
     if (!categorie) throw new ApiError(400, "Cette catégorie n'appartient pas à l'événement.");
   }
   if (action === 'RENVOYER_EMAIL' && !options.type) throw new ApiError(400, "Choisissez l'email à renvoyer.");
+  if (action === 'IMPRIMER' && !req.event.badge?.elements?.length) {
+    throw new ApiError(400, "Cet événement n'a pas encore de modèle de badge (onglet Badge).");
+  }
 
   const ids = await resolveSelection(req.event._id, selection);
   // Filter mode stops reading at MAX_SELECTION + 1, so the exact count is unknown past the limit.
   if (ids.length > MAX_SELECTION) throw new ApiError(400, tooMany(`Plus de ${MAX_SELECTION}`));
   if (ids.length === 0) throw new ApiError(400, 'Aucun participant ne correspond à la sélection.');
 
-  const participants = await Participant.find({ _id: { $in: ids } }).select('statut email nbImpressionsBadge categorieId').lean();
+  const participants = await Participant.find({ _id: { $in: ids } })
+    .select('statut email nbImpressionsBadge categorieId invitedOrganismId nom prenom createdAt')
+    .lean();
   const scannes = action === 'SUPPRIMER' ? new Set((await Scan.distinct('participantId', { participantId: { $in: ids } })).map(String)) : undefined;
   const summary = summarize(action, participants, { options, scannes });
 
@@ -59,7 +66,21 @@ async function prepare(req) {
   }
   summary.libelle = BULK_ACTIONS[action].libelle;
   summary.verbe = BULK_ACTIONS[action].verbe;
-  return { action, options, ids, summary };
+  return { action, options, ids, participants, summary };
+}
+
+/** Badges to print, in print order: the job renders them in this sequence. */
+async function printOrder(participants, options) {
+  const eligibles = participants.filter((p) => eligibility('IMPRIMER', p, { options }).ok);
+  const [organismes, categories] = await Promise.all([
+    InvitedOrganism.find({ _id: { $in: [...new Set(eligibles.map((p) => String(p.invitedOrganismId)))] } }).select('nom').lean(),
+    CategorieEvent.find({ _id: { $in: [...new Set(eligibles.map((p) => String(p.categorieId)))] } }).select('nom').lean(),
+  ]);
+  const names = {
+    organisme: new Map(organismes.map((o) => [String(o._id), o.nom])),
+    categorie: new Map(categories.map((c) => [String(c._id), c.nom])),
+  };
+  return sortForPrint(eligibles, options.ordre, names).map((p) => p._id);
 }
 
 const GROUPS_LIMIT = 300;
@@ -130,11 +151,16 @@ export async function previewBulkAction(req, res, next) {
 export async function runBulkAction(req, res, next) {
   try {
     const { requestId, confirmation } = z.object({ requestId: z.string().min(8).max(64), confirmation: z.number().int().optional() }).parse(req.body);
-    const { action, options, ids, summary } = await prepare(req);
+    const { action, options, ids, participants, summary } = await prepare(req);
     if (summary.eligibles === 0) throw new ApiError(409, 'Aucun participant de la sélection n’est concerné par cette action.');
     if (action === 'SUPPRIMER' && confirmation !== summary.eligibles) {
       throw new ApiError(400, `Pour confirmer la suppression, saisissez le nombre de participants supprimés (${summary.eligibles}).`);
     }
+    const items = action === 'IMPRIMER' ? await printOrder(participants, options) : ids;
+    const libelle =
+      action === 'IMPRIMER'
+        ? `Impression — ${items.length} badge${items.length > 1 ? 's' : ''}`
+        : `${summary.libelle} — ${ids.length} participant${ids.length > 1 ? 's' : ''}`;
     const { job } = await createJob({
       type: JOB_TYPES[action] || 'BULK_PARTICIPANTS',
       organisateurId: req.organisateurId,
@@ -142,8 +168,8 @@ export async function runBulkAction(req, res, next) {
       createdBy: req.user.sub,
       requestId,
       params: { action, options, userId: req.user.sub },
-      items: ids,
-      libelle: `${summary.libelle} — ${ids.length} participant${ids.length > 1 ? 's' : ''}`,
+      items,
+      libelle,
     });
     res.status(201).json({ id: String(job._id), statut: job.statut });
   } catch (error) {

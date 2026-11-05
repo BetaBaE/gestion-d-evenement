@@ -82,7 +82,15 @@ export async function runJobStep(deadline) {
   if (job.reprises > MAX_REPRISES_SANS_PROGRES) {
     await Job.updateOne(
       { _id: job._id },
-      { $set: { statut: 'ECHEC', erreur: 'La tâche a été interrompue trop de fois (redémarrages).', finishedAt: new Date(), lockedUntil: null } },
+      {
+        $set: {
+          statut: 'ECHEC',
+          // Keep the last step error: it is usually the real cause.
+          erreur: `La tâche a été interrompue trop de fois${job.erreur ? ` (dernière erreur : ${job.erreur})` : ' (redémarrages)'}.`,
+          finishedAt: new Date(),
+          lockedUntil: null,
+        },
+      },
     );
     return true;
   }
