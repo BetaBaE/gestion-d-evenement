@@ -11,12 +11,24 @@ import { publicInscriptionRoutes } from './routes/publicInscriptionRoutes.js';
 import { publicScanRoutes } from './routes/publicScanRoutes.js';
 import { publicImageRoutes, adminImageRoutes, publicScanPhotoRoutes } from './routes/imageRoutes.js';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
+import { kickWorkAfterRequest } from './jobs/worker.js';
 
 export const app = express();
 
 // On Vercel every request arrives through its proxy: trust one hop so
 // req.ip is the visitor's address (rate limits per visitor, not shared).
 if (process.env.VERCEL) app.set('trust proxy', 1);
+
+// Serverless: no permanent worker, so each API response gives the queue a
+// step (jobs, emails) while the function is still alive.
+if (process.env.VERCEL) {
+  app.use((req, res, next) => {
+    res.on('finish', () => {
+      kickWorkAfterRequest().catch((error) => console.error('[worker] kick failed:', error));
+    });
+    next();
+  });
+}
 
 // The app reaches the API through a same-origin proxy (Vite in dev, Nginx
 // in production), so images are same-origin; `same-site` (instead of

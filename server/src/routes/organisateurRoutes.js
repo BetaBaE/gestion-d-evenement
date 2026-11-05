@@ -18,6 +18,7 @@ import { eventRoutes } from './eventRoutes.js';
 import { emailSettingsRoutes } from './emailSettingsRoutes.js';
 import { partenaireRoutes } from './partenaireRoutes.js';
 import { modeleBadgeRoutes } from './modeleBadgeRoutes.js';
+import { jobRoutes } from './jobRoutes.js';
 
 export const organisateurRoutes = Router();
 
@@ -62,6 +63,13 @@ organisateurRoutes.use(
   requireRole('SUPER_ADMIN', 'GESTIONNAIRE'),
   tenantScope,
   partenaireRoutes,
+);
+
+organisateurRoutes.use(
+  '/:organisateurId/taches',
+  requireRole('SUPER_ADMIN', 'GESTIONNAIRE'),
+  tenantScope,
+  jobRoutes,
 );
 
 organisateurRoutes.use(

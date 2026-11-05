@@ -11,6 +11,7 @@ import BadgeIcon from '@mui/icons-material/Badge';
 import { dataProvider } from './dataProvider.js';
 import { authProvider } from './authProvider.js';
 import { AdminAppBar } from './AdminAppBar.jsx';
+import { JobsProvider } from './jobs/JobsContext.jsx';
 import { OrganisateurList, OrganisateurEdit, OrganisateurCreate } from './resources/organisateurs.jsx';
 import { UserList, UserEdit, UserCreate } from './resources/users.jsx';
 import { EventList, EventEdit, EventCreate } from './resources/events.jsx';
@@ -24,7 +25,12 @@ import { LoginPage } from './LoginPage.jsx';
 const i18nProvider = polyglotI18nProvider(() => frenchMessages, 'fr');
 
 function AdminLayout(props) {
-  return <Layout {...props} appBar={AdminAppBar} />;
+  // Jobs (bulk actions, printing) are tracked app-wide: top-bar panel + toasts.
+  return (
+    <JobsProvider>
+      <Layout {...props} appBar={AdminAppBar} />
+    </JobsProvider>
+  );
 }
 
 export function AdminApp() {
