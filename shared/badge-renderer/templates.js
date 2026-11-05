@@ -16,7 +16,7 @@ const FILES = [
   { key: 'signal', version: 1, file: signal },
   { key: 'gala', version: 1, file: gala },
   { key: 'epure', version: 1, file: epure },
-  { key: 'pass', version: 1, file: pass },
+  { key: 'pass', version: 2, file: pass }, // v2: organisme on 2 lines (long names were cut)
 ];
 
 const BADGE_FIELDS = ['format', 'carteLargeurMm', 'carteHauteurMm', 'rotationLigneBas180', 'traitsDePliage', 'safeZoneMm', 'panneauxActifs', 'theme', 'elements'];

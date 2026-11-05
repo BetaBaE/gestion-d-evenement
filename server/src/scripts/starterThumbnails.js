@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import puppeteer from 'puppeteer';
 import { STARTER_TEMPLATES, renderBadgeHtml } from '../../../shared/badge-renderer/index.js';
 import { generateQrCodeSvg } from '../services/qrService.js';
+import { withBadgeFonts, waitForBadgeFonts } from '../services/badgeService.js';
 
 const OUT_DIR = fileURLToPath(new URL('../../../client/public/starters/', import.meta.url));
 const FIT_SCRIPT = fileURLToPath(new URL('../../../shared/badge-renderer/browserFit.js', import.meta.url));
@@ -36,11 +37,11 @@ const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] 
 try {
   for (const starter of Object.values(STARTER_TEMPLATES)) {
     const badge = starter.build();
-    const html = renderBadgeHtml({ badge, theme: badge.theme, ...SAMPLE, assets: { qrCodeSvg } });
+    const html = await withBadgeFonts(renderBadgeHtml({ badge, theme: badge.theme, ...SAMPLE, assets: { qrCodeSvg } }));
     const page = await browser.newPage();
     await page.setViewport({ width: 900, height: 1200, deviceScaleFactor: 1.5 });
     await page.setContent(html, { waitUntil: 'networkidle0' });
-    await page.evaluate(() => document.fonts.ready);
+    await waitForBadgeFonts(page);
     await page.addScriptTag({ content: fit });
     await page.evaluate(() => window.__badgeRendererFit());
     const panel = await page.$('.panel-P1');

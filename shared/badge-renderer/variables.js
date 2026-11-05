@@ -69,6 +69,20 @@ export function formatDateRangeLong(debut, fin, timeZone = DEFAULT_TIMEZONE) {
   return `${a.day} – ${b.day} ${MOIS[b.month - 1]} ${b.year}`;
 }
 
+const MOIS_COURT = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+
+/** "18 – 20 nov.", "28 nov. – 2 déc.", one day: "18 nov." (no year: the "Dates" element, short format) */
+export function formatDateRangeMoisCourt(debut, fin, timeZone = DEFAULT_TIMEZONE) {
+  const d1 = toDate(debut);
+  const d2 = toDate(fin) || d1;
+  if (!d1) return '';
+  const a = partsInZone(d1, timeZone);
+  const b = partsInZone(d2, timeZone);
+  if (a.day === b.day && a.month === b.month && a.year === b.year) return `${a.day} ${MOIS_COURT[a.month - 1]}`;
+  if (a.month === b.month && a.year === b.year) return `${a.day} – ${b.day} ${MOIS_COURT[b.month - 1]}`;
+  return `${a.day} ${MOIS_COURT[a.month - 1]} – ${b.day} ${MOIS_COURT[b.month - 1]}`;
+}
+
 /** "18–20/11/2026", "28/11–02/12/2026", one day: "18/11/2026" */
 export function formatDateRangeCourt(debut, fin, timeZone = DEFAULT_TIMEZONE) {
   const d1 = toDate(debut);

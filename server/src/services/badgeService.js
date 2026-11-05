@@ -9,7 +9,9 @@ import { Organisateur } from '../models/Organisateur.js';
 import { Participant } from '../models/Participant.js';
 import { env } from '../config/env.js';
 import { generateQrCodeSvg } from './qrService.js';
-import { renderBadgeHtml, renderBatchBadgeHtml } from '../../../shared/badge-renderer/index.js';
+import { renderBadgeHtml, renderBatchBadgeHtml, FONT_FILES, BUNDLED_FONT_FAMILIES, fontFaceCss } from '../../../shared/badge-renderer/index.js';
+
+const FONTS_DIR = new URL('../../../shared/badge-renderer/fonts/', import.meta.url);
 
 const BROWSER_FIT_SCRIPT_PATH = fileURLToPath(
   new URL('../../../shared/badge-renderer/browserFit.js', import.meta.url),
@@ -38,14 +40,18 @@ async function launchBrowser() {
 async function getBrowser() {
   if (!browserPromise) {
     browserPromise = launchBrowser();
-    browserPromise.catch(() => {
-      browserPromise = null;
-    });
-    browserPromise.then((browser) => {
-      browser.on('disconnected', () => {
+    // One handler for both outcomes: a separate .then() without .catch() was an
+    // unhandled rejection when Chrome failed to start — it killed the server.
+    browserPromise.then(
+      (browser) => {
+        browser.on('disconnected', () => {
+          browserPromise = null;
+        });
+      },
+      () => {
         browserPromise = null;
-      });
-    });
+      },
+    );
   }
   return browserPromise;
 }
@@ -124,12 +130,44 @@ async function hydrateEntry({ participant, event, categorie, organisme, organisa
  * (browserFit.js) — the same algorithm the editor runs in its iframe — so
  * dynamic text in the PDF is shrunk/wrapped/truncated against real fonts.
  */
+/** The bundled fonts as data URIs (no network in Puppeteer; works on Vercel). */
+let fontCssPromise = null;
+function badgeFontCss() {
+  if (!fontCssPromise) {
+    fontCssPromise = Promise.all(
+      FONT_FILES.map(async (f) => [f.file, (await fs.readFile(new URL(f.file, FONTS_DIR))).toString('base64')]),
+    ).then((entries) => {
+      const data = Object.fromEntries(entries);
+      return fontFaceCss((file) => `data:font/woff2;base64,${data[file]}`);
+    });
+    fontCssPromise.catch(() => {
+      fontCssPromise = null; // read failed: retry on the next badge
+    });
+  }
+  return fontCssPromise;
+}
+
+/** Adds the @font-face rules to a rendered badge document. */
+export async function withBadgeFonts(html) {
+  const css = await badgeFontCss();
+  return html.replace('<style>', () => `<style>${css}\n`);
+}
+
+/** Waits until every bundled family is loaded (document.fonts.ready alone resolves before unused fonts start loading). */
+export async function waitForBadgeFonts(page) {
+  await page.evaluate(async (families) => {
+    const probes = families.flatMap((f) => [`400 16px "${f}"`, `700 16px "${f}"`, `italic 400 16px "${f}"`]);
+    await Promise.all(probes.map((p) => document.fonts.load(p).catch(() => [])));
+    await document.fonts.ready;
+  }, BUNDLED_FONT_FAMILIES);
+}
+
 async function withFittedPage(html, fn) {
-  const [browser, fitScript] = await Promise.all([getBrowser(), getBrowserFitScript()]);
+  const [browser, fitScript, withFonts] = await Promise.all([getBrowser(), getBrowserFitScript(), withBadgeFonts(html)]);
   const page = await browser.newPage();
   try {
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    await page.evaluate(() => document.fonts.ready);
+    await page.setContent(withFonts, { waitUntil: 'networkidle0' });
+    await waitForBadgeFonts(page);
     await page.addScriptTag({ content: fitScript });
     const fitReport = await page.evaluate(() => window.__badgeRendererFit());
     return await fn(page, fitReport);
@@ -156,9 +194,10 @@ export async function generateSingleBadgePdf(args) {
  */
 export async function generateBadgeHtmlPreview(args) {
   const hydrated = await hydrateEntry(args);
-  const html = renderBadgeHtml(hydrated);
+  const html = await withBadgeFonts(renderBadgeHtml(hydrated));
   const fitScript = await getBrowserFitScript();
-  const bootstrap = `<script>${fitScript}</script><script>document.fonts.ready.then(function(){window.__badgeRendererFit();});</script>`;
+  const families = JSON.stringify(BUNDLED_FONT_FAMILIES);
+  const bootstrap = `<script>${fitScript}</script><script>Promise.all(${families}.map(function(f){return document.fonts.load('400 16px "'+f+'"');})).then(function(){return document.fonts.ready;}).then(function(){window.__badgeRendererFit();});</script>`;
   return html.replace('</body>', `${bootstrap}</body>`);
 }
 

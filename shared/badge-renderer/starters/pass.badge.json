@@ -159,7 +159,7 @@
         "x": 3,
         "y": 31,
         "largeur": 47,
-        "hauteur": 4,
+        "hauteur": 7,
         "rotation": 0,
         "z": 6,
         "verrouille": false,
@@ -176,8 +176,9 @@
           "graisse": 700,
           "majuscules": true,
           "alignH": "gauche",
-          "alignV": "milieu",
-          "lignesMax": 1
+          "alignV": "haut",
+          "lignesMax": 2,
+          "interligne": 1.1
         }
       },
       {
@@ -185,7 +186,7 @@
         "type": "dates",
         "panneau": "P1",
         "x": 3,
-        "y": 37,
+        "y": 39,
         "largeur": 47,
         "hauteur": 4,
         "rotation": 0,

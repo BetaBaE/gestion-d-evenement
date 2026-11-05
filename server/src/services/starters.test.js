@@ -22,8 +22,10 @@ for (const key of Object.keys(EXPECTED)) {
   test(`starter "${key}" passes the import validation and has 0 blocking rule`, () => {
     // Same path as a user import: schema version, zod schema, element props, references.
     const file = parseTemplateFile(Buffer.from(JSON.stringify(STARTER_TEMPLATES[key].file())));
-    const bloquants = checkBadgeRules(file.modele).filter((r) => r.niveau === 'bloquant');
-    assert.deepEqual(bloquants, []);
+    const rules = checkBadgeRules(file.modele);
+    assert.deepEqual(rules.filter((r) => r.niveau === 'bloquant'), []);
+    // Only Pass has warnings, both inherent to the card size.
+    assert.deepEqual(rules.map((r) => r.code), key === 'pass' ? ['QR_PETIT', 'NOM_PETIT'] : []);
     // One QR on P1 and the name on P1.
     const p1 = file.modele.elements.filter((e) => e.panneau === 'P1' && !e.masque);
     assert.equal(p1.filter((e) => e.type === 'qrCode').length, 1);

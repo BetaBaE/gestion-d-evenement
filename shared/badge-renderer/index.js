@@ -36,6 +36,7 @@ export {
   listVariablesByGroup,
 } from './variables.js';
 export { fitText } from './textFit.js';
+export { FONT_FILES, BUNDLED_FONT_FAMILIES, fontFaceCss, loadBundledFonts } from './fonts.js';
 export { fitDynamicTextInDom } from './fitDynamicTextInDom.js';
 export { styleToCss, resolveToken } from './style.js';
 

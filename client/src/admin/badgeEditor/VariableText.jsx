@@ -139,6 +139,23 @@ export function VariableTextField({ label, value, onChange, previewCtx }) {
         contentEditable
         suppressContentEditableWarning
         onInput={emit}
+        onMouseDown={(e) => {
+          // A chip isn't editable: clicking it left no caret and the next keystrokes were lost.
+          // Put the caret before or after it (whichever half was clicked) and focus the field.
+          const chip = e.target.closest?.('.var-chip');
+          if (!chip) return;
+          e.preventDefault();
+          const rect = chip.getBoundingClientRect();
+          const range = document.createRange();
+          if (e.clientX < rect.left + rect.width / 2) range.setStartBefore(chip);
+          else range.setStartAfter(chip);
+          range.collapse(true);
+          ref.current.focus();
+          const sel = document.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+          savedRange.current = range.cloneRange();
+        }}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         onKeyDown={(e) => {

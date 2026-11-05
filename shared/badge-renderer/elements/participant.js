@@ -1,6 +1,7 @@
 import { registerElement } from '../registry.js';
 import { dynamicTextMarkup } from './texte.js';
 import { ok, fail } from '../validate.js';
+import { DEFAULT_TIMEZONE, formatDateRangeLong, formatDateRangeMoisCourt } from '../variables.js';
 
 registerElement('qrCode', {
   defaultProps: { couleur: '#000000', fond: '#ffffff', niveauCorrection: 'M' },
@@ -95,16 +96,13 @@ registerElement('dates', {
     return ok({ format: format || 'long' });
   },
   render({ props, ctx }) {
-    const text = formatDateRange(ctx.event?.dateDebut, ctx.event?.dateFin, props.format);
+    // Same formatting as {{event.dates}}, in the app's time zone (not the server's).
+    const tz = ctx.timezone || DEFAULT_TIMEZONE;
+    const text =
+      props.format === 'court'
+        ? formatDateRangeMoisCourt(ctx.event?.dateDebut, ctx.event?.dateFin, tz)
+        : formatDateRangeLong(ctx.event?.dateDebut, ctx.event?.dateFin, tz);
     if (!text) return '';
     return dynamicTextMarkup(text);
   },
 });
-
-function formatDateRange(dateDebut, dateFin, format) {
-  if (!dateDebut || !dateFin) return '';
-  const opts = format === 'court' ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'long', year: 'numeric' };
-  const d1 = new Date(dateDebut).toLocaleDateString('fr-FR', opts);
-  const d2 = new Date(dateFin).toLocaleDateString('fr-FR', opts);
-  return d1 === d2 ? d1 : `${d1} - ${d2}`;
-}

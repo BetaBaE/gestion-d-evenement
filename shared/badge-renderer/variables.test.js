@@ -10,6 +10,7 @@ import {
   listVariablesByGroup,
   formatDateRangeLong,
   formatDateRangeCourt,
+  formatDateRangeMoisCourt,
 } from './variables.js';
 import { checkBadgeRules } from './rules.js';
 
@@ -120,4 +121,15 @@ test('rules engine: an unknown variable blocks, naming the element', () => {
   assert.match(rule.message, /\{\{event\.inconnu\}\}/);
   badge.elements[2].props.contenu = '{{event.titre}} {{participant.categorie}}';
   assert.ok(!checkBadgeRules(badge).some((r) => r.code === 'VARIABLE_INCONNUE'));
+});
+
+test('"Dates" element: same range format as {{event.dates}}, in the time zone', async () => {
+  const { renderBadgeHtml } = await import('./index.js');
+  const badge = (format) => ({ format: 'A6', elements: [{ id: 'd', type: 'dates', panneau: 'P1', x: 5, y: 5, largeur: 60, hauteur: 6, props: { format }, style: {} }] });
+  // 23:30 UTC on the 17th is already the 18th in Casablanca.
+  const event = { dateDebut: '2026-11-17T23:30:00Z', dateFin: '2026-11-20T17:00:00Z' };
+  const raw = (format) => renderBadgeHtml({ badge: badge(format), theme: {}, event, timezone: TZ, assets: {} }).match(/data-raw-text="([^"]*)"/)[1];
+  assert.equal(raw('long'), '18 – 20 novembre 2026');
+  assert.equal(raw('court'), '18 – 20 nov.');
+  assert.equal(formatDateRangeMoisCourt('2026-11-28T10:00:00Z', '2026-12-02T10:00:00Z', TZ), '28 nov. – 2 déc.');
 });

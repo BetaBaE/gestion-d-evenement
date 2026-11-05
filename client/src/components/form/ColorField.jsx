@@ -138,7 +138,9 @@ export function ColorField({
           placeholder={allowNone ? 'Aucune' : '#RRGGBB'}
           onChange={(e) => {
             setDraft(e.target.value);
-            const normalized = normalizeHex(e.target.value);
+            // Live only for a complete #RRGGBB: '#FF0' (on the way to '#FF0000') is a valid
+            // short code and briefly applied yellow. Short codes apply on blur / Enter.
+            const normalized = /^#?[0-9a-f]{6}$/i.test(e.target.value.trim()) ? normalizeHex(e.target.value) : null;
             if (normalized) {
               setDraftError(false);
               if (normalized !== value) onChange(normalized);
@@ -146,6 +148,12 @@ export function ColorField({
           }}
           onFocus={() => {
             typingRef.current = true;
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              if (!token || e.target.value !== token.label) commitDraft(e.target.value.trim());
+            }
           }}
           onBlur={(e) => {
             typingRef.current = false;

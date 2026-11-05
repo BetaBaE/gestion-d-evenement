@@ -46,3 +46,44 @@ test('active panels: A4 defaults to all four, P1 always kept; single-panel forma
   assert.deepEqual(activePanelKeys({ format: 'CARTE' }), ['P1']);
   assert.deepEqual(elementsHorsPage({ format: 'A6', elements: [el('texte', 'P1'), el('texte', 'P4')] }).map((e) => e.panneau), ['P4']);
 });
+
+const box = (type, x, y, w, h, extra = {}) => ({ id: `${type}-${x}-${y}`, type, panneau: 'P1', x, y, largeur: w, hauteur: h, props: {}, ...extra });
+const nom = (min = 12) => box('champ', 10, 10, 60, 12, { props: { champ: 'nomPrenom' }, style: { tailleMin: min } });
+const codesOf = (badge) => checkBadgeRules(badge).map((r) => `${r.niveau}:${r.code}`);
+
+test('QR code: under 30 mm blocks, under 45 mm warns, must be square', () => {
+  assert.ok(codesOf({ format: 'A6', elements: [nom(), box('qrCode', 10, 40, 25, 25)] }).includes('bloquant:QR_TROP_PETIT'));
+  assert.deepEqual(codesOf({ format: 'A6', elements: [nom(), box('qrCode', 10, 40, 35, 35)] }), ['avertissement:QR_PETIT']);
+  assert.deepEqual(codesOf({ format: 'A6', elements: [nom(), box('qrCode', 10, 40, 45, 45)] }), []);
+  assert.ok(codesOf({ format: 'A6', elements: [nom(), box('qrCode', 10, 40, 45, 50)] }).includes('bloquant:QR_NON_CARRE'));
+});
+
+test('QR code covered by an element above it blocks; a card below it does not', () => {
+  const qr = box('qrCode', 10, 40, 45, 45, { z: 5 });
+  assert.deepEqual(codesOf({ format: 'A6', elements: [nom(), qr, box('forme', 8, 38, 50, 50, { z: 4 })] }), []);
+  assert.ok(codesOf({ format: 'A6', elements: [nom(), qr, box('texte', 20, 50, 20, 10, { z: 6 })] }).includes('bloquant:QR_COUVERT'));
+});
+
+test('exactly one QR code on P1', () => {
+  const elements = [nom(), box('qrCode', 10, 40, 45, 45), box('qrCode', 55, 90, 45, 45)];
+  assert.ok(codesOf({ format: 'A6', elements }).includes('bloquant:QR_MULTIPLE'));
+});
+
+test('safe zone: content warns, full-bleed backgrounds and bands do not', () => {
+  const ok = [nom(), box('qrCode', 10, 40, 45, 45), box('forme', 0, 0, 105, 20), box('bandeCategorie', 0, 138.5, 105, 10)];
+  assert.deepEqual(codesOf({ format: 'A6', safeZoneMm: 5, elements: ok }), []);
+  assert.deepEqual(codesOf({ format: 'A6', safeZoneMm: 5, elements: [...ok, box('texte', 2, 30, 50, 5)] }), ['avertissement:HORS_ZONE_SURE']);
+  // card format: its own size and safe zone
+  assert.deepEqual(codesOf({ format: 'CARTE', carteLargeurMm: 85.6, carteHauteurMm: 54, safeZoneMm: 3, elements: [nom(), box('qrCode', 52.6, 13, 30, 30)] }), ['avertissement:QR_PETIT']);
+});
+
+test('text that can shrink under 6 pt and a name under 12 pt warn', () => {
+  const base = [box('qrCode', 10, 40, 45, 45)];
+  assert.deepEqual(codesOf({ format: 'A6', elements: [...base, nom(10)] }), ['avertissement:NOM_PETIT']);
+  assert.deepEqual(codesOf({ format: 'A6', elements: [...base, nom(), box('texte', 10, 100, 50, 5, { style: { tailleMin: 5 } })] }), ['avertissement:TEXTE_TROP_PETIT']);
+});
+
+test('a small logo in the middle of the QR code only warns', () => {
+  const qr = box('qrCode', 10, 40, 79, 79, { z: 1 });
+  assert.deepEqual(codesOf({ format: 'A6', elements: [nom(), qr, box('icone', 47, 77, 8, 8, { z: 6 })] }), ['avertissement:QR_PARTIELLEMENT_COUVERT']);
+});

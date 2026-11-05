@@ -3,6 +3,7 @@ import Moveable from 'react-moveable';
 import Selecto from 'react-selecto';
 import { Box } from '@mui/material';
 import { renderEditorSheet, fitDynamicTextInDom } from '../../../../shared/badge-renderer/index.js';
+import { ensureBadgeFonts } from './badgeFonts.js';
 import { ELEMENT_CATALOG } from './elementCatalog.js';
 import { PX_PER_MM, activePanels, mmToPx, panelOrigin, panelSizeMm, pxToMm, round1, sheetSizeMm } from './geometry.js';
 import { panelAtSheetPoint } from './placement.js';
@@ -175,10 +176,10 @@ export function EditorCanvas({
     setSheetEl(host.querySelector('.sheet'));
   }, [html, selectedIds]);
 
-  // Same fitting pass Puppeteer runs before printing, once fonts are ready.
+  // Same fitting pass Puppeteer runs before printing, once the bundled fonts are loaded.
   useEffect(() => {
     let cancelled = false;
-    document.fonts.ready.then(() => {
+    ensureBadgeFonts().then(() => {
       if (cancelled || !hostRef.current) return;
       fitDynamicTextInDom(hostRef.current);
       moveableRef.current?.updateRect();
