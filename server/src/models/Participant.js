@@ -30,6 +30,9 @@ const participantSchema = new mongoose.Schema(
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     validatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     validatedAt: { type: Date },
+    // Bulk job that validated this participant: a resumed job re-queues the
+    // badge email (deduplicated) instead of skipping it as "déjà validé".
+    validationJobId: { type: mongoose.Schema.Types.ObjectId, ref: 'Job' },
     photoImageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Image' },
     consentementPhoto: { type: Boolean, default: false },
     consentementPhotoLe: { type: Date },

@@ -8,14 +8,12 @@ import {
   useRecordContext,
   useNotify,
   useRefresh,
-  useListContext,
   Button as RaButton,
   useDataProvider,
   Pagination,
   TextInput,
   required,
   email,
-  BulkActionsToolbar,
 } from 'react-admin';
 import { useState } from 'react';
 import { Box, IconButton, Stack, Typography } from '@mui/material';
@@ -31,6 +29,7 @@ import { getImageUrl, uploadParticipantPhoto, deleteParticipantPhoto, deleteAllP
 import { FormDialog, DialogForm, FormSection, Field, ImageField } from '../../components/form/index.js';
 import { ParticipantFilterBar, PresenceChip, EntriesField, StatutChip, NameFrom } from './ParticipantFilters.jsx';
 import { SelectionProvider, ListStateSync, SelectionBanner } from './ParticipantSelection.jsx';
+import { BulkActionBar } from './BulkActionBar.jsx';
 
 function basePath(eventId) {
   const organisateurId = getSelectedOrganisateurId();
@@ -202,23 +201,6 @@ function CategorieInlineSelect({ eventId, categories, onChanged }) {
   );
 }
 
-function BulkValidateButton({ eventId, onDone }) {
-  const { selectedIds } = useListContext();
-  const notify = useNotify();
-
-  async function handleClick() {
-    try {
-      await axiosClient.post(`${basePath(eventId)}/valider-lot`, { participantIds: selectedIds });
-      notify('Participants validés et badges envoyés.', { type: 'success' });
-      onDone();
-    } catch (error) {
-      notify(error.response?.data?.message || 'Erreur lors de la validation groupée.', { type: 'error' });
-    }
-  }
-
-  return <RaButton label="Valider et envoyer les badges" onClick={handleClick} />;
-}
-
 function ParticipantPhotoField({ eventId }) {
   const record = useRecordContext();
   const refresh = useRefresh();
@@ -328,10 +310,9 @@ export function ParticipantsPanel({ eventId, categories, organismes }) {
         <ListStateSync storageKey={`selection-participants-${eventId}`} />
         <ParticipantFilterBar eventId={eventId} organismes={organismes} categories={categories} />
         <SelectionBanner />
-        <BulkActionsToolbar>
-          <BulkValidateButton eventId={eventId} onDone={refresh} />
-        </BulkActionsToolbar>
         <Datagrid
+          // Our sticky BulkActionBar replaces RA's toolbar (and its immediate bulk delete).
+          bulkActionsToolbar={<></>}
           rowClick={(id, resource, record) => {
             setDialog({ mode: 'edit', id: record.id });
             return false;
@@ -350,6 +331,7 @@ export function ParticipantsPanel({ eventId, categories, organismes }) {
           <ParticipantRowActions eventId={eventId} onDone={refresh} label="Actions" />
         </Datagrid>
         <Pagination />
+        <BulkActionBar eventId={eventId} categories={categories} />
       </ListBase>
 
       <FormDialog

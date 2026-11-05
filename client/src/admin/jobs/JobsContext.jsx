@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { useNotify } from 'react-admin';
+import { useNotify, useRefresh } from 'react-admin';
 import { listJobs, advanceJobs } from '../../api/jobsApi.js';
 
 const JobsContext = createContext(null);
@@ -20,6 +20,8 @@ const DONE_MESSAGES = {
  */
 export function JobsProvider({ children }) {
   const notify = useNotify();
+  const refreshRef = useRef(null);
+  refreshRef.current = useRefresh(); // via a ref: must not restart the polling loop
   const [jobs, setJobs] = useState([]);
   const [open, setOpen] = useState(false);
   const previous = useRef(new Map());
@@ -37,13 +39,17 @@ export function JobsProvider({ children }) {
       // logged out or network down: try again later
     }
     if (items) {
+      let finished = false;
       items.forEach((j) => {
         const before = previous.current.get(j.id);
         if (before && before !== j.statut && DONE_MESSAGES[j.statut]) {
           const { type, text } = DONE_MESSAGES[j.statut](j);
           notify(text, { type, autoHideDuration: 8000 });
+          finished = true;
         }
       });
+      // Lists on screen show the new statuses / categories without a reload.
+      if (finished) refreshRef.current();
       previous.current = new Map(items.map((j) => [j.id, j.statut]));
       setJobs(items);
     }
