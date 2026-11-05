@@ -8,7 +8,7 @@ import { ApiError } from '../middlewares/errorHandler.js';
 import { parsePagination, paginatedResponse } from '../utils/pagination.js';
 import { buildParticipantFilter, presenceByParticipant, ABSENT } from '../services/participantFilter.js';
 import { generateBadgeCode } from '../utils/tokens.js';
-import { sendConfirmationEmail, sendBadgeEmail } from '../services/emailService.js';
+import { enqueueEmail } from '../services/emailQueue.js';
 import { optimizeAndStoreImage, deleteImage } from '../services/imageService.js';
 
 const manualParticipantSchema = z.object({
@@ -34,15 +34,6 @@ const updateParticipantSchema = z.object({
 });
 
 export const validateManualParticipant = manualParticipantSchema;
-
-async function loadRelations(event, participant) {
-  const [categorie, organisme, organisateur] = await Promise.all([
-    CategorieEvent.findById(participant.categorieId),
-    InvitedOrganism.findById(participant.invitedOrganismId),
-    Organisateur.findById(event.organisateurId),
-  ]);
-  return { categorie, organisme, organisateur };
-}
 
 export async function listParticipants(req, res, next) {
   try {
@@ -162,21 +153,9 @@ export async function validateAndSendBadge(req, res, next) {
     participant.validatedAt = new Date();
     await participant.save();
 
-    const { categorie, organisme, organisateur } = await loadRelations(req.event, participant);
-    const result = await sendBadgeEmail({
-      participant,
-      event: req.event,
-      organisateur,
-      categorie,
-      organisme,
-    });
-
-    if (result.success) {
-      participant.badgeEnvoyeLe = new Date();
-      await participant.save();
-    }
-
-    res.json({ participant, emailSent: result.success });
+    // The badge email goes through the queue (organisateur's sending rate).
+    await enqueueEmail({ type: 'BADGE', participant, event: req.event });
+    res.json({ participant, emailQueued: true });
   } catch (error) {
     next(error);
   }
@@ -197,15 +176,8 @@ export async function validateAndSendBadgeBulk(req, res, next) {
       participant.validatedBy = req.user.sub;
       participant.validatedAt = new Date();
       await participant.save();
-
-      const { categorie, organisme, organisateur } = await loadRelations(req.event, participant);
-      const result = await sendBadgeEmail({ participant, event: req.event, organisateur, categorie, organisme });
-
-      if (result.success) {
-        participant.badgeEnvoyeLe = new Date();
-        await participant.save();
-      }
-      results.push({ participantId: participant._id, emailSent: result.success });
+      await enqueueEmail({ type: 'BADGE', participant, event: req.event });
+      results.push({ participantId: participant._id, emailQueued: true });
     }
 
     res.json({ results });
@@ -242,14 +214,8 @@ export async function resendEmail(req, res, next) {
       throw new ApiError(404, 'Ressource introuvable');
     }
 
-    const { categorie, organisme, organisateur } = await loadRelations(req.event, participant);
-
-    const result =
-      type === 'CONFIRMATION'
-        ? await sendConfirmationEmail({ participant, event: req.event, organisateur })
-        : await sendBadgeEmail({ participant, event: req.event, organisateur, categorie, organisme });
-
-    res.json({ emailSent: result.success });
+    await enqueueEmail({ type, participant, event: req.event });
+    res.json({ emailQueued: true });
   } catch (error) {
     next(error);
   }

@@ -15,6 +15,9 @@ const settingsSchema = z.object({
   fromEmail: z.string().email('Email invalide.'),
   replyTo: z.string().email('Email invalide.').optional().or(z.literal('')),
   actif: z.boolean().optional(),
+  limiteParMinute: z.number().int().min(1, 'Au moins 1 email par minute.').max(500).optional(),
+  // null = no daily limit
+  limiteParJour: z.number().int().min(1).max(100000).nullable().optional(),
 });
 
 function toSafeJson(settings) {
@@ -45,7 +48,11 @@ export async function upsertEmailSettings(req, res, next) {
       '+smtpPassEncrypted',
     );
 
-    const update = { ...rest, updatedBy: req.user.sub };
+    const { limiteParJour, ...fields } = rest;
+    const update = { ...fields, updatedBy: req.user.sub };
+    const unset = { alerteAuth: '' }; // settings changed: give the mailbox another chance
+    if (limiteParJour) update.limiteParJour = limiteParJour;
+    else if (limiteParJour === null) unset.limiteParJour = '';
 
     if (smtpPass) {
       update.smtpPassEncrypted = encryptSecret(smtpPass);
@@ -55,8 +62,8 @@ export async function upsertEmailSettings(req, res, next) {
 
     const settings = await EmailSettings.findOneAndUpdate(
       { organisateurId: req.organisateurId },
-      { $set: update },
-      { new: true, upsert: true, runValidators: true },
+      { $set: update, $unset: unset },
+      { returnDocument: 'after', upsert: true, runValidators: true },
     );
 
     invalidateOrganisateurTransporter(req.organisateurId);
@@ -98,6 +105,7 @@ export async function testEmailSettings(req, res, next) {
       settings.dernierTestLe = new Date();
       settings.dernierTestStatut = 'OK';
       settings.dernierTestErreur = undefined;
+      settings.alerteAuth = undefined; // credentials work again
       await settings.save();
 
       invalidateOrganisateurTransporter(req.organisateurId);

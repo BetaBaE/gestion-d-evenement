@@ -1,5 +1,6 @@
 import { runJobStep } from './jobQueue.js';
 import { cleanupExpiredFiles } from '../services/fileStore.js';
+import { processEmailQueue } from '../services/emailQueue.js';
 import './handlers/index.js';
 
 /**
@@ -17,6 +18,9 @@ const MIN_STEP_MS = 3000;
 export function registerWorkStep(fn) {
   steps.push(fn);
 }
+
+// Emails first: they are time-sensitive (confirmations right after a registration).
+registerWorkStep(processEmailQueue);
 
 async function doWork(budgetMs) {
   const deadline = Date.now() + budgetMs;

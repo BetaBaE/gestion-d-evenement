@@ -16,6 +16,8 @@ const EMPTY_FORM = {
   fromEmail: '',
   replyTo: '',
   actif: true,
+  limiteParMinute: 20,
+  limiteParJour: null,
 };
 
 const PROVIDER_PRESETS = [
@@ -142,6 +144,8 @@ export function EmailSettingsPage() {
       fromEmail: values.fromEmail,
       replyTo: values.replyTo || '',
       actif: !!values.actif,
+      limiteParMinute: Number(values.limiteParMinute) || 20,
+      limiteParJour: values.limiteParJour ? Number(values.limiteParJour) : null,
       ...(values.smtpPass ? { smtpPass: values.smtpPass } : {}),
     };
     try {
@@ -220,6 +224,25 @@ export function EmailSettingsPage() {
                 validate={hasPassword ? undefined : required('Le mot de passe SMTP est requis.')}
                 helperText={hasPassword ? 'Laisser vide pour conserver le mot de passe actuel.' : undefined}
               />
+            </Field>
+          </FormSection>
+
+          <FormSection
+            title="Cadence d'envoi"
+            description="Les emails partent par une file d'attente à ce rythme. Microsoft 365 limite souvent à environ 30 emails par minute, Gmail à quelques centaines par jour."
+          >
+            <Field w="quarter">
+              <NumberInput
+                source="limiteParMinute"
+                label="Emails par minute"
+                validate={[required(), minValue(1, 'Au moins 1.'), maxValue(500, '500 maximum.')]}
+                min={1}
+                max={500}
+                fullWidth
+              />
+            </Field>
+            <Field w="quarter">
+              <NumberInput source="limiteParJour" label="Emails par jour" helperText="Facultatif" validate={minValue(1, 'Au moins 1.')} min={1} fullWidth />
             </Field>
           </FormSection>
 

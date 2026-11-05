@@ -1,11 +1,20 @@
 import { getTransporter, getTestMessageUrl, isUsingEthereal } from '../config/mailer.js';
 import { getOrganisateurTransporter, buildFromHeader } from './organisateurMailer.js';
 import { env } from '../config/env.js';
-import { EmailLog } from '../models/EmailLog.js';
+import { Participant } from '../models/Participant.js';
+import { Event } from '../models/Event.js';
+import { Organisateur } from '../models/Organisateur.js';
+import { CategorieEvent } from '../models/CategorieEvent.js';
+import { InvitedOrganism } from '../models/InvitedOrganism.js';
 import { confirmationEmailTemplate, badgeEmailTemplate } from './emailTemplates.js';
 import { generateQrCodeBuffer } from './qrService.js';
 import { generateSingleBadgePdf } from './badgeService.js';
 
+/**
+ * Email content and delivery. Nothing calls this to send directly: emails
+ * are queued (emailQueue.enqueueEmail) and the queue calls deliverEmail at
+ * the organisateur's sending rate.
+ */
 async function resolveTransporter(organisateurId) {
   if (organisateurId) {
     const organisateurResult = await getOrganisateurTransporter(organisateurId);
@@ -18,84 +27,57 @@ async function resolveTransporter(organisateurId) {
       };
     }
   }
-
-  return {
-    transporter: await getTransporter(),
-    from: env.mailFrom,
-    replyTo: undefined,
-    expediteurUtilise: 'PLATEFORME',
-  };
+  return { transporter: await getTransporter(), from: env.mailFrom, replyTo: undefined, expediteurUtilise: 'PLATEFORME' };
 }
 
-async function sendAndLog({ eventId, participantId, organisateurId, type, to, subject, html, attachments }) {
-  try {
-    const { transporter, from, replyTo, expediteurUtilise } = await resolveTransporter(organisateurId);
-    const info = await transporter.sendMail({
-      from,
-      replyTo,
-      to,
-      subject,
-      html,
-      attachments,
-    });
-
-    if (expediteurUtilise === 'PLATEFORME' && isUsingEthereal()) {
-      console.log(`[email] ${type} to ${to} — preview: ${getTestMessageUrl(info)}`);
-    }
-
-    await EmailLog.create({
-      eventId,
-      participantId,
-      type,
-      destinataire: to,
-      statut: 'ENVOYE',
-      expediteurUtilise,
-    });
-    return { success: true };
-  } catch (error) {
-    await EmailLog.create({
-      eventId,
-      participantId,
-      type,
-      destinataire: to,
-      statut: 'ECHEC',
-      erreur: error.message,
-    });
-    return { success: false, error };
+async function buildMessage(log) {
+  const participant = await Participant.findById(log.participantId);
+  if (!participant) {
+    const error = new Error('Participant supprimé : email annulé.');
+    error.responseCode = 550; // permanent
+    throw error;
   }
-}
+  const event = await Event.findById(participant.eventId);
+  const [organisateur, categorie, organisme] = await Promise.all([
+    Organisateur.findById(event.organisateurId),
+    CategorieEvent.findById(participant.categorieId),
+    InvitedOrganism.findById(participant.invitedOrganismId),
+  ]);
 
-export async function sendConfirmationEmail({ participant, event, organisateur }) {
-  const html = confirmationEmailTemplate({ participant, event, organisateur });
-  return sendAndLog({
-    eventId: event._id,
-    participantId: participant._id,
-    organisateurId: event.organisateurId,
-    type: 'CONFIRMATION',
-    to: participant.email,
-    subject: `Confirmation d'inscription — ${event.titre}`,
-    html,
-  });
-}
-
-export async function sendBadgeEmail({ participant, event, organisateur, categorie, organisme }) {
-  const html = badgeEmailTemplate({ participant, event, organisateur });
+  if (log.type === 'CONFIRMATION') {
+    return {
+      to: participant.email,
+      subject: `Confirmation d'inscription — ${event.titre}`,
+      html: confirmationEmailTemplate({ participant, event, organisateur }),
+    };
+  }
   const [qrBuffer, pdfBuffer] = await Promise.all([
     generateQrCodeBuffer(participant.badgeCode),
     generateSingleBadgePdf({ participant, event, categorie, organisme, organisateur }),
   ]);
-
-  return sendAndLog({
-    eventId: event._id,
-    participantId: participant._id,
-    organisateurId: event.organisateurId,
-    type: 'BADGE',
+  return {
     to: participant.email,
     subject: `Votre badge — ${event.titre}`,
-    html,
+    html: badgeEmailTemplate({ participant, event, organisateur }),
     attachments: [
       { filename: 'badge.pdf', content: pdfBuffer, contentType: 'application/pdf' },
       { filename: 'qrcode.png', content: qrBuffer, cid: 'qrcode' },
     ],
-  });
+  };
+}
+
+/** Sends one queued email. Throws the transport error (classified by the queue). */
+export async function deliverEmail(log) {
+  const message = await buildMessage(log);
+  const { transporter, from, replyTo, expediteurUtilise } = await resolveTransporter(log.organisateurId);
+  const info = await transporter.sendMail({ from, replyTo, ...message });
+  if (expediteurUtilise === 'PLATEFORME' && isUsingEthereal()) {
+    console.log(`[email] ${log.type} to ${message.to} — preview: ${getTestMessageUrl(info)}`);
+  }
+  return { expediteurUtilise };
+}
+
+/** Whether emails of this organisateur go through its own mailbox (vs the platform's). */
+export async function usesOrganisateurMailbox(organisateurId) {
+  return !!(await getOrganisateurTransporter(organisateurId));
 }

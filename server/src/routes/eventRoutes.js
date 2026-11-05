@@ -31,6 +31,7 @@ import { categorieRoutes } from './categorieRoutes.js';
 import { organismeRoutes } from './organismeRoutes.js';
 import { participantRoutes } from './participantRoutes.js';
 import { statsRoutes } from './statsRoutes.js';
+import { getEventEmailSummary, resendFailedEmails } from '../controllers/emailQueueController.js';
 
 export const eventRoutes = Router({ mergeParams: true });
 
@@ -50,6 +51,8 @@ eventRoutes.get('/:eventId/badge-templates', eventScope, listBadgeTemplates);
 eventRoutes.post('/:eventId/badge-template', eventScope, applyBadgeTemplate);
 eventRoutes.put('/:eventId/badge', eventScope, updateEventBadge);
 eventRoutes.get('/:eventId/badge-contexte', eventScope, getBadgeEditorContext);
+eventRoutes.get('/:eventId/emails/resume', eventScope, getEventEmailSummary);
+eventRoutes.post('/:eventId/emails/renvoyer-echecs', eventScope, resendFailedEmails);
 eventRoutes.post('/:eventId/badge-image', eventScope, imageUpload.single('file'), uploadBlocImage);
 eventRoutes.get('/:eventId/badge-apercu', eventScope, previewBadge);
 eventRoutes.get('/:eventId/badge-apercu-html', eventScope, previewBadgeHtml);

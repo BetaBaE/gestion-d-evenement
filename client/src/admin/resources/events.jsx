@@ -34,6 +34,7 @@ import { CategoriesPanel } from './categories.jsx';
 import { OrganismesPanel } from './organismes.jsx';
 import { ParticipantsPanel } from './participants.jsx';
 import { DashboardPanel } from './DashboardPanel.jsx';
+import { EmailStatusBar } from './EmailStatusBar.jsx';
 import { ScanPanel } from './EventShow.jsx';
 
 const statutChoices = [
@@ -317,6 +318,7 @@ function EventTabs() {
       breadcrumbs={[{ label: 'Événements', to: '/admin/events' }, { label: record.titre }]}
       maxWidth={1200}
     >
+      <EmailStatusBar eventId={eventId} />
       <Paper variant="outlined" sx={{ borderRadius: 2 }}>
         <Tabs
           value={tab}

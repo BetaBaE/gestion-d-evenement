@@ -48,7 +48,7 @@ function ParticipantRowActions({ eventId, onDone }) {
     setLoading(true);
     try {
       await axiosClient.post(`${basePath(eventId)}/${record.id}/valider`);
-      notify('Participant validé, badge envoyé.', { type: 'success' });
+      notify("Participant validé, badge mis en file d'envoi.", { type: 'success' });
       onDone();
     } catch (error) {
       notify(error.response?.data?.message || 'Erreur lors de la validation.', { type: 'error' });
@@ -77,7 +77,7 @@ function ParticipantRowActions({ eventId, onDone }) {
     try {
       const type = record.statut === 'VALIDE' ? 'BADGE' : 'CONFIRMATION';
       await axiosClient.post(`${basePath(eventId)}/${record.id}/renvoyer-email`, { type });
-      notify('Email renvoyé.', { type: 'success' });
+      notify("Email mis en file d'envoi.", { type: 'success' });
     } catch (error) {
       notify(error.response?.data?.message || "Erreur lors de l'envoi.", { type: 'error' });
     } finally {

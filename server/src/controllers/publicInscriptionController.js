@@ -6,7 +6,7 @@ import { Participant } from '../models/Participant.js';
 import { Organisateur } from '../models/Organisateur.js';
 import { ApiError } from '../middlewares/errorHandler.js';
 import { generateBadgeCode, generateToken } from '../utils/tokens.js';
-import { sendConfirmationEmail } from '../services/emailService.js';
+import { enqueueEmail } from '../services/emailQueue.js';
 import { optimizeAndStoreImage } from '../services/imageService.js';
 import { registrationClosedReason } from '../services/eventDates.js';
 
@@ -165,7 +165,6 @@ export async function submitInscription(req, res, next) {
     }
 
     const defaultCategorie = await CategorieEvent.findOne({ eventId: event._id, isDefault: true });
-    const organisateur = await Organisateur.findById(event.organisateurId);
 
     const inscriptionGroupeId = generateToken(8);
     const createdParticipants = [];
@@ -206,7 +205,8 @@ export async function submitInscription(req, res, next) {
       });
       createdParticipants.push(participant);
 
-      await sendConfirmationEmail({ participant, event, organisateur });
+      // Through the queue: sent at the organisateur's rate, retried on errors.
+      await enqueueEmail({ type: 'CONFIRMATION', participant, event });
     }
 
     res.status(201).json({
