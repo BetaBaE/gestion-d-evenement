@@ -32,7 +32,7 @@ import { organismeRoutes } from './organismeRoutes.js';
 import { participantRoutes } from './participantRoutes.js';
 import { statsRoutes } from './statsRoutes.js';
 import { getEventEmailSummary, resendFailedEmails } from '../controllers/emailQueueController.js';
-import { previewBulkAction, runBulkAction } from '../controllers/bulkActionController.js';
+import { getGroupCounts, previewBulkAction, runBulkAction } from '../controllers/bulkActionController.js';
 
 export const eventRoutes = Router({ mergeParams: true });
 
@@ -53,6 +53,7 @@ eventRoutes.post('/:eventId/badge-template', eventScope, applyBadgeTemplate);
 eventRoutes.put('/:eventId/badge', eventScope, updateEventBadge);
 eventRoutes.get('/:eventId/badge-contexte', eventScope, getBadgeEditorContext);
 eventRoutes.get('/:eventId/emails/resume', eventScope, getEventEmailSummary);
+eventRoutes.get('/:eventId/actions-groupees/compteurs', eventScope, getGroupCounts);
 eventRoutes.post('/:eventId/actions-groupees/apercu', eventScope, previewBulkAction);
 eventRoutes.post('/:eventId/actions-groupees', eventScope, runBulkAction);
 eventRoutes.post('/:eventId/emails/renvoyer-echecs', eventScope, resendFailedEmails);

@@ -23,6 +23,7 @@ import { axiosClient } from '../../api/axiosClient.js';
 import { getSelectedOrganisateurId } from '../organisateurContext.js';
 import { FormDialog, DialogForm, FormSection, Field, ImageField, UrlInput } from '../../components/form/index.js';
 import { getImageUrl, uploadOrganismeLogo, deleteOrganismeLogo } from '../../api/imageApi.js';
+import { GroupActionsProvider, OrganismeCountsField, OrganismeShortcuts } from './GroupShortcuts.jsx';
 
 function OrganismeLogoField({ eventId }) {
   const record = useRecordContext();
@@ -191,6 +192,7 @@ export function OrganismesPanel({ eventId }) {
         onChange={handleImport}
       />
 
+      <GroupActionsProvider eventId={eventId}>
       <ListBase resource="organismes" queryOptions={{ meta: { eventId } }}>
         <Datagrid
           bulkActionButtons={false}
@@ -203,10 +205,13 @@ export function OrganismesPanel({ eventId }) {
           <TextField source="ville" label="Ville" />
           <TextField source="email" label="Email" />
           <TextField source="contactNom" label="Contact" />
+          <OrganismeCountsField eventId={eventId} label="Participants" />
+          <OrganismeShortcuts eventId={eventId} label="" />
           <DeleteOrganismeButton eventId={eventId} onDeleted={refresh} />
         </Datagrid>
         <Pagination />
       </ListBase>
+      </GroupActionsProvider>
 
       <FormDialog
         open={!!dialog}

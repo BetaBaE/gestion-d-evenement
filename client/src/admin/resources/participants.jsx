@@ -16,7 +16,7 @@ import {
   email,
 } from 'react-admin';
 import { useState } from 'react';
-import { Box, IconButton, Stack, Typography } from '@mui/material';
+import { Box, IconButton, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import EmailIcon from '@mui/icons-material/Email';
@@ -30,6 +30,8 @@ import { FormDialog, DialogForm, FormSection, Field, ImageField } from '../../co
 import { ParticipantFilterBar, PresenceChip, EntriesField, StatutChip, NameFrom } from './ParticipantFilters.jsx';
 import { SelectionProvider, ListStateSync, SelectionBanner } from './ParticipantSelection.jsx';
 import { BulkActionBar } from './BulkActionBar.jsx';
+import { GroupActionsProvider, InscriptionsView } from './GroupShortcuts.jsx';
+import { useSearchParams } from 'react-router';
 
 function basePath(eventId) {
   const organisateurId = getSelectedOrganisateurId();
@@ -298,14 +300,40 @@ export function ParticipantsPanel({ eventId, categories, organismes }) {
   const notify = useNotify();
   const refresh = useRefresh();
   const [dialog, setDialog] = useState(null);
+  const [params, setParams] = useSearchParams();
+  const vue = params.get('vue') === 'inscriptions' ? 'inscriptions' : 'liste';
+
+  const setVue = (value, filtre) => {
+    const next = new URLSearchParams(params);
+    if (value === 'inscriptions') next.set('vue', value);
+    else next.delete('vue');
+    if (filtre) {
+      next.set('f', JSON.stringify(filtre));
+      next.delete('p');
+    }
+    setParams(next, { replace: true });
+  };
 
   return (
     <SelectionProvider>
+    <GroupActionsProvider eventId={eventId}>
     <Box>
-      <RaButton label="Ajouter un participant" onClick={() => setDialog({ mode: 'create' })} sx={{ mb: 2 }} />
-      <DeleteAllPhotosButton eventId={eventId} onDone={refresh} />
+      <Stack direction="row" spacing={1} sx={{ mb: 2, alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
+        <RaButton label="Ajouter un participant" onClick={() => setDialog({ mode: 'create' })} />
+        <DeleteAllPhotosButton eventId={eventId} onDone={refresh} />
+        <Box sx={{ flex: 1 }} />
+        <ToggleButtonGroup size="small" exclusive value={vue} onChange={(_e, v) => v && setVue(v)}>
+          <ToggleButton value="liste">Liste</ToggleButton>
+          <ToggleButton value="inscriptions">Par inscription</ToggleButton>
+        </ToggleButtonGroup>
+      </Stack>
+
+      {vue === 'inscriptions' && (
+        <InscriptionsView eventId={eventId} organismes={organismes} onShowGroup={(id) => setVue('liste', { inscriptionGroupeId: id })} />
+      )}
 
       {/* Filters and page live in our own URL params (?f=, ?p=) next to ?onglet=. */}
+      {vue === 'liste' && (
       <ListBase resource="participants" queryOptions={{ meta: { eventId } }} disableSyncWithLocation storeKey={`participants-${eventId}`}>
         <ListStateSync storageKey={`selection-participants-${eventId}`} />
         <ParticipantFilterBar eventId={eventId} organismes={organismes} categories={categories} />
@@ -333,6 +361,7 @@ export function ParticipantsPanel({ eventId, categories, organismes }) {
         <Pagination />
         <BulkActionBar eventId={eventId} categories={categories} />
       </ListBase>
+      )}
 
       <FormDialog
         open={!!dialog}
@@ -381,6 +410,7 @@ export function ParticipantsPanel({ eventId, categories, organismes }) {
         )}
       </FormDialog>
     </Box>
+    </GroupActionsProvider>
     </SelectionProvider>
   );
 }

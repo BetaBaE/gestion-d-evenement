@@ -62,6 +62,60 @@ async function prepare(req) {
   return { action, options, ids, summary };
 }
 
+const GROUPS_LIMIT = 300;
+
+/**
+ * Counts behind the group shortcuts: per organisme ("12 inscrits · 8 en
+ * attente"), per catégorie, and the form submissions grouped by
+ * inscriptionGroupeId (most recent first).
+ */
+export async function getGroupCounts(req, res, next) {
+  try {
+    const eventId = req.event._id;
+    const counts = (key) => [
+      { $match: { eventId } },
+      {
+        $group: {
+          _id: `$${key}`,
+          inscrits: { $sum: 1 },
+          enAttente: { $sum: { $cond: [{ $eq: ['$statut', 'EN_ATTENTE'] }, 1, 0] } },
+          valides: { $sum: { $cond: [{ $eq: ['$statut', 'VALIDE'] }, 1, 0] } },
+          jamaisImprimes: { $sum: { $cond: [{ $and: [{ $eq: ['$statut', 'VALIDE'] }, { $lte: [{ $ifNull: ['$nbImpressionsBadge', 0] }, 0] }] }, 1, 0] } },
+        },
+      },
+    ];
+    const [organismes, categories, inscriptions] = await Promise.all([
+      Participant.aggregate(counts('invitedOrganismId')),
+      Participant.aggregate(counts('categorieId')),
+      Participant.aggregate([
+        { $match: { eventId, inscriptionGroupeId: { $nin: [null, ''] } } },
+        { $sort: { createdAt: 1 } },
+        {
+          $group: {
+            _id: '$inscriptionGroupeId',
+            n: { $sum: 1 },
+            enAttente: { $sum: { $cond: [{ $eq: ['$statut', 'EN_ATTENTE'] }, 1, 0] } },
+            valides: { $sum: { $cond: [{ $eq: ['$statut', 'VALIDE'] }, 1, 0] } },
+            organismeId: { $first: '$invitedOrganismId' },
+            soumisLe: { $min: '$createdAt' },
+            noms: { $push: { $concat: ['$prenom', ' ', '$nom'] } },
+          },
+        },
+        { $sort: { soumisLe: -1 } },
+        { $limit: GROUPS_LIMIT },
+      ]),
+    ]);
+    const byId = (rows) => Object.fromEntries(rows.map(({ _id, ...c }) => [String(_id), c]));
+    res.json({
+      organismes: byId(organismes),
+      categories: byId(categories),
+      inscriptions: inscriptions.map(({ _id, noms, ...g }) => ({ id: _id, ...g, noms: noms.slice(0, 6) })),
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 /** Confirmation dialog: "37 sélectionnés → 34 seront validés · 3 déjà validés (ignorés)…". */
 export async function previewBulkAction(req, res, next) {
   try {

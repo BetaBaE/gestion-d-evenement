@@ -40,6 +40,9 @@ export function ListStateSync({ storageKey }) {
   const { filterMode, setFilterMode } = useSelectionMode();
   const [params, setParams] = useSearchParams();
   const restored = useRef(false);
+  // URL state being restored: the write-back waits until the list has applied
+  // it (otherwise the list's previous state would erase ?f= / ?p= first).
+  const pending = useRef(null);
 
   // Restore once.
   useEffect(() => {
@@ -47,9 +50,11 @@ export function ListStateSync({ storageKey }) {
     restored.current = true;
     try {
       const f = params.get('f');
-      if (f) setFilters(JSON.parse(f), {});
       const p = Number(params.get('p'));
+      pending.current = { filters: f ? JSON.stringify(pickFilters(JSON.parse(f))) : null, page: p > 1 ? p : null };
+      if (f) setFilters(JSON.parse(f), {});
       if (p > 1) setTimeout(() => setPage(p), 0);
+      setTimeout(() => (pending.current = null), 3000); // never block the URL for good
       const saved = JSON.parse(sessionStorage.getItem(storageKey) || 'null');
       if (saved?.ids?.length) onSelect(saved.ids);
       if (saved?.filterMode) setFilterMode(true);
@@ -62,6 +67,11 @@ export function ListStateSync({ storageKey }) {
   useEffect(() => {
     if (!restored.current) return;
     const filters = pickFilters(filterValues);
+    const wait = pending.current;
+    if (wait) {
+      if ((wait.filters && JSON.stringify(filters) !== wait.filters) || (wait.page && page !== wait.page)) return;
+      pending.current = null;
+    }
     const next = new URLSearchParams(params);
     if (Object.keys(filters).length) next.set('f', JSON.stringify(filters));
     else next.delete('f');

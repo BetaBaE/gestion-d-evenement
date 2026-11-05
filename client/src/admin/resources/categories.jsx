@@ -17,6 +17,7 @@ import { useState } from 'react';
 import { Box, IconButton } from '@mui/material';
 import { FormDialog, DialogForm, FormSection, Field, ColorInput } from '../../components/form/index.js';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { GroupActionsProvider, CategorieShortcuts } from './GroupShortcuts.jsx';
 
 function ColorSwatch() {
   const record = useRecordContext();
@@ -86,6 +87,7 @@ export function CategoriesPanel({ eventId }) {
     <Box>
       <RaButton label="Nouvelle catégorie" onClick={() => setDialog({ mode: 'create' })} sx={{ mb: 2 }} />
 
+      <GroupActionsProvider eventId={eventId}>
       <ListBase resource="categories" queryOptions={{ meta: { eventId } }}>
         <Datagrid
           bulkActionButtons={false}
@@ -98,9 +100,11 @@ export function CategoriesPanel({ eventId }) {
           <TextField source="nom" label="Nom" />
           <BooleanField source="isDefault" label="Par défaut" />
           <TextField source="description" label="Description" />
+          <CategorieShortcuts eventId={eventId} label="Participants" />
           <DeleteCategorieButton eventId={eventId} onDeleted={refresh} />
         </Datagrid>
       </ListBase>
+      </GroupActionsProvider>
 
       <FormDialog
         open={!!dialog}
