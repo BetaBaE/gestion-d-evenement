@@ -349,7 +349,7 @@ function ThemeSection({ theme, onTheme }) {
         Sélectionnez un élément pour le modifier. Les couleurs du thème recolorent tous les éléments qui les utilisent.
       </Typography>
       {colors.map(([key, label]) => (
-        <ThemeColorField key={key} label={label} value={theme[key]} onChange={(v) => onTheme({ [key]: v })} />
+        <ThemeColorField key={key} label={label} value={theme[key]} onChange={(v) => onTheme({ [key]: v }, true)} />
       ))}
       {[
         ['policeTitres', 'Police des titres'],

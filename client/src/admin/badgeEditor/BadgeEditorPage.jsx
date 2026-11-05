@@ -47,7 +47,8 @@ import { checkBadgeRules, nanoid } from '../../../../shared/badge-renderer/index
 import { axiosClient } from '../../api/axiosClient.js';
 import { badgePreviewUrl, modelePreviewUrl, uploadBadgeImage, uploadModeleImage } from '../../api/imageApi.js';
 import { getSelectedOrganisateurId } from '../organisateurContext.js';
-import { useBadgeHistory } from './useBadgeHistory.js';
+import { useEditorHistory } from './useEditorHistory.js';
+import { elementPatchLabel, themePatchLabel } from './historyLabels.js';
 import { EditorCanvas, PALETTE_DRAG_TYPE } from './EditorCanvas.jsx';
 import { pickActivePanel, placePastedElements } from './placement.js';
 import { RulesPanel } from './RulesPanel.jsx';
@@ -97,7 +98,9 @@ function badgeSource(kind, id) {
           theme,
         };
       },
-      save: ({ elements, theme }) => axiosClient.put(base, { elements, theme }),
+      // Settings (name, format, panels) are part of the undoable document: saved with it.
+      save: ({ elements, theme, meta }) =>
+        axiosClient.put(base, { elements, theme, ...Object.fromEntries(SETTINGS_FIELDS.filter((k) => meta?.[k] !== undefined && meta?.[k] !== null).map((k) => [k, meta[k]])) }),
       saveSettings: (settings) => axiosClient.put(base, settings).then(({ data }) => data),
       previewUrl: () => modelePreviewUrl(org, id),
       upload: (file, options) => uploadModeleImage(org, id, file, options),
@@ -137,6 +140,26 @@ function badgeSource(kind, id) {
 function isTypingTarget(target) {
   return !!target?.closest?.('input, textarea, select, [contenteditable="true"]');
 }
+
+const TEXT_INPUT_TYPES = ['', 'text', 'search', 'email', 'number', 'tel', 'url', 'password'];
+
+/** Ctrl+Z inside a text field undoes characters in the field (browser undo); anywhere else it's the editor's. */
+function isTextEntry(target) {
+  if (!target) return false;
+  if (target.isContentEditable || target.tagName === 'TEXTAREA') return true;
+  return target.tagName === 'INPUT' && TEXT_INPUT_TYPES.includes((target.getAttribute('type') || '').toLowerCase());
+}
+
+/** "déplacement", "redimensionnement" or "rotation" for a canvas gesture. */
+function geometryLabel(geoms, elements) {
+  const byId = new Map(elements.map((e) => [e.id, e]));
+  const changed = (key) => geoms.some((g) => key in g && Math.abs((g[key] ?? 0) - (byId.get(g.id)?.[key] ?? 0)) > 0.01);
+  if (changed('rotation')) return 'rotation';
+  if (changed('largeur') || changed('hauteur')) return 'redimensionnement';
+  return 'déplacement';
+}
+
+const SETTINGS_FIELDS = ['nom', 'description', 'format', 'carteLargeurMm', 'carteHauteurMm', 'panneauxActifs', 'rotationLigneBas180', 'traitsDePliage', 'safeZoneMm'];
 
 /** Re-numbers z within each panel after `reorder` produced a new top-to-bottom list. */
 function applyPanelOrder(elements, panelKey, orderedTopFirst) {
@@ -260,12 +283,22 @@ export function BadgeEditorPage({ kind = 'event' }) {
   const [event, setEvent] = useState(null);
   const [context, setContext] = useState(null);
   const [participants, setParticipants] = useState([]);
-  const [badgeMeta, setBadgeMeta] = useState(null);
-  const [theme, setTheme] = useState(null);
   const [loadError, setLoadError] = useState(null);
-  const { elements, setElements, resetElements, undo, redo, canUndo, canRedo } = useBadgeHistory([]);
-
-  const [selectedIds, setSelectedIds] = useState([]);
+  // The document ({ elements, theme, meta }) and the selection live in the
+  // history: every change goes through commit(), so every change can be undone.
+  const history = useEditorHistory();
+  const { doc, commit, undo, redo, canUndo, canRedo } = history;
+  const { elements, theme, meta: badgeMeta } = doc;
+  const commitElements = useCallback(
+    (label, fn, options) => commit(label, (d) => ({ ...d, elements: fn(d.elements) }), options),
+    [commit],
+  );
+  // Hidden or deleted elements can't stay selected.
+  const selectedIds = useMemo(
+    () => history.selection.filter((id) => elements.some((e) => e.id === id && !e.masque)),
+    [history.selection, elements],
+  );
+  const setSelectedIds = history.select;
   // Where new elements go: see pickActivePanel (selection > last click > visible centre > P1).
   const [lastClickedPanel, setLastClickedPanel] = useState(null);
   const [centerPanel, setCenterPanel] = useState(null);
@@ -281,8 +314,8 @@ export function BadgeEditorPage({ kind = 'event' }) {
   const skipNextSaveRef = useRef(false);
   const canvasBoxRef = useRef(null);
   const saveTimerRef = useRef(null);
-  const latestRef = useRef({ elements, theme });
-  latestRef.current = { elements, theme };
+  const latestRef = useRef(doc);
+  latestRef.current = doc;
 
   const readOnly = viewportWidth < MIN_EDITOR_WIDTH;
 
@@ -297,9 +330,7 @@ export function BadgeEditorPage({ kind = 'event' }) {
         setTitle(loaded.title);
         setContext(loaded.context);
         setParticipants(loaded.participants);
-        setBadgeMeta(loaded.meta);
-        setTheme(loaded.theme);
-        resetElements(loaded.elements);
+        history.reset({ elements: loaded.elements, theme: loaded.theme, meta: loaded.meta });
         loadedRef.current = true;
         skipNextSaveRef.current = true;
       })
@@ -307,15 +338,15 @@ export function BadgeEditorPage({ kind = 'event' }) {
     return () => {
       cancelled = true;
     };
-  }, [source, resetElements]);
+  }, [source, history.reset]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- Autosave (debounced) ----
   const save = useCallback(async () => {
     clearTimeout(saveTimerRef.current);
-    const { elements: els, theme: th } = latestRef.current;
+    const { elements: els, theme: th, meta } = latestRef.current;
     setSaveStatus('saving');
     try {
-      await source.save({ elements: els, theme: th });
+      await source.save({ elements: els, theme: th, meta });
       setSaveStatus('saved');
     } catch (error) {
       setSaveStatus('error');
@@ -338,7 +369,12 @@ export function BadgeEditorPage({ kind = 'event' }) {
     clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(save, AUTOSAVE_MS);
     return () => clearTimeout(saveTimerRef.current);
-  }, [elements, theme, save]);
+  }, [doc, save]);
+
+  // A template's title follows its name (renamed in the settings, or by undo).
+  useEffect(() => {
+    if (kind === 'modele' && badgeMeta?.nom) setTitle(`Modèle — ${badgeMeta.nom}`);
+  }, [kind, badgeMeta?.nom]);
 
   useEffect(() => {
     function warn(e) {
@@ -406,10 +442,6 @@ export function BadgeEditorPage({ kind = 'event' }) {
     [elements],
   );
 
-  useEffect(() => {
-    setSelectedIds((ids) => ids.filter((id) => elements.some((e) => e.id === id && !e.masque)));
-  }, [elements]);
-
   const selected = elements.filter((e) => selectedIds.includes(e.id));
   const movable = selected.filter((e) => !e.verrouille);
 
@@ -418,7 +450,7 @@ export function BadgeEditorPage({ kind = 'event' }) {
     (geoms) => {
       if (!badge) return;
       const byId = new Map(geoms.map((g) => [g.id, g]));
-      setElements((els) =>
+      commitElements(geometryLabel(geoms, elements), (els) =>
         els.map((el) => {
           const g = byId.get(el.id);
           if (!g) return el;
@@ -427,30 +459,42 @@ export function BadgeEditorPage({ kind = 'event' }) {
         }),
       );
     },
-    [badge, setElements],
+    [badge, elements, commitElements],
   );
 
+  /**
+   * Property-panel change. `mergeKey` marks continuous inputs (picker drag,
+   * typing, number fields): one history step per gesture and per property.
+   */
   const changeElement = useCallback(
     (id, patch, mergeKey) => {
-      setElements((els) =>
-        els.map((el) => {
-          if (el.id !== id) return el;
-          const next = { ...el, ...patch };
-          return GEOMETRY_KEYS.some((k) => k in patch) ? clampToPanel(next, badge) : next;
-        }),
-      mergeKey);
+      const label = elementPatchLabel(patch, elements.find((e) => e.id === id));
+      commitElements(
+        label,
+        (els) =>
+          els.map((el) => {
+            if (el.id !== id) return el;
+            const next = { ...el, ...patch };
+            return GEOMETRY_KEYS.some((k) => k in patch) ? clampToPanel(next, badge) : next;
+          }),
+        { coalesceKey: mergeKey ? `${mergeKey}:${label}` : undefined },
+      );
     },
-    [badge, setElements],
+    [badge, elements, commitElements],
   );
 
-  function updateSelected(transform) {
+  function updateSelected(label, transform, options) {
     const ids = new Set(movable.map((e) => e.id));
     if (ids.size === 0) return;
-    setElements((els) => {
-      const updated = transform(els.filter((e) => ids.has(e.id)));
-      const byId = new Map(updated.map((e) => [e.id, clampToPanel(e, badge)]));
-      return els.map((e) => byId.get(e.id) || e);
-    });
+    commitElements(
+      label,
+      (els) => {
+        const updated = transform(els.filter((e) => ids.has(e.id)));
+        const byId = new Map(updated.map((e) => [e.id, clampToPanel(e, badge)]));
+        return els.map((e) => byId.get(e.id) || e);
+      },
+      options,
+    );
   }
 
   const activePanel = badge
@@ -460,16 +504,14 @@ export function BadgeEditorPage({ kind = 'event' }) {
   /** Adds an element in the active panel, or at `at` in `panneau` (palette drop). */
   function addElement(type, props, { panneau = activePanel, at } = {}) {
     const el = createElement(type, { badge, panneau, elements, props, at });
-    setElements((els) => [...els, el]);
-    setSelectedIds([el.id]);
+    commitElements('ajout', (els) => [...els, el], { selection: [el.id] });
     setLastClickedPanel(panneau);
   }
 
   function deleteSelected() {
     const ids = new Set(movable.map((e) => e.id));
     if (ids.size === 0) return;
-    setElements((els) => els.filter((e) => !ids.has(e.id)));
-    setSelectedIds([]);
+    commitElements('suppression', (els) => els.filter((e) => !ids.has(e.id)), { selection: [] });
   }
 
   /**
@@ -510,15 +552,13 @@ export function BadgeEditorPage({ kind = 'event' }) {
         badge,
       );
     });
-    setElements((els) => [...els, ...created]);
-    setSelectedIds(created.map((e) => e.id));
+    commitElements(mode === 'paste' ? 'collage' : 'duplication', (els) => [...els, ...created], { selection: created.map((e) => e.id) });
   }
 
   /** Moves "hors page" elements back onto P1, kept inside it. */
   function bringBackToP1(ids) {
     const set = new Set(ids);
-    setElements((els) => els.map((e) => (set.has(e.id) ? clampToPanel({ ...e, panneau: 'P1' }, badge) : e)));
-    setSelectedIds(ids);
+    commitElements('retour sur P1', (els) => els.map((e) => (set.has(e.id) ? clampToPanel({ ...e, panneau: 'P1' }, badge) : e)), { selection: ids });
   }
 
   /**
@@ -539,9 +579,7 @@ export function BadgeEditorPage({ kind = 'event' }) {
       notify(error.response?.data?.details?.[0]?.message || error.response?.data?.message || 'Erreur lors de l’enregistrement.', { type: 'error' });
       throw error;
     }
-    setBadgeMeta(nextMeta);
-    setTitle(`Modèle — ${settings.nom}`);
-    setElements(nextElements);
+    commit('paramètres du modèle', (d) => ({ ...d, meta: nextMeta, elements: nextElements }));
     if (horsApres > horsAvant) {
       notify(`${horsApres - horsAvant} élément(s) passé(s) hors page : retrouvez-les en haut des calques.`, { type: 'warning' });
     } else {
@@ -553,16 +591,28 @@ export function BadgeEditorPage({ kind = 'event' }) {
     if (movable.length < (group ? 2 : 1)) return;
     const groupeId = group ? nanoid() : null;
     const ids = new Set(movable.map((e) => e.id));
-    setElements((els) => els.map((e) => (ids.has(e.id) ? { ...e, groupeId } : e)));
+    commitElements(group ? 'groupement' : 'dégroupement', (els) => els.map((e) => (ids.has(e.id) ? { ...e, groupeId } : e)));
   }
+
+  const shiftSelectedLayers = (direction) =>
+    commitElements('ordre des calques', (els) => shiftLayers(els, movable.map((m) => m.id), direction));
 
   // ---- Keyboard ----
   useEffect(() => {
     function onKeyDown(e) {
       if (e.key === 'Shift') setShiftHeld(true);
-      if (readOnly || isTypingTarget(e.target)) return;
+      if (readOnly) return;
       const ctrl = e.ctrlKey || e.metaKey;
       const key = e.key.toLowerCase();
+      // Undo / redo: the editor's everywhere (color swatch, picker, selects,
+      // switches), except in a text field where the browser undoes characters.
+      if (ctrl && (key === 'z' || key === 'y') && !isTextEntry(e.target)) {
+        e.preventDefault();
+        if (key === 'z' && !e.shiftKey) undo();
+        else redo();
+        return;
+      }
+      if (isTypingTarget(e.target)) return;
       let handled = true;
 
       if (e.key === 'Escape') setSelectedIds([]);
@@ -571,10 +621,11 @@ export function BadgeEditorPage({ kind = 'event' }) {
         const step = e.shiftKey ? 5 : 0.5;
         const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
         const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
-        updateSelected((sel) => sel.map((el) => ({ ...el, x: round1(el.x + dx), y: round1(el.y + dy) })));
-      } else if (ctrl && key === 'z' && !e.shiftKey) undo();
-      else if (ctrl && (key === 'y' || (key === 'z' && e.shiftKey))) redo();
-      else if (ctrl && key === 'c' && selected.length) {
+        // Held / repeated arrows = one step, closed when the key is released.
+        updateSelected('déplacement', (sel) => sel.map((el) => ({ ...el, x: round1(el.x + dx), y: round1(el.y + dy) })), {
+          coalesceKey: `nudge:${movable.map((m) => m.id).join(',')}`,
+        });
+      } else if (ctrl && key === 'c' && selected.length) {
         localStorage.setItem(CLIPBOARD_KEY, JSON.stringify(selected));
       } else if (ctrl && key === 'v') {
         try {
@@ -584,8 +635,8 @@ export function BadgeEditorPage({ kind = 'event' }) {
         }
       } else if (ctrl && key === 'd') pasteElements(selected);
       else if (ctrl && key === 'g') setGroup(!e.shiftKey);
-      else if (ctrl && e.key === ']') setElements((els) => shiftLayers(els, movable.map((m) => m.id), 1));
-      else if (ctrl && e.key === '[') setElements((els) => shiftLayers(els, movable.map((m) => m.id), -1));
+      else if (ctrl && e.key === ']') shiftSelectedLayers(1);
+      else if (ctrl && e.key === '[') shiftSelectedLayers(-1);
       else handled = false;
 
       if (handled) e.preventDefault();
@@ -639,7 +690,7 @@ export function BadgeEditorPage({ kind = 'event' }) {
 
   const multi = movable.length >= 2;
   const panel = panelSizeMm(badge);
-  const align = (mode) => updateSelected((s) => alignElements(s, mode, panel));
+  const align = (mode) => updateSelected('alignement', (s) => alignElements(s, mode, panel));
   const alignReason = movable.length === 0 ? (selected.length ? 'élément verrouillé' : 'sélectionnez un élément') : null;
   // One element aligns to its panel; several align to each other.
   const alignTip = (label) => (movable.length === 1 ? `${label} (sur le panneau)` : label);
@@ -668,8 +719,8 @@ export function BadgeEditorPage({ kind = 'event' }) {
           </Button>
         )}
         <Divider orientation="vertical" flexItem />
-        {tool('Annuler (Ctrl+Z)', UndoIcon, undo, !canUndo || readOnly)}
-        {tool('Rétablir (Ctrl+Y)', RedoIcon, redo, !canRedo || readOnly)}
+        {tool(history.undoLabel ? `Annuler : ${history.undoLabel} (Ctrl+Z)` : 'Annuler (Ctrl+Z)', UndoIcon, undo, !canUndo || readOnly, 'rien à annuler')}
+        {tool(history.redoLabel ? `Rétablir : ${history.redoLabel} (Ctrl+Y)` : 'Rétablir (Ctrl+Y)', RedoIcon, redo, !canRedo || readOnly, 'rien à rétablir')}
         <Divider orientation="vertical" flexItem />
         {tool(alignTip('Aligner à gauche'), AlignHorizontalLeftIcon, () => align('gauche'), !!alignReason, alignReason)}
         {tool(alignTip('Centrer horizontalement'), AlignHorizontalCenterIcon, () => align('centreH'), !!alignReason, alignReason)}
@@ -677,11 +728,11 @@ export function BadgeEditorPage({ kind = 'event' }) {
         {tool(alignTip('Aligner en haut'), AlignVerticalTopIcon, () => align('haut'), !!alignReason, alignReason)}
         {tool(alignTip('Centrer verticalement'), AlignVerticalCenterIcon, () => align('milieu'), !!alignReason, alignReason)}
         {tool(alignTip('Aligner en bas'), AlignVerticalBottomIcon, () => align('bas'), !!alignReason, alignReason)}
-        {tool('Répartir horizontalement', HorizontalDistributeIcon, () => updateSelected((s) => distributeElements(s, 'h')), movable.length < 3, 'sélectionnez au moins 3 éléments (Maj+clic)')}
-        {tool('Répartir verticalement', VerticalDistributeIcon, () => updateSelected((s) => distributeElements(s, 'v')), movable.length < 3, 'sélectionnez au moins 3 éléments (Maj+clic)')}
+        {tool('Répartir horizontalement', HorizontalDistributeIcon, () => updateSelected('répartition', (s) => distributeElements(s, 'h')), movable.length < 3, 'sélectionnez au moins 3 éléments (Maj+clic)')}
+        {tool('Répartir verticalement', VerticalDistributeIcon, () => updateSelected('répartition', (s) => distributeElements(s, 'v')), movable.length < 3, 'sélectionnez au moins 3 éléments (Maj+clic)')}
         <Divider orientation="vertical" flexItem />
-        {tool('Premier plan (Ctrl+])', FlipToFrontIcon, () => setElements((els) => shiftLayers(els, movable.map((m) => m.id), 1)), !movable.length, 'sélectionnez un élément')}
-        {tool('Arrière-plan (Ctrl+[)', FlipToBackIcon, () => setElements((els) => shiftLayers(els, movable.map((m) => m.id), -1)), !movable.length, 'sélectionnez un élément')}
+        {tool('Premier plan (Ctrl+])', FlipToFrontIcon, () => shiftSelectedLayers(1), !movable.length, 'sélectionnez un élément')}
+        {tool('Arrière-plan (Ctrl+[)', FlipToBackIcon, () => shiftSelectedLayers(-1), !movable.length, 'sélectionnez un élément')}
         {tool('Grouper (Ctrl+G)', LinkIcon, () => setGroup(true), !multi, 'sélectionnez au moins 2 éléments (Maj+clic)')}
         {tool('Dégrouper (Ctrl+Maj+G)', LinkOffIcon, () => setGroup(false), !movable.some((e) => e.groupeId), 'aucun groupe sélectionné')}
         {tool('Dupliquer (Ctrl+D)', ContentCopyIcon, () => pasteElements(selected), !selected.length || readOnly, 'sélectionnez un élément')}
@@ -799,7 +850,11 @@ export function BadgeEditorPage({ kind = 'event' }) {
                 previewCtx={previewCtx}
                 uploadImage={source.upload}
                 onChangeElement={changeElement}
-                onTheme={(patch) => setTheme((t) => ({ ...t, ...patch }))}
+                onTheme={(patch, mergeKey) =>
+                  commit(themePatchLabel(patch), (d) => ({ ...d, theme: { ...d.theme, ...patch } }), {
+                    coalesceKey: mergeKey ? `theme:${Object.keys(patch).join(',')}` : undefined,
+                  })
+                }
               />
             </Paper>
             <Paper sx={{ p: 1, flex: 2, overflowY: 'auto', minHeight: 0 }}>
@@ -815,7 +870,7 @@ export function BadgeEditorPage({ kind = 'event' }) {
                 onRename={(id, nom) => changeElement(id, { nom })}
                 onBringBack={bringBackToP1}
                 onReorder={(draggedId, overId) =>
-                  setElements((els) => {
+                  commitElements('ordre des calques', (els) => {
                     const dragged = els.find((e) => e.id === draggedId);
                     const over = els.find((e) => e.id === overId);
                     if (!dragged || !over || dragged.panneau !== over.panneau) return els;

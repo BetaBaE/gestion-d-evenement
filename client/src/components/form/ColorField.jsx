@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { HexColorPicker } from 'react-colorful';
 import { Box, IconButton, Popover, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import ColorizeIcon from '@mui/icons-material/Colorize';
@@ -62,8 +62,11 @@ export function ColorField({
   const [anchor, setAnchor] = useState(null);
 
   // Keep the text field in sync when the value changes from outside
-  // (picker, preset, form reset, undo).
+  // (picker, preset, form reset, undo) — not while typing in it: '#FF0' is
+  // already a valid color and would rewrite '#FF0000' half-way through.
+  const typingRef = useRef(false);
   useEffect(() => {
+    if (typingRef.current) return;
     setDraft(token ? token.label : value && value !== 'aucun' ? normalizeHex(value) || value : '');
     setDraftError(false);
   }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -141,7 +144,11 @@ export function ColorField({
               if (normalized !== value) onChange(normalized);
             }
           }}
+          onFocus={() => {
+            typingRef.current = true;
+          }}
           onBlur={(e) => {
+            typingRef.current = false;
             if (!token || e.target.value !== token.label) commitDraft(e.target.value.trim());
             onBlur?.(e);
           }}

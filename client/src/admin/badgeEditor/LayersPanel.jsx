@@ -15,6 +15,7 @@ function LayerRow({ el, selected, onSelect, onToggle, onRename, onDragStart, onD
 
   return (
     <Stack
+      data-layer-id={el.id}
       direction="row"
       spacing={0.5}
       draggable={!editing}
