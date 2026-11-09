@@ -82,6 +82,38 @@ function Ruler({ orientation, lengthMm, zoom }) {
  * node's inline style; the result is read back in mm and committed once,
  * on gesture end, through onCommit.
  */
+/**
+ * Grid drawn ABOVE the badge (the panels' white background hid it), in sheet
+ * millimetres. Line width is 1/zoom so it stays one screen pixel at any zoom;
+ * every 10 mm a stronger line helps counting. Never captures the mouse.
+ */
+function GridOverlay({ width, height, grid, zoom }) {
+  const step = mmToPx(grid.sizeMm);
+  const major = mmToPx(10);
+  const stroke = 1 / zoom;
+  const id = `grid-${String(grid.sizeMm).replace('.', '-')}`;
+  return (
+    <svg
+      width={mmToPx(width)}
+      height={mmToPx(height)}
+      style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none', zIndex: 2 }}
+      shapeRendering="crispEdges"
+      aria-hidden="true"
+    >
+      <defs>
+        <pattern id={`${id}-minor`} width={step} height={step} patternUnits="userSpaceOnUse">
+          <path d={`M ${step} 0 L 0 0 0 ${step}`} fill="none" stroke={grid.color} strokeOpacity={0.45} strokeWidth={stroke} />
+        </pattern>
+        <pattern id={`${id}-major`} width={major} height={major} patternUnits="userSpaceOnUse">
+          <path d={`M ${major} 0 L 0 0 0 ${major}`} fill="none" stroke={grid.color} strokeOpacity={0.9} strokeWidth={stroke} />
+        </pattern>
+      </defs>
+      {grid.sizeMm < 10 && <rect width="100%" height="100%" fill={`url(#${id}-minor)`} />}
+      <rect width="100%" height="100%" fill={`url(#${id}-major)`} />
+    </svg>
+  );
+}
+
 export function EditorCanvas({
   badge,
   elements,
@@ -96,7 +128,7 @@ export function EditorCanvas({
   onSelect,
   onCommit,
   zoom,
-  showGrid,
+  grid,
   shiftHeld,
   readOnly,
   activePanel,
@@ -243,10 +275,6 @@ export function EditorCanvas({
             transform: `scale(${zoom})`,
             transformOrigin: '0 0',
             boxShadow: '0 2px 10px rgba(0,0,0,0.25)',
-            backgroundImage: showGrid
-              ? `linear-gradient(rgba(25,113,194,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(25,113,194,0.12) 1px, transparent 1px)`
-              : 'none',
-            backgroundSize: `${PX_PER_MM}px ${PX_PER_MM}px`,
           }}
         >
           <style>{css}</style>
@@ -254,9 +282,7 @@ export function EditorCanvas({
             <style>{errorIds.map((id) => `.${SCOPE} [data-element-id="${CSS.escape(id)}"]`).join(', ') + ' { outline: 0.6mm solid #d32f2f !important; outline-offset: 0.3mm; }'}</style>
           )}
           <div className={SCOPE} ref={hostRef} dangerouslySetInnerHTML={{ __html: html }} />
-          {showGrid && (
-            <style>{`.${SCOPE} .panel { background: rgba(255,255,255,0.88); }`}</style>
-          )}
+          {grid?.show && <GridOverlay width={sheet.width} height={sheet.height} grid={grid} zoom={zoom} />}
           {panels.length > 1 &&
             panels.includes(activePanel) &&
             (() => {
@@ -313,8 +339,8 @@ export function EditorCanvas({
               snapThreshold={5}
               isDisplaySnapDigit
               snapDistFormat={(v) => `${round1(pxToMm(v))} mm`}
-              snapGridWidth={showGrid ? PX_PER_MM : 0}
-              snapGridHeight={showGrid ? PX_PER_MM : 0}
+              snapGridWidth={grid?.show && grid.snap ? PX_PER_MM * grid.sizeMm : 0}
+              snapGridHeight={grid?.show && grid.snap ? PX_PER_MM * grid.sizeMm : 0}
               verticalGuidelines={guidelines.vertical}
               horizontalGuidelines={guidelines.horizontal}
               elementGuidelines={guideElements}

@@ -25,7 +25,6 @@ import RedoIcon from '@mui/icons-material/Redo';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import FitScreenIcon from '@mui/icons-material/FitScreen';
-import GridOnIcon from '@mui/icons-material/GridOn';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FlipToFrontIcon from '@mui/icons-material/FlipToFront';
@@ -52,6 +51,7 @@ import { elementPatchLabel, themePatchLabel } from './historyLabels.js';
 import { EditorCanvas, PALETTE_DRAG_TYPE } from './EditorCanvas.jsx';
 import { pickActivePanel, placePastedElements } from './placement.js';
 import { RulesPanel } from './RulesPanel.jsx';
+import { GridControl, loadGridSettings, saveGridSettings } from './GridControl.jsx';
 import { TemplateSettingsDialog } from '../modeles/TemplateSettingsDialog.jsx';
 import { PropertiesPanel } from './PropertiesPanel.jsx';
 import { LayersPanel } from './LayersPanel.jsx';
@@ -70,7 +70,10 @@ import {
 } from './geometry.js';
 
 const AUTOSAVE_MS = 1500;
-const MIN_EDITOR_WIDTH = 1280;
+// Below this the editor is read-only. 1024 so a 125 % browser zoom (or Windows
+// scaling) on a laptop screen keeps the side panels; they get narrower below 1440.
+const MIN_EDITOR_WIDTH = 1024;
+const COMPACT_WIDTH = 1440;
 const CLIPBOARD_KEY = 'badgeEditorClipboard';
 const GEOMETRY_KEYS = ['x', 'y', 'largeur', 'hauteur', 'panneau'];
 
@@ -305,7 +308,11 @@ export function BadgeEditorPage({ kind = 'event' }) {
   const [subjectKey, setSubjectKey] = useState('exemple');
   const [qrCodeSvg, setQrCodeSvg] = useState('');
   const [zoom, setZoom] = useState(1);
-  const [showGrid, setShowGrid] = useState(false);
+  const [grid, setGridState] = useState(loadGridSettings);
+  const setGrid = useCallback((next) => {
+    setGridState(next);
+    saveGridSettings(next);
+  }, []);
   const [shiftHeld, setShiftHeld] = useState(false);
   const [saveStatus, setSaveStatus] = useState('saved');
   const [viewportWidth, setViewportWidth] = useState(window.innerWidth);
@@ -318,6 +325,7 @@ export function BadgeEditorPage({ kind = 'event' }) {
   latestRef.current = doc;
 
   const readOnly = viewportWidth < MIN_EDITOR_WIDTH;
+  const compact = viewportWidth < COMPACT_WIDTH;
 
   // ---- Loading ----
   useEffect(() => {
@@ -706,7 +714,9 @@ export function BadgeEditorPage({ kind = 'event' }) {
   );
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)', p: 1, gap: 1 }}>
+    // width / minWidth 0 / overflow: the zoomed canvas scrolls inside its own area instead of
+    // widening the page and pushing the right panel off-screen.
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)', p: 1, gap: 1, width: '100%', minWidth: 0, overflow: 'hidden' }}>
       <Title title={title} />
 
       <Paper sx={{ px: 1, py: 0.5, display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
@@ -744,11 +754,7 @@ export function BadgeEditorPage({ kind = 'event' }) {
         </Typography>
         {tool('Zoom avant', ZoomInIcon, () => setZoom((z) => Math.min(4, round1(z + 0.25))))}
         {tool("Ajuster à l'écran", FitScreenIcon, fitToScreen)}
-        <Tooltip title="Grille 1 mm">
-          <IconButton size="small" color={showGrid ? 'primary' : 'default'} onClick={() => setShowGrid((g) => !g)}>
-            <GridOnIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        <GridControl grid={grid} onChange={setGrid} />
         {activePanels(badge).length > 1 && (
           <Tooltip title="Les éléments ajoutés vont dans ce panneau. Cliquez dans un panneau pour l'activer.">
             <Chip size="small" color="primary" variant="outlined" label={`${activePanel} actif`} sx={{ ml: 0.5 }} />
@@ -800,9 +806,9 @@ export function BadgeEditorPage({ kind = 'event' }) {
         </Alert>
       )}
 
-      <Box sx={{ flex: 1, minHeight: 0, display: 'flex', gap: 1 }}>
+      <Box sx={{ flex: 1, minHeight: 0, minWidth: 0, display: 'flex', gap: 1 }}>
         {!readOnly && (
-          <Paper sx={{ width: 200, p: 1, overflowY: 'auto', flexShrink: 0 }}>
+          <Paper sx={{ width: compact ? 168 : 200, p: 1, overflowY: 'auto', flexShrink: 0 }}>
             <AddPalette onAdd={addElement} />
             <Divider sx={{ my: 1 }} />
             <RulesPanel
@@ -814,7 +820,8 @@ export function BadgeEditorPage({ kind = 'event' }) {
           </Paper>
         )}
 
-        <Paper ref={canvasBoxRef} sx={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+        {/* width 0 + flex 1: fills the space, but the zoomed canvas never counts toward the page width. */}
+        <Paper ref={canvasBoxRef} sx={{ flex: 1, width: 0, minWidth: 0, overflow: 'hidden' }}>
           <EditorCanvas
             badge={badge}
             elements={elements}
@@ -829,7 +836,7 @@ export function BadgeEditorPage({ kind = 'event' }) {
             onSelect={select}
             onCommit={commitGeometry}
             zoom={zoom}
-            showGrid={showGrid}
+            grid={grid}
             shiftHeld={shiftHeld}
             readOnly={readOnly}
             activePanel={activePanel}
@@ -840,7 +847,7 @@ export function BadgeEditorPage({ kind = 'event' }) {
         </Paper>
 
         {!readOnly && (
-          <Stack sx={{ width: 320, flexShrink: 0, gap: 1, minHeight: 0 }}>
+          <Stack sx={{ width: compact ? 270 : 320, flexShrink: 0, gap: 1, minHeight: 0 }}>
             <Paper sx={{ p: 1.5, flex: 3, overflowY: 'auto', minHeight: 0 }}>
               <PropertiesPanel
                 badge={badge}
