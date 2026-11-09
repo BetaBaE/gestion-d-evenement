@@ -96,7 +96,7 @@ function GridOverlay({ width, height, grid, zoom }) {
     <svg
       width={mmToPx(width)}
       height={mmToPx(height)}
-      style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none', zIndex: 2 }}
+      style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none', zIndex: 2, opacity: grid.opacity ?? 1 }}
       shapeRendering="crispEdges"
       aria-hidden="true"
     >
@@ -281,7 +281,9 @@ export function EditorCanvas({
           {errorIds.length > 0 && (
             <style>{errorIds.map((id) => `.${SCOPE} [data-element-id="${CSS.escape(id)}"]`).join(', ') + ' { outline: 0.6mm solid #d32f2f !important; outline-offset: 0.3mm; }'}</style>
           )}
-          <div className={SCOPE} ref={hostRef} dangerouslySetInnerHTML={{ __html: html }} />
+          {/* Own stacking context: the elements' layer z-indexes stay inside the
+              badge, so the grid and panel outlines are always drawn above it. */}
+          <div className={SCOPE} ref={hostRef} style={{ position: 'relative', zIndex: 0, isolation: 'isolate' }} dangerouslySetInnerHTML={{ __html: html }} />
           {grid?.show && <GridOverlay width={sheet.width} height={sheet.height} grid={grid} zoom={zoom} />}
           {panels.length > 1 &&
             panels.includes(activePanel) &&

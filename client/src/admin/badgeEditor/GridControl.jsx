@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Box, FormControlLabel, IconButton, InputAdornment, MenuItem, Popover, Stack, Switch, TextField, Tooltip, Typography } from '@mui/material';
+import { Box, FormControlLabel, IconButton, InputAdornment, MenuItem, Popover, Slider, Stack, Switch, TextField, Tooltip, Typography } from '@mui/material';
 import GridOnIcon from '@mui/icons-material/GridOn';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import { ColorField } from '../../components/form/index.js';
 
 const STORAGE_KEY = 'badgeEditorGrid';
-const DEFAULT_GRID = { show: false, sizeMm: 5, color: '#1971C2', snap: true };
+const DEFAULT_GRID = { show: false, sizeMm: 5, color: '#1971C2', opacity: 0.6, snap: true };
 const SIZES = [1, 2, 2.5, 5, 10];
 
 /** Grid settings of this browser (a per-viewer preference, not part of the badge). */
@@ -79,6 +79,20 @@ export function GridControl({ grid, onChange }) {
             slotProps={{ htmlInput: { min: 0.5, max: 50, step: 0.5 }, input: { endAdornment: <InputAdornment position="end">mm</InputAdornment> } }}
           />
           <ColorField label="Couleur des lignes" value={grid.color} onChange={(color) => set({ color })} />
+          <Box>
+            <Typography variant="caption" color="text.secondary">
+              Opacité : {Math.round((grid.opacity ?? 1) * 100)} %
+            </Typography>
+            <Slider
+              size="small"
+              min={10}
+              max={100}
+              step={5}
+              value={Math.round((grid.opacity ?? 1) * 100)}
+              onChange={(_, v) => set({ opacity: v / 100, show: true })}
+              aria-label="Opacité de la grille"
+            />
+          </Box>
           <FormControlLabel
             control={<Switch size="small" checked={grid.snap} onChange={(e) => set({ snap: e.target.checked })} />}
             label="Aimanter les éléments à la grille"
