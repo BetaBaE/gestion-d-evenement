@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import {
@@ -21,9 +21,12 @@ import {
   Checkbox,
   FileButton,
   Avatar,
+  useComputedColorScheme,
 } from '@mantine/core';
 import { IconTrash, IconPlus, IconCamera } from '@tabler/icons-react';
 import { getInscriptionForm, submitInscription, imageUrl } from '../../api/publicApi.js';
+import { TurnstileField } from '../../components/security/TurnstileField.jsx';
+import { captchaErrorMessage, useTurnstileConfig } from '../../components/security/turnstileConfig.js';
 
 function emptyParticipant() {
   return {
@@ -89,6 +92,13 @@ export function InscriptionPage() {
   const [participants, setParticipants] = useState([emptyParticipant()]);
   const [honeypot, setHoneypot] = useState('');
   const [submitError, setSubmitError] = useState(null);
+  // One bot-check token for the whole submission (all participant rows).
+  const turnstile = useTurnstileConfig();
+  const turnstileRef = useRef(null);
+  const colorScheme = useComputedColorScheme('light');
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [captchaError, setCaptchaError] = useState(null);
+  const needsToken = turnstile.loading || turnstile.enabled;
 
   const selectedOrganisme = data?.organismes.find((o) => o.id === selectedOrganismeId);
 
@@ -122,9 +132,17 @@ export function InscriptionPage() {
           honeypot,
         },
         photos: participants.map((p) => p.photoFile),
+        turnstileToken: turnstileToken || undefined,
       }),
     onError: (err) => {
-      setSubmitError(err.response?.data?.message || 'Une erreur est survenue.');
+      const captcha = captchaErrorMessage(err);
+      if (captcha) setCaptchaError(captcha);
+      else setSubmitError(err.response?.data?.message || 'Une erreur est survenue.');
+      // Tokens are single-use: any server error needs a fresh one.
+      if (turnstile.enabled) {
+        setTurnstileToken('');
+        turnstileRef.current?.reset();
+      }
     },
   });
 
@@ -176,9 +194,19 @@ export function InscriptionPage() {
     setParticipants((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function resetTurnstile() {
+    setTurnstileToken('');
+    setCaptchaError(null);
+    turnstileRef.current?.reset();
+  }
+
+  const verifying = needsToken && !turnstileToken && !captchaError && !turnstile.misconfigured;
+
   function handleSubmit(event) {
     event.preventDefault();
+    if (needsToken && !turnstileToken) return;
     setSubmitError(null);
+    setCaptchaError(null);
     mutation.mutate();
   }
 
@@ -327,8 +355,34 @@ export function InscriptionPage() {
 
             {submitError && <Alert color="red">{submitError}</Alert>}
 
-            <Button type="submit" disabled={!canSubmit} loading={mutation.isPending} fullWidth>
-              Envoyer l'inscription
+            <TurnstileField
+              ref={turnstileRef}
+              action="inscription"
+              theme={colorScheme === 'dark' ? 'dark' : 'light'}
+              onToken={(token) => {
+                setTurnstileToken(token);
+                setCaptchaError(null);
+              }}
+              onExpire={() => setTurnstileToken('')}
+              onError={() => {
+                setTurnstileToken('');
+                setCaptchaError("La vérification anti-robot n'a pas pu aboutir.");
+              }}
+            />
+
+            {captchaError && (
+              <Alert color="orange">
+                <Group justify="space-between" wrap="nowrap">
+                  <Text size="sm">{captchaError}</Text>
+                  <Button size="xs" variant="light" color="orange" onClick={resetTurnstile}>
+                    Réessayer
+                  </Button>
+                </Group>
+              </Alert>
+            )}
+
+            <Button type="submit" disabled={!canSubmit || (needsToken && !turnstileToken)} loading={mutation.isPending} fullWidth>
+              {verifying ? 'Vérification en cours…' : "Envoyer l'inscription"}
             </Button>
           </Stack>
         </form>

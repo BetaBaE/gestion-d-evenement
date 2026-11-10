@@ -8,8 +8,8 @@ function syncOrganisateurContext(identity) {
 }
 
 export const authProvider = {
-  async login({ username, password }) {
-    const { data } = await axiosClient.post('/auth/login', { email: username, password });
+  async login({ username, password, turnstileToken }) {
+    const { data } = await axiosClient.post('/auth/login', { email: username, password, turnstileToken });
     localStorage.setItem('identity', JSON.stringify(data));
     syncOrganisateurContext(data);
     return data;

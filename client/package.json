@@ -19,6 +19,7 @@
     "@mantine/dates": "9.7.4",
     "@mantine/hooks": "9.7.4",
     "@mantine/notifications": "9.7.4",
+    "@marsidev/react-turnstile": "1.6.3",
     "@mui/icons-material": "9.5.0",
     "@mui/material": "9.5.0",
     "@tabler/icons-react": "3.50.0",

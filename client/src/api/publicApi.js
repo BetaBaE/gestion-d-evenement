@@ -6,7 +6,7 @@ export async function getInscriptionForm(formToken) {
   return data;
 }
 
-export async function submitInscription(formToken, { data: jsonData, photos }) {
+export async function submitInscription(formToken, { data: jsonData, photos, turnstileToken }) {
   const formData = new FormData();
   formData.append('data', JSON.stringify(jsonData));
   photos.forEach((file, index) => {
@@ -16,7 +16,8 @@ export async function submitInscription(formToken, { data: jsonData, photos }) {
   });
 
   const { data } = await axiosClient.post(`/public/inscription/${formToken}`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+    // The bot-check token travels in a header: the server checks it before reading the photos.
+    headers: { 'Content-Type': 'multipart/form-data', ...(turnstileToken ? { 'cf-turnstile-response': turnstileToken } : {}) },
   });
   return data;
 }

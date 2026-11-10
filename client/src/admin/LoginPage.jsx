@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useLogin } from 'react-admin';
+import { useTheme } from '@mui/material/styles';
+import { TurnstileField } from '../components/security/TurnstileField.jsx';
+import { captchaErrorMessage, useTurnstileConfig } from '../components/security/turnstileConfig.js';
 import {
   Alert,
   Box,
@@ -35,23 +38,47 @@ function errorMessage(error) {
 /** Back-office sign-in: brand panel (hidden on phones) + form. */
 export function LoginPage() {
   const login = useLogin();
+  const theme = useTheme();
+  const turnstile = useTurnstileConfig();
+  const turnstileRef = useRef(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  // Bot-check problem (server code or widget failure): shown next to the button with "Réessayer".
+  const [captchaError, setCaptchaError] = useState(null);
+
+  const needsToken = turnstile.loading || turnstile.enabled;
+  const verifying = needsToken && !turnstileToken && !captchaError && !turnstile.misconfigured;
+
+  /** Tokens are single-use: after any failed attempt, ask Cloudflare for a new one. */
+  function resetTurnstile() {
+    setTurnstileToken('');
+    setCaptchaError(null);
+    turnstileRef.current?.reset();
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
+    if (needsToken && !turnstileToken) return;
     setError(null);
+    setCaptchaError(null);
     setLoading(true);
     try {
       // authProvider.login expects { username, password }; the username is the email.
-      await login({ username: email.trim(), password });
+      await login({ username: email.trim(), password, turnstileToken: turnstileToken || undefined });
     } catch (err) {
-      setError(errorMessage(err));
+      const captcha = captchaErrorMessage(err);
+      if (captcha) setCaptchaError(captcha);
+      else setError(errorMessage(err));
       setLoading(false);
+      if (turnstile.enabled) {
+        setTurnstileToken('');
+        turnstileRef.current?.reset();
+      }
     }
   }
 
@@ -185,16 +212,42 @@ export function LoginPage() {
                 },
               }}
             />
+            <TurnstileField
+              ref={turnstileRef}
+              action="login"
+              theme={theme.palette.mode === 'dark' ? 'dark' : 'light'}
+              onToken={(token) => {
+                setTurnstileToken(token);
+                setCaptchaError(null);
+              }}
+              onExpire={() => setTurnstileToken('')}
+              onError={() => {
+                setTurnstileToken('');
+                setCaptchaError("La vérification anti-robot n'a pas pu aboutir.");
+              }}
+            />
+            {captchaError && (
+              <Alert
+                severity="warning"
+                action={
+                  <Button color="inherit" size="small" onClick={resetTurnstile}>
+                    Réessayer
+                  </Button>
+                }
+              >
+                {captchaError}
+              </Alert>
+            )}
             <Button
               type="submit"
               variant="contained"
               size="large"
               fullWidth
-              disabled={loading || !email.trim() || !password}
-              startIcon={loading ? <CircularProgress size={18} color="inherit" /> : null}
+              disabled={loading || !email.trim() || !password || (needsToken && !turnstileToken)}
+              startIcon={loading || verifying ? <CircularProgress size={18} color="inherit" /> : null}
               sx={{ py: 1.4, fontWeight: 600 }}
             >
-              {loading ? 'Connexion…' : 'Se connecter'}
+              {loading ? 'Connexion…' : verifying ? 'Vérification en cours…' : 'Se connecter'}
             </Button>
           </Stack>
 
