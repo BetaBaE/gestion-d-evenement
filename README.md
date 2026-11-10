@@ -149,6 +149,38 @@ Une action "Supprimer toutes les photos" (page Participants d'un événement) pe
 
 Chaque route de back-office imbriquée sous `/api/admin/organisateurs/:organisateurId/...` passe par le middleware `tenantScope` : pour un Gestionnaire, l'`organisateurId` de son JWT est **toujours** utilisé, quel que soit l'identifiant présent dans l'URL — un gestionnaire ne peut donc jamais accéder aux données d'un autre organisateur, même en forgeant l'URL. Les sous-ressources d'un événement (catégories, organismes, participants) passent en plus par `eventScope`, qui vérifie que l'événement appartient bien à l'organisateur résolu.
 
+## Vérification anti-robot (Cloudflare Turnstile)
+
+La page de connexion du back-office et le formulaire public d'inscription (`/inscription/:formToken`) sont protégés par [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/), en plus de la limitation des tentatives et du champ piège (honeypot). Le scan, les pages du back-office et l'API interne ne sont pas concernés. Turnstile fonctionne sur n'importe quel site : **le DNS d'atner.ma n'a pas à passer chez Cloudflare** et aucun proxy Cloudflare n'est nécessaire.
+
+Fonctionnement : le navigateur obtient un jeton (invisible, ou une simple case à cocher si Cloudflare a un doute) ; le serveur le fait vérifier par Cloudflare **avant** de tester le mot de passe ou de lire l'inscription (photos comprises). Un jeton ne sert qu'une fois et expire après 5 minutes ; il est lié à son formulaire (`login` ou `inscription`) et aux noms de domaine autorisés.
+
+### Créer le widget (une fois)
+
+1. Compte Cloudflare (gratuit) → **Turnstile → Add widget**.
+2. Hostnames : `event.atner.ma` et `gestion-d-evenement.vercel.app` (pour le poste de dev, utiliser les clés de test ci-dessous, ou un widget séparé avec `localhost`).
+3. Widget mode : **Managed**.
+4. Copier la **site key** dans `VITE_TURNSTILE_SITE_KEY` et la **secret key** dans `TURNSTILE_SECRET_KEY`, mettre `TURNSTILE_ENABLED=true` dans Vercel (Production), puis **redéployer** (la site key est intégrée au build du front).
+
+### Variables
+
+| Variable | Où | Rôle |
+| --- | --- | --- |
+| `TURNSTILE_ENABLED` | serveur | `true` pour activer. Absente ou `false` : pas de widget, pas de vérification (un avertissement est écrit au démarrage en production). Le front lit ce réglage via `GET /api/public/config` : le désactiver ne demande pas de rebuild. |
+| `TURNSTILE_SECRET_KEY` | serveur | Clé secrète, jamais envoyée au navigateur. Obligatoire si activé. |
+| `VITE_TURNSTILE_SITE_KEY` | front (build) | Clé publique du widget. |
+| `TURNSTILE_ALLOWED_HOSTNAMES` | serveur | Domaines acceptés (défaut : `event.atner.ma,gestion-d-evenement.vercel.app,localhost`). |
+| `TURNSTILE_LOGIN_FAIL_OPEN` | serveur | **Interrupteur d'urgence**, `false` par défaut. Voir ci-dessous. |
+| `TRUST_PROXY` | serveur | Nombre de proxys devant l'API (IP réelle du visiteur). Vercel : automatique. VPS derrière Nginx/Caddy : `1`. |
+
+Clés de test officielles (pour le développement) : toujours valide : site key `1x00000000000000000000AA`, secret `1x0000000000000000000000000000000AA` ; toujours refusé : site key `2x00000000000000000000AB`, secret `2x0000000000000000000000000000000AA`. Avec ces clés, Cloudflare ne contrôle ni le domaine ni le formulaire, et un même jeton peut resservir : seules de vraies clés le font.
+
+### Si Cloudflare est indisponible
+
+Par défaut, le serveur **refuse** (réponse `CAPTCHA_INDISPONIBLE`) : aucune inscription ni connexion ne passe sans vérification. Si une panne Cloudflare empêchait les administrateurs de se connecter, mettre `TURNSTILE_LOGIN_FAIL_OPEN=true` dans Vercel et redéployer : pendant la panne, les **connexions** passent (avec un avertissement dans les logs) ; un jeton invalide reste refusé, et le formulaire d'inscription reste protégé. Remettre `false` une fois la panne terminée. En dernier recours, `TURNSTILE_ENABLED=false` coupe complètement la vérification.
+
+Sécurité des en-têtes : la Content-Security-Policy de Helmet ne s'applique qu'aux réponses de l'API ; les pages du front n'en ont pas, donc rien à autoriser pour `challenges.cloudflare.com`. Si une CSP est ajoutée plus tard (Nginx sur le VPS), y autoriser `https://challenges.cloudflare.com` dans `script-src` et `frame-src`.
+
 ## Déploiement (Vercel — phase de test)
 
 Tout est hébergé sur un seul projet Vercel, sur un seul domaine : le front (build Vite statique, `client/dist`) et l'API Express en fonction serverless (`api/index.js`, appelée via la réécriture `/api/*` de `vercel.json`). Le cookie de session et les images fonctionnent donc comme avec le proxy de développement. HTTPS est fourni par Vercel : caméra du scan et installation de l'application (PWA) fonctionnent sans réglage.
