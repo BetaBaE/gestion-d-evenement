@@ -9,15 +9,27 @@ import { organisateurRoutes } from './routes/organisateurRoutes.js';
 import { userRoutes } from './routes/userRoutes.js';
 import { publicInscriptionRoutes } from './routes/publicInscriptionRoutes.js';
 import { publicScanRoutes } from './routes/publicScanRoutes.js';
+import { publicConfigRoutes } from './routes/publicConfigRoutes.js';
 import { publicImageRoutes, adminImageRoutes, publicScanPhotoRoutes } from './routes/imageRoutes.js';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
 import { kickWorkAfterRequest } from './jobs/worker.js';
 
 export const app = express();
 
-// On Vercel every request arrives through its proxy: trust one hop so
-// req.ip is the visitor's address (rate limits per visitor, not shared).
-if (process.env.VERCEL) app.set('trust proxy', 1);
+// Behind Vercel (or Nginx/Caddy with TRUST_PROXY) requests arrive through a
+// proxy: trust exactly those hops so req.ip is the visitor's address (rate
+// limits per visitor, IP hint for the bot check). See env.trustProxy.
+if (env.trustProxy !== false) app.set('trust proxy', env.trustProxy);
+
+if (!env.turnstile.enabled && env.isProduction) {
+  console.warn('[turnstile] WARNING: the bot check is DISABLED in production (TURNSTILE_ENABLED is not "true").');
+}
+if (env.turnstile.enabled && env.isProduction && /^[12]x0+AA$/.test(env.turnstile.secretKey)) {
+  console.warn('[turnstile] WARNING: a Cloudflare TEST secret key is used in production: the check is not real.');
+}
+if (env.turnstile.enabled && env.turnstile.loginFailOpen) {
+  console.warn('[turnstile] TURNSTILE_LOGIN_FAIL_OPEN=true: logins are let through while Cloudflare is unreachable.');
+}
 
 // Serverless: no permanent worker, so each API response gives the queue a
 // step (jobs, emails) while the function is still alive.
@@ -46,6 +58,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/admin/organisateurs', organisateurRoutes);
 app.use('/api/admin/users', userRoutes);
+app.use('/api/public/config', publicConfigRoutes);
 app.use('/api/public/inscription', publicInscriptionRoutes);
 app.use('/api/public/scan', publicScanRoutes);
 app.use('/api/public/scan', publicScanPhotoRoutes);
